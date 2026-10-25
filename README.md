@@ -12,9 +12,13 @@ RoomCrew/
 ├── changelog/          每天一个日志文件，如 20261025.md
 ├── frontend/src/       前端界面与交互，占位
 ├── backend/src/        后端逻辑，占位
-├── docs/
-│   ├── development/environment.md     Python 环境说明
-│   └── architecture/0001-deepagents.md 技术选型决定
+├── doc/                开发指导文档
+│   ├── README.md                    现行基线与阅读导引
+│   ├── product-design.html          产品设计 v1.4
+│   ├── technical-design.html        技术设计 v1.4
+│   ├── architecture-roadmap.html    图解架构与路线图
+│   ├── development/environment.md   Python 环境说明
+│   └── architecture/0001-deepagents.md 现行选型决定
 ├── pyproject.toml      Python 依赖与工具配置
 ├── uv.lock             完整依赖锁
 ├── .python-version     Python 版本
@@ -40,5 +44,5 @@ $env:UV_PYTHON_INSTALL_DIR = Join-Path (Get-Location) '.tools/python'
 & .\.tools\bootstrap\Scripts\uv.exe sync --locked --all-groups
 ```
 
-详细步骤见 [环境说明](docs/development/environment.md)，选型见 [Deep Agents 决定](docs/architecture/0001-deepagents.md)。
+开发前先读 [开发指导](doc/README.md)。详细步骤见 [环境说明](doc/development/environment.md)，选型见 [Deep Agents 决定](doc/architecture/0001-deepagents.md)。
 每次完成改动后，按 [项目规范](AGENTS.md) 更新 [变更日志](changelog/)，在当天 YYYYMMDD.md 中按 HHmm-标题简短说明改了什么。
