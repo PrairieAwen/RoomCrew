@@ -1,0 +1,53 @@
+[project]
+name = "roomcrew"
+version = "0.1.0"
+description = "A local-first digital studio with configurable AI coworkers."
+readme = "README.md"
+requires-python = ">=3.13.17,<3.14"
+dependencies = [
+    "deepagents==0.7.32",
+    "langchain-openai>=1.7.2,<2",
+    "langchain-mcp-adapters>=0.3.2,<0.4",
+    "langgraph-checkpoint-sqlite>=3.1.2,<4",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=2.4.0,<3",
+    "pytest>=9.1.1,<10",
+    "pytest-asyncio>=1.4.0,<2",
+    "ruff>=0.17.2,<0.18",
+]
+
+[tool.uv]
+package = false
+required-version = ">=0.13.5,<0.14"
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"
+default = true
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+src = ["backend/src"]
+extend-exclude = ["main.py", ".tools", ".cache", "work"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+files = ["backend/src"]
+
+[tool.pytest.ini_options]
+testpaths = ["backend"]
+addopts = "-ra --strict-markers --strict-config"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "integration: installed components without a live model or external service",
+    "live: requires credentials and explicit opt-in; excluded from normal checks",
+]
