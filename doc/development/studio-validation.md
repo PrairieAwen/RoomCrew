@@ -1,0 +1,63 @@
+# 事务所交互原型验证
+
+日期：2026-10-26。分支：`codex/studio-interaction`。实现合同见 [ADR-0004](../architecture/0004-studio-interaction.md)。
+
+本页保留上一轮交互原型验收。当前游戏表现、图集导入与全窗口场景见 [新增验证](game-animation-validation.md) 及 [ADR-0005](../architecture/0005-game-animation.md)。
+
+## 已完成验证
+
+| 检查 | 结果 | 说明 |
+| --- | --- | --- |
+| `python -m pytest -q` | 42 passed / 29.25s | 包含旧会话基线与新账号、协议、场景、人工恢复和独立旁白域 |
+| Ruff / format --check | 通过，76 个 Python 文件已格式化 | 包含源码、测试与打包入口 |
+| mypy strict | 通过，68 个源码文件 | 框架类型留在适配边界 |
+| Node protocol.test.cjs | 通过 | 未知动作/版本、长帧限制、走坐互斥、重复与迟到计划、快照先到及隐藏恢复 |
+| 原生会话 WebView2 | 通过 | 配置表单保存、标准工具探测、3 次真实 SDK 模型调用、2 次文件工具、1 个真实文件；共 4 次 HTTP 请求 |
+| 原生事务所 WebView2 | 通过 | 招募与外观、老板换座、@员工、真实人工暂停/答复、真实工具写入、按需轨迹；4 位人物重开账号库仍存在，3 次 HTTP 请求 |
+| 空间模式日志约束 | 通过 | 上述事务所执行完成后全会话原始轨迹游标仍为 0；点击成员并展开后单独读取该成员事件 |
+
+自动模型服务只监听本机回环地址、只使用合成测试凭据。测试服务提供协议响应；实际 SDK 调用、Deep Agents 图、文件工具、中断、checkpoint、SQLite、桌面桥和界面均使用生产实现。生产包不包含测试服务或预置任务答案。
+
+## 关键不变量与失败路径
+
+1. 两个人物可以共享一份 Agent 定义，但 member ID 和主线程上下文独立；所有 scope 仍能按同一个 conversation 查询。已有 Run 固定当时配置快照。
+2. 账号属性跨重启存在，共享定义改动可见；过期人物版本、过期 Agent 定义版本被拒绝；核心角色不能关闭或归档。
+3. 单个 scope 结束不清除其他工作；未知事件与自然语言「完成/授权」不改变真实状态。场景快照不包含原消息、问题正文或工具参数。
+4. 家具重叠、被占座、布局版本过期被拒绝；A* 路径绕过家具。动画先站立、走路、再落座，历史旧计划不能回放覆盖新位置。
+5. `ask_user` 真正暂停图；正常退出后重新打开，沿用同一 Run / thread 恢复。子 Agent 提问保持正确员工身份，多个问题可以逐项答复。
+6. 重复答复不重复执行；取消后旧问题不能继续；恢复不刷新模型调用额度。人工等待不算活动执行时间。
+7. 投影缓存损坏和布局 SQLite 损坏分别模拟过：表现返回 degraded，执行器仍能启动、调用真实工具并结束。没有让执行器回调等待动画。
+8. 表现模型使用另一份配置；默认关闭。测试覆盖正常短旁白和 3 秒服务延迟触发 2 秒回退；主任务独立完成。实际请求不含主任务私密标记，SDK 发出的输出额度为 160 token。
+9. 独立程序默认最大化到 Windows 工作区；普通窗口初始尺寸考虑 DPI 单位。1100×650 原生交互测试确认发送按钮没有越过视口，实际 exe 也已检查完整输入区。绘制约 30fps，动作片段独立取帧，菜单不随无关事件反复重建。
+
+## 可以复现的命令
+
+```powershell
+& .\.venv\Scripts\python.exe -m pytest -q
+& .\.venv\Scripts\python.exe desktop/tests/desktop_smoke.py
+& .\.venv\Scripts\python.exe desktop/tests/studio_smoke.py
+& .\.venv\Scripts\python.exe -m ruff check backend
+& .\.venv\Scripts\python.exe -m ruff format --check backend
+& .\.venv\Scripts\python.exe -m mypy backend/src
+node desktop/tests/web/protocol.test.cjs
+& .\packaging\build.ps1
+```
+
+Windows asyncio / 本地 HTTP / WebView2 检查需要允许本机套接字的正常终端环境。开发者使用受限执行环境时，测试需要环境授权；生产应用不增加任何绕过系统安全的代码。
+
+## 验证的实际边界
+
+- 没有用户真实 API Key，尚未声称通过真实服务商、计费账户、长任务质量或用户日记内容验收。实际模型仍需在方便时填写配置验证。
+- 当前支持 OpenAI 兼容 Chat Completions；不是所有模型厂商私有协议都已实现。执行模型需标准工具调用；可选旁白模型只需有限 JSON。
+- 这是一套矢量骨架与格网交互原型，尚未完成正式游戏美术、外部动作图导入、拖拽布置、多人避让或完整动作分阶段 ACK。
+- 账号级数据当前只有单用户本地仓库；云端登录、租户隔离、同步和冲突处理未实现。迁云不包含把秘密配置或所有任务日志自动外发。
+- 人工信息确认不等于安全审批。安全 VM、Shell、任意代码、MCP 与 Computer Use 继续关闭。
+- 产品库与 checkpoint 没有跨库原子事务；正常等待重启恢复已验证，任意断电时刻恢复与 exactly-once 未完成。
+- Windows 包在当前开发机器验证；全新干净机器与多种 DPI / 显示器仍需后续兼容测试。
+
+## 上一轮发行包核对（已由游戏表现版更新）
+
+- `dist/RoomCrew/RoomCrew.exe` 已在当前机器独立启动，默认最大化，输入区与发送按钮完整可见。
+- 7 个前端资源与源码逐字节一致，新增账号、投影、场景、人工工具、旁白和 DPI 模块均包含在打包代码中。
+- ZIP 共 312 个条目，约 39.93 MiB；CRC 全部通过，不含测试脚本、真实配置或业务数据库。
+- SHA-256：`ae610ec7a9a4382a8977c26cc5c80dd246a86e49118e6ed0de7cafc73306866e`。

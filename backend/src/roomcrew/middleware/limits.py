@@ -6,13 +6,13 @@ from roomcrew.contracts.errors import ExecutionError
 
 
 class ModelCallBudget:
-    def __init__(self, maximum: int = 32) -> None:
+    def __init__(self, maximum: int = 32, used: int = 0) -> None:
         """因为子 Agent 和摘要不能各自重置额度，需要为同一次 Run 建立共享、线程安全的计数器。"""
         # 1、该对象每 Run 新建；绑定模型工具时只共享本 Run 的同一个对象。
-        if maximum < 1:
+        if maximum < 1 or not 0 <= used <= maximum:
             raise ValueError("模型调用上限必须为正数")
         self._maximum = maximum
-        self._calls = 0
+        self._calls = used
         self._lock = threading.Lock()
 
     def consume(self) -> None:

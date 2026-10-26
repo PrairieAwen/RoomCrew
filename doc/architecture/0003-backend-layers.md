@@ -2,11 +2,13 @@
 
 状态：已接受，依据用户明确要求。此次目标是保留 V1 会话应用，建立可以扩展的代码边界；不启用安全 VM、MCP、Shell 或浏览器。
 
+新增人物仓库、单向表现协议、空间与真实人工恢复的分层扩展见 [ADR-0004](0004-studio-interaction.md)。执行器仍不依赖表现服务，实际依赖白名单由自动检查维护。
+
 ## 从外到内理解代码
 
 ```mermaid
 flowchart TD
-    UI[frontend 会话界面] --> Desktop[desktop 具名桌面桥]
+    UI[desktop/ui 会话与会议室界面] --> Desktop[roomcrew_desktop 显式空间桥]
     Desktop --> App[application 会话与运行用例]
     App --> Config[config 配置与引用]
     App --> Models[models 私有模型工厂]
@@ -30,9 +32,9 @@ flowchart TD
 
 ```text
 backend/src/roomcrew/
-├── __main__.py                       最小入口：日志边界、加载桌面
 ├── application/
-│   ├── runtime.py                    稳定应用门面、生命周期
+│   ├── workspaces.py                 多空间 Runtime 装配与明确身份路由
+│   ├── runtime.py                    单空间应用门面、生命周期
 │   ├── execution.py                  Run 幂等、组件装配、停止与终态
 │   ├── artifacts.py                  真实产物列表与预览
 │   └── options.py                    本 Run 的不可变组装参数
@@ -75,13 +77,10 @@ backend/src/roomcrew/
 ├── contracts/
 │   ├── errors.py                     稳定错误码及公开含义
 │   └── limits.py                     有界执行参数
-├── desktop/
-│   ├── window.py                     原生窗口及单实例
-│   ├── host.py                       后台线程和 asyncio 生命周期
-│   ├── api.py                        用户界面的具名入口
-│   └── responses.py                  安全响应包装
 └── platform/paths.py                  安装资源与本机数据定位
 ```
+
+桌面已按 [ADR-0007](0007-workspace-rooms.md) 提取到根 `desktop/`：界面在 `desktop/ui/`，窗口、桥、线程宿主和入口在 `desktop/src/roomcrew_desktop/`。根 `frontend/` 只预留管理员 Web 界面。
 
 包的 `__init__.py` 只说明职责，不把所有实现重新导出成一个大命名空间。原平铺 `runtime.py`、`configuration.py`、`models.py`、`desktop.py`、`storage.py`、`paths.py` 已移除，不保留一套旧实现或转发兼容壳。
 
@@ -92,7 +91,7 @@ backend/src/roomcrew/
 - `context_compression/` 根据公开模型能力建立压缩器，不读取配置文件、不存取产品 SQLite。
 - `middleware/` 组装跨调用策略。`ModelCallBudget` 位于模型调用边界，先预占再进入 SDK。
 - `security/` 不反向依赖配置或用例。DPAPI 只处理字节；配置仓库负责 JSON 与用户错误。
-- `desktop/` 不导入 SDK。前后端之间仍是普通字典和产品 ID，不传图、模型或 checkpoint 对象。
+- 根 `desktop/src/roomcrew_desktop/` 不导入 SDK。前后端之间仍是普通字典和产品 ID，不传图、模型或 checkpoint 对象。
 - `application/` 是组合层，允许连接各模块；它不解析 SDK 事件或重复实现工具、路径、压缩和密码保护。
 - `storage/` 把产品表和框架 saver 分开；跨库不具备同一原子事务，不宣称工具恰好执行一次。
 

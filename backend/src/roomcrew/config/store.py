@@ -2,7 +2,7 @@
 
 import json
 import os
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 from typing import Any
 
@@ -12,10 +12,12 @@ from roomcrew.security.windows_dpapi import protect_bytes
 
 
 class ConfigStore:
-    def __init__(self, private_dir: Path) -> None:
+    def __init__(self, private_dir: Path, filename: str = "model-config.dpapi") -> None:
         """因为密钥不属于任务资料，需要把配置仓库固定在独立私有目录。"""
         # 1、仅保存可信程序传入的路径，不允许 Agent 或前端更改配置文件位置。
-        self.path = private_dir / "model-config.dpapi"
+        if filename not in {"model-config.dpapi", "presentation-model.dpapi"}:
+            raise ValueError("未知模型配置域")
+        self.path = private_dir / filename
 
     def require_profile(self) -> ModelProfile:
         """因为未配置时不能让 SDK 使用默认环境凭据，需要显式要求有效的人工配置。"""
@@ -46,7 +48,7 @@ class ConfigStore:
             raise ConfigurationError("本地模型配置无法读取，请重新保存配置") from error
 
     def save(self, values: dict[str, Any]) -> ModelProfile:
-        """因为用户可能填错端点或保留旧 Key，需要先验证，再原子替换加密配置文件。"""
+        """因为用户会反复保存或更换端点，需要校验完整配置，只在实际变更时原子替换保护文件。"""
         # 1、限定为首版已实现的 Chat Completions 协议，验证端点不包含认证片段。
         try:
             previous = self.load()
@@ -54,7 +56,10 @@ class ConfigStore:
             # 损坏配置允许用户用完整新输入修复，但不能沿用无法读取的旧凭据。
             previous = None
         profile = validate_profile(values, previous)
-        # 2、先加密完整配置再写临时文件，成功后原子替换；磁盘不出现明文中间文件。
+        # 2、内容完全相同时保留已有引用，避免重复保存使原会话的模型绑定失效。
+        if previous and replace(profile, reference=previous.reference) == previous:
+            return previous
+        # 3、先加密完整配置再写临时文件，成功后原子替换；磁盘不出现明文中间文件。
         sealed = protect_bytes(json.dumps(asdict(profile), ensure_ascii=False).encode("utf-8"))
         temporary = self.path.with_suffix(".tmp")
         try:

@@ -1,20 +1,16 @@
-﻿# 因为 Windows 用户需要完整独立程序，需要从锁定依赖构建并打包整个发行目录。
+# 因为 Windows 用户需要完整独立程序，需要先在缓存构建，成功后再发布完整发行目录。
 $ErrorActionPreference = 'Stop'
 $roomcrewRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $roomcrewPython = Join-Path $roomcrewRoot '.venv/Scripts/python.exe'
-$roomcrewDist = Join-Path $roomcrewRoot 'dist'
+$roomcrewStage = Join-Path $roomcrewRoot ('.cache/release-build-' + [guid]::NewGuid().ToString('N'))
 
-# 1、从明确的项目根运行，避免路径变化影响界面资源和打包目录。
+# 1、PyInstaller 只操作新的缓存目录，构建失败不会删除用户正在使用的 dist。
 Push-Location -LiteralPath $roomcrewRoot
 try {
-    & $roomcrewPython -m PyInstaller packaging/RoomCrew.spec --distpath dist --workpath .cache/pyinstaller --noconfirm
-    if ($LASTEXITCODE -ne 0) { throw 'Windows 程序构建失败' }
-    # 2、使用说明随应用分发，用户无需打开源码寻找运行步骤。
-    Copy-Item -LiteralPath (Join-Path $PSScriptRoot '使用说明.txt') -Destination (Join-Path $roomcrewDist 'RoomCrew/使用说明.txt') -Force
-    # 3、压缩整个目录，保留 exe 所需运行库；版本包属于构建产物，不提交 Git。
-    $roomcrewArchive = Join-Path $roomcrewDist 'RoomCrew-0.1.0-windows-x64.zip'
-    Compress-Archive -LiteralPath (Join-Path $roomcrewDist 'RoomCrew') -DestinationPath $roomcrewArchive -Force
-    Get-FileHash -LiteralPath $roomcrewArchive -Algorithm SHA256
+    & $roomcrewPython -m PyInstaller packaging/RoomCrew.spec --distpath $roomcrewStage --workpath .cache/pyinstaller --noconfirm
+    if ($LASTEXITCODE -ne 0) { throw 'Windows 程序构建失败，原发行目录未改动' }
+    # 2、完整候选交给统一发布入口，运行中拒绝替换并保留候选，不结束用户任务。
+    & (Join-Path $PSScriptRoot 'publish.ps1') -Candidate (Join-Path $roomcrewStage 'RoomCrew')
 } finally {
     Pop-Location
 }

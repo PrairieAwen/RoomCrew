@@ -1,0 +1,585 @@
+{
+  "format": "roomcrew.avatar",
+  "version": 1,
+  "name": "薄荷 · 动作制作样例",
+  "image": "atlas.png",
+  "frame_size": [
+    128,
+    160
+  ],
+  "pivot": [
+    64,
+    151
+  ],
+  "pixel_art": false,
+  "clips": [
+    {
+      "action": "idle",
+      "expression": "neutral",
+      "direction": "se",
+      "posture": "standing",
+      "frames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "fps": 12,
+      "loop": true
+    },
+    {
+      "action": "think",
+      "expression": "focused",
+      "direction": "se",
+      "posture": "standing",
+      "frames": [
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "fps": 12,
+      "loop": true
+    },
+    {
+      "action": "read",
+      "expression": "focused",
+      "direction": "se",
+      "posture": "standing",
+      "frames": [
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "fps": 12,
+      "loop": true
+    },
+    {
+      "action": "type",
+      "expression": "focused",
+      "direction": "se",
+      "posture": "standing",
+      "frames": [
+        18,
+        19,
+        20,
+        21,
+        22,
+        23
+      ],
+      "fps": 12,
+      "loop": true
+    },
+    {
+      "action": "write",
+      "expression": "focused",
+      "direction": "se",
+      "posture": "standing",
+      "frames": [
+        24,
+        25,
+        26,
+        27,
+        28,
+        29
+      ],
+      "fps": 12,
+      "loop": true
+    },
+    {
+      "action": "talk",
+      "expression": "neutral",
+      "direction": "se",
+      "posture": "standing",
+      "frames": [
+        30,
+        31,
+        32,
+        33,
+        34,
+        35
+      ],
+      "fps": 12,
+      "loop": true
+    },
+    {
+      "action": "ask",
+      "expression": "curious",
+      "direction": "se",
+      "posture": "standing",
+      "frames": [
+        36,
+        37,
+        38,
+        39,
+        40,
+        41
+      ],
+      "fps": 12,
+      "loop": true
+    },
+    {
+      "action": "report",
+      "expression": "smile",
+      "direction": "se",
+      "posture": "standing",
+      "frames": [
+        42,
+        43,
+        44,
+        45,
+        46,
+        47
+      ],
+      "fps": 12,
+      "loop": false
+    },
+    {
+      "action": "alert",
+      "expression": "concerned",
+      "direction": "se",
+      "posture": "standing",
+      "frames": [
+        48,
+        49,
+        50,
+        51,
+        52,
+        53
+      ],
+      "fps": 12,
+      "loop": true
+    },
+    {
+      "action": "listen",
+      "expression": "neutral",
+      "direction": "se",
+      "posture": "standing",
+      "frames": [
+        54,
+        55,
+        56,
+        57,
+        58,
+        59
+      ],
+      "fps": 12,
+      "loop": true
+    },
+    {
+      "action": "walk",
+      "expression": "neutral",
+      "direction": "e",
+      "posture": "standing",
+      "frames": [
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67
+      ],
+      "fps": 9,
+      "loop": true
+    },
+    {
+      "action": "walk",
+      "expression": "neutral",
+      "direction": "se",
+      "posture": "standing",
+      "frames": [
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75
+      ],
+      "fps": 9,
+      "loop": true
+    },
+    {
+      "action": "walk",
+      "expression": "neutral",
+      "direction": "sw",
+      "posture": "standing",
+      "frames": [
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        82,
+        83
+      ],
+      "fps": 9,
+      "loop": true
+    },
+    {
+      "action": "walk",
+      "expression": "neutral",
+      "direction": "w",
+      "posture": "standing",
+      "frames": [
+        84,
+        85,
+        86,
+        87,
+        88,
+        89,
+        90,
+        91
+      ],
+      "fps": 9,
+      "loop": true
+    },
+    {
+      "action": "run",
+      "expression": "neutral",
+      "direction": "e",
+      "posture": "standing",
+      "frames": [
+        92,
+        93,
+        94,
+        95,
+        96,
+        97,
+        98,
+        99
+      ],
+      "fps": 14,
+      "loop": true
+    },
+    {
+      "action": "run",
+      "expression": "neutral",
+      "direction": "se",
+      "posture": "standing",
+      "frames": [
+        100,
+        101,
+        102,
+        103,
+        104,
+        105,
+        106,
+        107
+      ],
+      "fps": 14,
+      "loop": true
+    },
+    {
+      "action": "run",
+      "expression": "neutral",
+      "direction": "sw",
+      "posture": "standing",
+      "frames": [
+        108,
+        109,
+        110,
+        111,
+        112,
+        113,
+        114,
+        115
+      ],
+      "fps": 14,
+      "loop": true
+    },
+    {
+      "action": "run",
+      "expression": "neutral",
+      "direction": "w",
+      "posture": "standing",
+      "frames": [
+        116,
+        117,
+        118,
+        119,
+        120,
+        121,
+        122,
+        123
+      ],
+      "fps": 14,
+      "loop": true
+    },
+    {
+      "action": "sit_down",
+      "expression": "neutral",
+      "direction": "se",
+      "posture": "standing",
+      "frames": [
+        124,
+        125,
+        126,
+        127,
+        128,
+        129
+      ],
+      "fps": 16,
+      "loop": false
+    },
+    {
+      "action": "stand_up",
+      "expression": "neutral",
+      "direction": "se",
+      "posture": "standing",
+      "frames": [
+        130,
+        131,
+        132,
+        133,
+        134,
+        135
+      ],
+      "fps": 16,
+      "loop": false
+    },
+    {
+      "action": "idle",
+      "expression": "neutral",
+      "direction": "se",
+      "posture": "seated",
+      "frames": [
+        136,
+        137,
+        138,
+        139
+      ],
+      "fps": 8,
+      "loop": true
+    },
+    {
+      "action": "think",
+      "expression": "focused",
+      "direction": "se",
+      "posture": "seated",
+      "frames": [
+        140,
+        141,
+        142,
+        143
+      ],
+      "fps": 8,
+      "loop": true
+    },
+    {
+      "action": "read",
+      "expression": "focused",
+      "direction": "se",
+      "posture": "seated",
+      "frames": [
+        144,
+        145,
+        146,
+        147
+      ],
+      "fps": 8,
+      "loop": true
+    },
+    {
+      "action": "type",
+      "expression": "focused",
+      "direction": "se",
+      "posture": "seated",
+      "frames": [
+        148,
+        149,
+        150,
+        151
+      ],
+      "fps": 8,
+      "loop": true
+    },
+    {
+      "action": "write",
+      "expression": "focused",
+      "direction": "se",
+      "posture": "seated",
+      "frames": [
+        152,
+        153,
+        154,
+        155
+      ],
+      "fps": 8,
+      "loop": true
+    },
+    {
+      "action": "talk",
+      "expression": "neutral",
+      "direction": "se",
+      "posture": "seated",
+      "frames": [
+        156,
+        157,
+        158,
+        159
+      ],
+      "fps": 8,
+      "loop": true
+    },
+    {
+      "action": "ask",
+      "expression": "curious",
+      "direction": "se",
+      "posture": "seated",
+      "frames": [
+        160,
+        161,
+        162,
+        163
+      ],
+      "fps": 8,
+      "loop": true
+    },
+    {
+      "action": "report",
+      "expression": "smile",
+      "direction": "se",
+      "posture": "seated",
+      "frames": [
+        164,
+        165,
+        166,
+        167
+      ],
+      "fps": 8,
+      "loop": false
+    },
+    {
+      "action": "alert",
+      "expression": "concerned",
+      "direction": "se",
+      "posture": "seated",
+      "frames": [
+        168,
+        169,
+        170,
+        171
+      ],
+      "fps": 8,
+      "loop": true
+    },
+    {
+      "action": "listen",
+      "expression": "neutral",
+      "direction": "se",
+      "posture": "seated",
+      "frames": [
+        172,
+        173,
+        174,
+        175
+      ],
+      "fps": 8,
+      "loop": true
+    },
+    {
+      "action": "idle",
+      "expression": "focused",
+      "direction": "se",
+      "posture": "standing",
+      "frames": [
+        176,
+        177
+      ],
+      "fps": 3,
+      "loop": true
+    },
+    {
+      "action": "idle",
+      "expression": "curious",
+      "direction": "se",
+      "posture": "standing",
+      "frames": [
+        178,
+        179
+      ],
+      "fps": 3,
+      "loop": true
+    },
+    {
+      "action": "idle",
+      "expression": "concerned",
+      "direction": "se",
+      "posture": "standing",
+      "frames": [
+        180,
+        181
+      ],
+      "fps": 3,
+      "loop": true
+    },
+    {
+      "action": "idle",
+      "expression": "smile",
+      "direction": "se",
+      "posture": "standing",
+      "frames": [
+        182,
+        183
+      ],
+      "fps": 3,
+      "loop": true
+    },
+    {
+      "action": "work",
+      "expression": "focused",
+      "direction": "se",
+      "posture": "standing",
+      "frames": [
+        18,
+        19,
+        20,
+        21,
+        22,
+        23
+      ],
+      "fps": 12,
+      "loop": true
+    },
+    {
+      "action": "work",
+      "expression": "focused",
+      "direction": "se",
+      "posture": "seated",
+      "frames": [
+        148,
+        149,
+        150,
+        151
+      ],
+      "fps": 8,
+      "loop": true
+    },
+    {
+      "action": "sit",
+      "expression": "neutral",
+      "direction": "se",
+      "posture": "seated",
+      "frames": [
+        136,
+        137,
+        138,
+        139
+      ],
+      "fps": 8,
+      "loop": true
+    }
+  ]
+}

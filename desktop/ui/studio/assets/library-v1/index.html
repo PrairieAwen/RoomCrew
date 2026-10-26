@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>RoomCrew · 素材总览</title>
+        <link rel="stylesheet" href="gallery.css" />
+        <script src="../../protocol.js" defer></script>
+        <script src="../../skins.js" defer></script>
+        <script src="catalog.js" defer></script>
+        <script src="gallery.js" defer></script>
+    </head>
+    <body>
+        <header>
+            <a class="brand" href="index.html"
+                >ROOMCREW <span>RoomCrew</span></a
+            ><span class="local">● 本地素材预览 · 不连接模型</span>
+        </header>
+        <main>
+            <section class="hero">
+                <div class="eyebrow">
+                    THE ART OF YOUR LITTLE STUDIO / VOL. 01
+                </div>
+                <h1>RoomCrew，<br /><em>一整套生活的细节。</em></h1>
+                <p>
+                    角色、工作动作、摸鱼习惯，以及陪他们一起工作的家具。点击素材，就能查看真实片段与制作覆盖情况。
+                </p>
+                <div id="metrics" class="metrics"></div>
+            </section>
+            <nav aria-label="素材类别">
+                <button class="selected" data-category="character">
+                    人物与动作</button
+                ><button data-category="furniture">办公家具</button
+                ><button data-category="decor">空间装饰</button
+                ><button data-category="effects">状态特效</button
+                ><button data-category="matrix">动作覆盖矩阵</button>
+            </nav>
+            <section class="section-heading">
+                <div>
+                    <h2 id="section-title">会议室里的伙伴</h2>
+                    <p id="section-note">
+                        四套可导入角色，每套覆盖当前 20 种动作语义与 5
+                        种闲置表情。
+                    </p>
+                </div>
+                <span id="section-count"></span>
+            </section>
+            <div id="asset-grid" class="asset-grid"></div>
+            <section id="coverage" hidden></section>
+            <p class="boundary">
+                角色套装及常用手绘家具已接入房间，其余装饰与特效的接入状态见详情。部分生成帧、接触关系和缺失的方向/姿态组合仍待精修；监管员形象不代表安全
+                VM 已接入。
+            </p>
+            <p id="gallery-error" role="status"></p>
+        </main>
+        <dialog id="inspector">
+            <div class="detail-heading">
+                <div>
+                    <span class="eyebrow">MATERIAL INSPECTOR</span>
+                    <h2 id="detail-name"></h2>
+                </div>
+                <button id="close-inspector" aria-label="关闭素材详情">
+                    ×
+                </button>
+            </div>
+            <div class="detail-body">
+                <div class="large-stage">
+                    <canvas
+                        id="detail-canvas"
+                        width="800"
+                        height="800"
+                        aria-label="素材动画预览"
+                    ></canvas
+                    ><span id="frame-caption"></span>
+                </div>
+                <div class="detail-controls">
+                    <p id="detail-note"></p>
+                    <div id="character-controls">
+                        <label>动作<select id="detail-action"></select></label>
+                        <div class="two-col">
+                            <label
+                                >姿态<select id="detail-posture">
+                                    <option value="standing">站立</option>
+                                    <option value="seated">坐姿</option>
+                                </select></label
+                            ><label
+                                >朝向<select id="detail-direction"></select
+                            ></label>
+                        </div>
+                        <label
+                            >表情<select id="detail-expression"></select
+                        ></label>
+                    </div>
+                    <div class="playback">
+                        <button id="toggle-play">暂停</button
+                        ><input
+                            id="frame-slider"
+                            type="range"
+                            min="0"
+                            max="7"
+                            value="0"
+                            aria-label="逐帧查看"
+                        />
+                    </div>
+                    <p id="fallback-note" class="fallback"></p>
+                    <div id="source-links" class="source-links"></div>
+                    <p class="detail-boundary">
+                        这里只播放素材。没有任务调用、工具执行或授权效果。
+                    </p>
+                </div>
+            </div>
+        </dialog>
+        <footer>
+            RoomCrew / RoomCrew · 本地基础素材库 · 实际覆盖以动作矩阵为准
+        </footer>
+    </body>
+</html>

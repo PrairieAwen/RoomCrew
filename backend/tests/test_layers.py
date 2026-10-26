@@ -23,10 +23,12 @@ LAYERS = {
     "agent_loop": {"agent_loop", "tracing", "contracts"},
     "tracing": {"tracing"},
     "storage": {"storage"},
+    "accounts": {"accounts", "contracts"},
+    "presentation": {"presentation", "contracts"},
+    "assets": {"assets", "contracts"},
     "platform": {"platform"},
-    "desktop": {"desktop", "application", "platform", "contracts"},
 }
-LAYERS["application"] = (set(LAYERS) - {"desktop"}) | {"application"}
+LAYERS["application"] = set(LAYERS) | {"application"}
 
 
 def test_internal_dependencies_obey_layer_contract() -> None:
@@ -46,9 +48,35 @@ def test_internal_dependencies_obey_layer_contract() -> None:
             elif isinstance(item, ast.Import):
                 names = [alias.name for alias in item.names]
             for name in names:
+                if name.startswith(("roomcrew_desktop", "webview")):
+                    failures.append(f"{relative} -> desktop dependency")
                 if name.startswith("roomcrew.") and name.split(".")[1] not in LAYERS[layer]:
                     failures.append(f"{relative} -> {name}")
     # 2、Loop 不能读配置或数据库，桌面不能直接调用模型 SDK，安全模块不依赖应用用例。
+    assert not failures, failures
+
+
+def test_desktop_depends_only_on_application_contracts_and_paths() -> None:
+    """因为桌面桥已独立成包，需要防止它绕过应用用例访问凭据、数据库或框架。"""
+    # 1、检查实际导入；宿主引用后端仅限应用、合同与本机资源定位。
+    root = Path(__file__).resolve().parents[2] / "desktop/src/roomcrew_desktop"
+    failures = []
+    for path in root.rglob("*.py"):
+        for item in ast.walk(ast.parse(path.read_text("utf-8"))):
+            names = []
+            if isinstance(item, ast.ImportFrom) and item.module:
+                names = [item.module]
+            elif isinstance(item, ast.Import):
+                names = [alias.name for alias in item.names]
+            for name in names:
+                if name.startswith("roomcrew.") and name.split(".")[1] not in {
+                    "application",
+                    "contracts",
+                    "platform",
+                }:
+                    failures.append(f"{path.name} -> {name}")
+                if name.startswith(("deepagents", "langchain", "langgraph", "sqlite3")):
+                    failures.append(f"{path.name} -> {name}")
     assert not failures, failures
 
 

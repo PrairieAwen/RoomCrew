@@ -12,7 +12,7 @@ class AppPaths:
     private: Path
     data: Path
     sessions: Path
-    frontend: Path
+    desktop_ui: Path
 
     @classmethod
     def create(cls, root: Path | None = None) -> "AppPaths":
@@ -26,7 +26,7 @@ class AppPaths:
             base / "private",
             base / "data",
             base / "data/sessions",
-            resources / "frontend/src",
+            resources / "desktop/ui",
         )
         # 2、提前建立数据目录；配置始终位于 Agent 会话根目录之外。
         for folder in (paths.private, paths.data, paths.sessions):
@@ -41,3 +41,19 @@ class AppPaths:
         target = self.sessions / conversation_id / "files"
         target.mkdir(parents=True, exist_ok=True)
         return target
+
+    def for_workspace(self, workspace_id: str) -> "AppPaths":
+        """因为每个会议室需要独立业务数据，需要按受限 ID 创建空间路径，同时共用用户私有模型配置。"""
+        # 1、默认空间继续使用旧数据位置，不移动或重写历史文件。
+        if workspace_id == "default":
+            return self
+        if len(workspace_id) != 32 or any(char not in "0123456789abcdef" for char in workspace_id):
+            raise ValueError("工作空间标识无效")
+        base = self.root / "workspaces" / workspace_id
+        if not base.resolve().is_relative_to((self.root / "workspaces").absolute()):
+            raise ValueError("工作空间目录不能指向外部位置")
+        data = base / "data"
+        sessions = data / "sessions"
+        # 2、空间目录不包含凭据；User 私有目录不挂载到任何 Agent 会话文件视图。
+        sessions.mkdir(parents=True, exist_ok=True)
+        return AppPaths(self.root, self.private, data, sessions, self.desktop_ui)

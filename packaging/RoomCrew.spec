@@ -6,7 +6,8 @@ from pathlib import Path
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules, copy_metadata
 
 project = Path(SPECPATH).parent
-datas = [(str(project / 'frontend/src'), 'frontend/src')]
+datas = [(str(project / 'desktop/ui'), 'desktop/ui')]
+datas += [(str(project / 'doc/assets/crew-avatar-example'), 'materials/crew-avatar-example')]
 for package in ('deepagents', 'langchain', 'langchain_core', 'langchain_openai',
                 'langgraph', 'langgraph_checkpoint', 'langgraph_checkpoint_sqlite',
                 'langgraph_prebuilt', 'tiktoken', 'pywebview'):
@@ -17,7 +18,7 @@ hidden = collect_submodules('langgraph') + collect_submodules('deepagents')
 hidden += ['tiktoken_ext.openai_public', 'webview.platforms.edgechromium', 'aiosqlite']
 
 analysis = Analysis([str(project / 'packaging/desktop_entry.py')],
-    pathex=[str(project / 'backend/src')], binaries=[], datas=datas,
+    pathex=[str(project / 'backend/src'), str(project / 'desktop/src')], binaries=[], datas=datas,
     hiddenimports=hidden, hookspath=[], runtime_hooks=[],
     excludes=['pytest', 'mypy', 'PyQt5', 'PyQt6', 'PySide2', 'PySide6',
               'webview.platforms.gtk', 'webview.platforms.qt', 'webview.platforms.cocoa',

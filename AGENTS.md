@@ -6,7 +6,8 @@
 
 - 当前已获用户明确授权，进入 V1 Windows 独立会话应用开发；范围以 doc/architecture/0002-conversation-v1.md 为准。
 - V1 包括用户模型配置入口、真实 Deep Agents 执行、同会话主子 Agent 轨迹、文件产物和独立 exe 打包验证。
-- 房间渲染、任意代码执行、MCP、浏览器和安全 VM 不在本次交付范围；不要把未来方案说成已实现。
+- 当前用户进一步授权事务所交互与人物持久化，新增范围按 doc/architecture/0004-studio-interaction.md 执行；保留会话视图。最新角色图集、正交动作和全窗口场景按 doc/architecture/0005-game-animation.md 执行。任意代码、MCP、浏览器和安全 VM 仍未开放。
+- 表现协议单向消费已提交轨迹；人物动作、旁白及动画回调不能决定任务结果或批准工具。新增表现能力不能成为执行器的前置依赖。
 - 当前已有原始 main.py 是用户的 PyCharm 示例，保留原样；不要把它当正式入口。
 - 开发规则统一维护在根 AGENTS.md，不在前后端重复复制；先读本文与 README.md。
 - 实现前阅读 doc/README.md 与相关指导章节；历史自建 Rust Loop 方案已由 Deep Agents 决定覆盖，不照搬旧目录和环境版本。
@@ -48,13 +49,14 @@
 
 ## 3. 前后端目录边界
 
-- frontend/：界面、布局、2.5D 场景、人物与家具交互、表单和前端状态。
+- desktop/：普通用户的 Windows 桌面应用；ui/ 保存界面、场景、人物素材与状态，src/roomcrew_desktop/ 保存原生窗口和桌面桥。
+- frontend/：仅预留未来管理员 Web 界面，用于用户与账号管理；当前不创建管理员工程或实现。
 - backend/：Agent 编排适配、产品任务、员工身份、工作空间、数据、权限与工具网关。
 - 前后端共享合同在实际接入时再建目录；协议不包含框架私有类型或真实秘密。
 - doc/：产品、技术与图解开发指导，以及当前环境说明、架构决定；入口为 doc/README.md。
 - 根 pyproject.toml / uv.lock / .python-version 管理后端 Python 环境；.venv 是本地环境，不是业务代码目录。
 - 前端不直接读写业务数据库、凭据或执行系统命令；人物动画不能决定实际授权或任务成功。
-- frontend/src 保存会话界面；backend/src/roomcrew 保存后端与桌面桥；backend/tests 验证重要不变量，packaging/ 管理 Windows 打包。
+- backend/src/roomcrew 保存后端用例和领域模块，不导入桌面或 WebView；desktop/tests 保存原生集成验证与界面检查，backend/tests 保存后端验证，packaging/ 管理 Windows 打包。
 - Deep Agents / LangChain 类型留在后端适配边界，不成为前端合同或领域对象。
 
 ### 3.1 后端职责包与依赖方向
@@ -69,20 +71,25 @@
 - tools/：真实本地工具和文件后端注册；不要把工具实现写进应用 Runtime 或 Loop。
 - mcp/：独立 MCP 能力接入边界；当前关闭，误开启必须明确失败，不能返回假工具。
 - skills/：显式技能来源验证与渐进加载接入；默认不自动扫描磁盘，不因 Skill 指令扩权。
+- assets/：用户 PNG 图集与 JSON 动作清单的校验、规范化、内容寻址存储；不执行素材脚本，不读取模型配置。
+- presentation/：只读轨迹归约、有限动作提示与可丢弃线索；素材或动画不能更改 Run、权限和人工答复。
 - application/：会话用例、运行生命周期、产物查询和组件装配；不解析 SDK 原始事件。
 - storage/：产品 SQLite 与框架 checkpoint 分开管理；tracing/ 与 contracts/ 保存稳定产品语义。
-- desktop/ 只通过应用用例和产品合同交互；platform/ 定位本机路径，不承担业务。
+- 根 desktop/src/roomcrew_desktop 只通过应用用例、产品合同和资源定位交互；platform/ 定位本机路径，不承担业务。
 - 新能力在所属包实现，在应用装配点接入；不得为了扩展工具去修改 SDK 源码或复制生产 Loop。
 - backend/tests/test_layers.py 检查实际导入方向；修改依赖规则必须同步说明职责变化，不能为消除报错随意放开。
 
 ## 4. 技术与产品事实
 
-- 名称 RoomCrew / 一间事务所；Windows 首发，保留 macOS 适配空间。
+- 名称 RoomCrew；Windows 首发，保留 macOS 适配空间。
 - 已决定以 Deep Agents 作为 Agent Loop 底座，不同时实现另一套生产循环。
 - 老板是 User；助手和员工都是通用 Agent 的配置；监管员映射安全 VM 及其权限服务，不是另一个 Agent。
+- 最新场景规则见 ADR-0006：User 不创建老板形象；最低人物为助手、监管员，默认助手接待。活动池最多四项，五至十分钟随机轮换；配置委派同任务开会，通用外援仅保留轨迹并显示发起人电话。
 - 同一 Agent 配置可并发产生多个独立 Run / Thread / 轨迹；不得用 agent_id 共享可变任务上下文。
+- ADR-0007：一工作空间对应一会议室；左侧选空间，主画布切房间。成员、布局、会话、轨迹、checkpoint 与产物按空间隔离，业务请求显式携带空间 ID，切换不停止后台任务。
+- 模型配置为用户本地共享配置；空间内不复制秘密。全空间有运行或待答复时不能更改共享模型配置。默认空间沿用旧数据目录，禁止隐式搬迁或混合旧历史。
 - SQLite + 本地文件是数据设计方向；框架 checkpoint 与产品业务状态分开。
-- V1 使用 pywebview / WebView2 桌面窗口与普通 HTML/CSS/JavaScript 会话界面；未来房间渲染框架仍需单独验证。
+- 当前使用 pywebview / WebView2、HTML/CSS/JavaScript 与 SVG 骨架验证会议室交互；未来正式游戏渲染框架与外部动作素材仍需单独验证。
 
 ## 5. 安全与数据底线
 

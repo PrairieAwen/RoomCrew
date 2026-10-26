@@ -2,11 +2,27 @@
 
 先读本页，再阅读相关 HTML。三份 HTML 是此前讨论中最后生成的版本，正文原样保留；后续已确定的选型和项目约定按本页与当前规范执行。
 
-## 当前交付：Windows 独立会话版
+## 当前交付：Windows 独立工作空间原型
 
-[ADR-0002：V1 范围与运行合同](architecture/0002-conversation-v1.md) 是当前实现依据。用户已授权进入功能开发，先交付模型配置入口、真实 Deep Agents、多 Agent 同会话公开轨迹和本地文件；安全 VM 与房间渲染后续迭代。运行与构建步骤见根 README，验证记录见 [会话版验证](development/v1-validation.md)。
+模型配置入口已修复为「保存并测试连接」，支持当前表单先保存、失败短路和绑定稳定，见 [配置测试验收](development/model-settings-validation.md)。
+
+最新空间与目录规则以 [ADR-0007](architecture/0007-workspace-rooms.md) 为准：品牌只保留 RoomCrew；一工作空间对应一会议室，左侧选择后切换主画布，任务继续后台运行。用户桌面界面与原生壳统一位于根 desktop/，frontend/ 仅预留管理员 Web 界面。多空间验证见 [验收记录](development/workspace-validation.md)。
+
+最新人物与空间规则以 [ADR-0006](architecture/0006-living-studio.md) 为准：用户无需老板替身、助手接待、五至十分钟随机生活活动、同任务配置成员会议、无形象外援电话，以及手绘环境接入。此前三人最低配置与单动作逻辑由该决定覆盖。
+
+当前验证结果与发行包见 [生活与协作验收](development/living-studio-validation.md)。
+
+[ADR-0002：V1 范围与运行合同](architecture/0002-conversation-v1.md) 是原会话基线；当前用户进一步授权的事务所空间、人物持久化、单向表现协议与真实人工恢复以 [ADR-0004](architecture/0004-studio-interaction.md) 为准。正交游戏动画、自定义角色图集与全窗口布局以 [ADR-0005](architecture/0005-game-animation.md) 为准；素材样例见 [制作说明](assets/crew-avatar-example/README.md)。安全 VM 仍未接入。运行与构建见根 README；原会话验证保留在 [历史基线](development/v1-validation.md)，新增验证见 [事务所原型验证](development/studio-validation.md)。
 
 [ADR-0003：后端职责分层](architecture/0003-backend-layers.md) 是当前源码结构依据，包含模块目录、依赖方向、运行/压缩时序，以及新增工具、MCP、Skills 和模型适配的接入位置。实际生产 Loop 仍只有 Deep Agents 一套。
+
+最新原生动画与素材验收见 [游戏表现验证](development/game-animation-validation.md)：包括真实图集选帧、跑步与疑问表情叠加、素材绑定及不影响真实 Agent 工具执行。
+
+个人摸鱼偏好、跨上下文空闲判定与自绘生活片段见 [ADR-0005 第 10 节](architecture/0005-game-animation.md#10-没有工作时的人物生活动作)，仍是单向表现，不增加生产 Agent 循环。
+
+最新单角色美术样板与 v2 裁切协议见 ADR-0005 第 11 节。可从人物属性试用手绘角色并连播，正式任务仍由原有轨迹映射驱动。
+
+完整基础素材库与受限双页 v3 协议见 ADR-0005 第 12 节及 `desktop/ui/studio/assets/library-v1/README.md`：四套可导入角色、496 个姿态、每套 20 种动作，另有家具/装饰/状态特效和可播放总览。常用环境美术已接入房间；其余展示素材按总览说明区分。
 
 ## 当前多 Agent 执行底座设计
 
@@ -26,19 +42,19 @@
 
 | 主题 | 当前有效约定 | 阅读历史文档时注意 |
 | --- | --- | --- |
-| 项目名称 | RoomCrew / 一间事务所 | “数字工作室”等旧称表达同一产品 |
+| 项目名称 | RoomCrew | “数字工作室”等旧称表达同一产品 |
 | Agent Loop | Deep Agents，初始锁定 0.7.32 | 自建小型 Rust Harness / Loop 的推荐已被替代，不再照此实现第二套循环 |
 | 角色与并发 | 老板是 User，助手是通用 Agent 配置，监管员是安全 VM；同配置可并发多个独立 Run | 不按旧方案把三者都作为 Agent；首版协程与每空间 SQLite，不强制每 Run 一个进程 / 数据库 |
 | Rust 与界面框架 | Rust 可用于必要系统组件；Tauri / React / PixiJS 等仍需相应验证 | 不能把历史候选组合当成已完成或全部冻结的选型 |
 | 产品权威 | User、Agent 配置、任务与 Run、共享事实和权限由产品掌握 | 框架 checkpoint、模型声明和动画均不单独决定任务成功或授权 |
-| 代码目录 | frontend/ 为界面交互，backend/ 为底层逻辑 | 不直接照搬历史多服务 / 多包目录模板，按实际任务再创建模块 |
+| 代码目录 | desktop/ 为用户桌面，backend/ 为底层逻辑，frontend/ 仅预留管理员 Web 界面 | 不直接照搬历史多服务 / 多包目录模板，按实际任务再创建模块 |
 | 开发规范 | 根 [AGENTS.md](../AGENTS.md) | 所有方法中文说明“因为……，需要……”，方法体用中文编号步骤，常用能力合理抽象 |
 | 变更记录 | 根 [changelog/](../changelog/) 下每天一个 YYYYMMDD.md | 前后端统一记录，每次只简短写实际改动 |
 | 依赖版本 | 根 pyproject.toml、uv.lock 和 .python-version | HTML 中的历史版本或工具建议不能覆盖当前锁定环境 |
 
 ## 实现边界
 
-当前已进入 V1 会话版开发。HTML 的完整产品流程、架构图和性能目标仍是长期开发指导；只有 ADR-0002 和验证记录明确列出的能力已经接入，不代表安全 VM、浏览器、MCP 和房间渲染已经完成。
+当前已进入事务所交互原型开发，保留会话基线。HTML 的完整产品流程、架构图和性能目标仍是长期指导；只有现行 ADR 和验证记录明确列出的能力已经接入，不代表安全 VM、浏览器、MCP、外部家具/骨骼文件导入或正式商业游戏美术已经完成。
 
 后续实现要先明确当前功能的行为、边界、合同与验收，再按授权任务开发；不能因为完整设计中存在某项能力就提前扩大实现范围。
 

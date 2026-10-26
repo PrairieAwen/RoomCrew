@@ -10,3 +10,5 @@ class TraceEvent:
     actor: str = "助手"
     scope: str = "main"
     payload: dict[str, Any] = field(default_factory=dict)
+    agent_id: str | None = None
+    member_id: str | None = None

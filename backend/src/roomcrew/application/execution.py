@@ -1,12 +1,15 @@
 """Run 受理、组件组装与终态；不实现模型—工具循环。"""
 
 import asyncio
+import time
 from typing import Any
 
+from roomcrew.accounts.service import AccountService
 from roomcrew.agent_loop.engine import DeepAgentsLoop
 from roomcrew.application.options import RunOptions
 from roomcrew.config.schema import ModelProfile
 from roomcrew.config.store import ConfigStore
+from roomcrew.contracts.agents import AgentSpec
 from roomcrew.contracts.errors import ERROR_MESSAGES, ExecutionError
 from roomcrew.mcp.provider import mcp_tools
 from roomcrew.middleware.limits import ModelCallBudget
@@ -15,6 +18,7 @@ from roomcrew.models.factory import create_model
 from roomcrew.platform.paths import AppPaths
 from roomcrew.skills.registry import resolve_skill_sources
 from roomcrew.storage.checkpoints import CheckpointStore
+from roomcrew.storage.run_state import RunStateStore
 from roomcrew.storage.sessions import SessionStore
 from roomcrew.tools.registry import file_backend, local_tools
 
@@ -28,14 +32,19 @@ class ExecutionService:
         store: SessionStore,
         checkpoints: CheckpointStore,
         options: RunOptions,
+        accounts: AccountService,
     ) -> None:
         """因为运行控制需要统一协调状态和资源，需要注入职责明确的模块，而不把实现堆回门面。"""
         # 1、一次应用宿主持有一个调度服务，每轮仍创建独立模型、图、额度和事件适配器。
         self.paths, self.config, self.store = paths, config, store
         self.checkpoints, self.options = checkpoints, options
+        self.accounts = accounts
+        self.state = RunStateStore(store)
         self.active: dict[str, asyncio.Task[None]] = {}
 
-    async def submit(self, conversation_id: str, text: str, request_id: str) -> dict[str, Any]:
+    async def submit(
+        self, conversation_id: str, text: str, request_id: str, member_id: str = "assistant"
+    ) -> dict[str, Any]:
         """因为重复点击或线程并发会重复执行工具，需要检查幂等和固定模型绑定后受理任务。"""
         # 1、请求幂等优先于新配置读取，历史请求重发只返回已有状态。
         text = text.strip()
@@ -45,6 +54,11 @@ class ExecutionService:
         if existing:
             if existing["conversation_id"] != conversation_id or existing["input"] != text:
                 raise ValueError("请求标识已被其他任务使用")
+            if (
+                self.state.context(existing["id"])["binding"]["main"]["actor"]["member_id"]
+                != member_id
+            ):
+                raise ValueError("请求标识已用于其他接单成员")
             return {"run_id": existing["id"], "status": existing["status"]}
         if self.active:
             raise ValueError("首版同时执行一个会话，请先完成或停止当前任务")
@@ -53,9 +67,21 @@ class ExecutionService:
         profile = self.config.require_profile()
         if conversation["profile_ref"] != profile.reference:
             raise ValueError("模型配置已更新，请新建会话后继续")
+        if self.store.latest_status(conversation_id) == "waiting_user":
+            raise ValueError("请先回答或取消本会话的待处理问题")
         if self.store.latest_status(conversation_id) in {"failed", "cancelled", "interrupted"}:
             raise ValueError("本会话上轮已中断或失败，请新建会话继续；历史仍可查看")
-        run_id = self.store.begin(conversation_id, text, request_id)
+        binding = self.accounts.binding(member_id)
+        main = AgentSpec.restore(binding["main"])
+        run_id = self.store.begin(
+            conversation_id,
+            text,
+            request_id,
+            main.actor.name,
+            main.actor.agent_id,
+            main.actor.member_id,
+        )
+        self.state.capture(run_id, binding)
         # 3、先持久化请求，再建立协程；界面通过独立查询读取进展。
         self.active[run_id] = asyncio.create_task(
             self._execute(conversation_id, run_id, text, profile)
@@ -63,12 +89,20 @@ class ExecutionService:
         return {"run_id": run_id, "status": "running"}
 
     async def _execute(
-        self, conversation_id: str, run_id: str, text: str, profile: ModelProfile
+        self,
+        conversation_id: str,
+        run_id: str,
+        text: str,
+        profile: ModelProfile,
+        resume: dict[str, str] | None = None,
     ) -> None:
         """因为任务结果必须来自真实框架，需要组装独立组件、消费产品事件并可靠记录终态。"""
         # 1、所有模块按同一份不可变策略装配；模型调用额度在请求发出前共享预占。
         model = None
-        budget = ModelCallBudget(self.options.limits.model_calls)
+        saved = self.state.context(run_id)
+        budget = ModelCallBudget(self.options.limits.model_calls, saved["model_calls"])
+        started = time.monotonic()
+        waiting = False
         try:
             self.options.capabilities.validate_release()
             extra_tools = local_tools(self.options.capabilities) + mcp_tools(self.options.mcp)
@@ -86,19 +120,50 @@ class ExecutionService:
                 checkpointer=self.checkpoints.saver,
                 limits=self.options.limits,
                 redact=model.redact,
+                main=AgentSpec.restore(saved["binding"]["main"]),
+                workers=[AgentSpec.restore(item) for item in saved["binding"]["workers"]],
             )
             # 2、应用层只消费普通轨迹合同，Loop 不直接操作产品数据库。
-            async with asyncio.timeout(self.options.limits.total_seconds):
-                async for event in loop.stream(conversation_id, text):
+            remaining = self.options.limits.total_seconds - saved["spent"]
+            if remaining <= 0:
+                raise TimeoutError
+            async with asyncio.timeout(remaining):
+                async for event in loop.stream(conversation_id, text, resume):
+                    if event.kind == "human.requested":
+                        waiting = True
+                        if not self.state.request(
+                            conversation_id,
+                            run_id,
+                            event.actor,
+                            event.scope,
+                            event.agent_id or "agent_assistant",
+                            event.member_id or "assistant",
+                            event.payload,
+                        ):
+                            continue
                     self.store.append(
                         conversation_id,
                         run_id,
                         event.kind,
                         event.actor,
                         event.scope,
+                        agent_id=event.agent_id,
+                        member_id=event.member_id,
                         **event.payload,
                     )
-            self.store.finish(run_id, "completed", {"model_calls": budget.calls})
+            if waiting:
+                self.state.wait(run_id)
+                main_actor = AgentSpec.restore(saved["binding"]["main"]).actor
+                self.store.append(
+                    conversation_id,
+                    run_id,
+                    "run.waiting_user",
+                    main_actor.name,
+                    agent_id=main_actor.agent_id,
+                    member_id=main_actor.member_id,
+                )
+            else:
+                self.store.finish(run_id, "completed", {"model_calls": budget.calls})
         # 3、取消、超时和稳定异常分别处理，不把原始 SDK 异常或配置写入轨迹。
         except asyncio.CancelledError:
             self.store.finish(
@@ -114,6 +179,7 @@ class ExecutionService:
         finally:
             # 4、连接和任务登记共同释放，后续任务不会复用仍在关闭的本轮资源。
             try:
+                self.state.usage(run_id, budget.calls, time.monotonic() - started)
                 if model is not None:
                     await model.close()
             finally:
@@ -131,7 +197,58 @@ class ExecutionService:
         if task:
             task.cancel()
             await asyncio.gather(task, return_exceptions=True)
+        else:
+            self.state.cancel(run_id)
+            self.store.finish(run_id, "cancelled", {"message": "已取消等待，旧问题不能继续执行。"})
         return {"stopped": True}
+
+    async def respond(self, request_id: str, answer: str, command_id: str) -> dict[str, Any]:
+        """因为人工回答必须恢复原线程，需要验证问题状态、配置引用与幂等后提交真实 Command。"""
+        # 1、重复提交只返回既有受理结果，不再次进入框架。
+        answer = answer.strip()
+        if not answer or len(answer) > 4000 or not 8 <= len(command_id) <= 100:
+            raise ValueError("请填写有效回答与命令标识")
+        duplicate = self.state.duplicate(command_id, request_id, answer)
+        if duplicate:
+            return {"run_id": duplicate["run_id"], "accepted": True}
+        if self.active:
+            raise ValueError("其他任务正在执行，请稍后提交回答")
+        profile = self.config.require_profile()
+        candidate = self.store.connection.execute(
+            "SELECT h.conversation_id FROM human_requests h WHERE h.id=?", (request_id,)
+        ).fetchone()
+        if (
+            candidate is None
+            or self.store.conversation(candidate[0])["profile_ref"] != profile.reference
+        ):
+            raise ValueError("问题不存在或原模型绑定已经变化")
+        # 2、领取回答后恢复同一 Run，不创建新用户消息或重新执行整段任务。
+        question = self.state.answer(request_id, answer, command_id)
+        run_id, conversation_id = question["run_id"], question["conversation_id"]
+        self.store.append(
+            conversation_id,
+            run_id,
+            "human.responded",
+            question["actor"],
+            question["scope"],
+            agent_id=question["agent_id"],
+            member_id=question["member_id"],
+            request_id=request_id,
+            answer=answer,
+        )
+        main = AgentSpec.restore(self.state.context(run_id)["binding"]["main"]).actor
+        self.store.append(
+            conversation_id,
+            run_id,
+            "run.resumed",
+            main.name,
+            agent_id=main.agent_id,
+            member_id=main.member_id,
+        )
+        self.active[run_id] = asyncio.create_task(
+            self._execute(conversation_id, run_id, "", profile, {request_id: answer})
+        )
+        return {"run_id": run_id, "accepted": True}
 
     async def close(self) -> None:
         """因为关闭应用前必须停止运行，需要先等所有执行协程记录终态并释放模型连接。"""

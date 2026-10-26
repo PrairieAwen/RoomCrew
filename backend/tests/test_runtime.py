@@ -16,8 +16,8 @@ from roomcrew.application.options import RunOptions
 from roomcrew.application.runtime import Runtime
 from roomcrew.config.schema import ConfigurationError
 from roomcrew.config.store import ConfigStore
-from roomcrew.desktop.host import RuntimeThread
 from roomcrew.platform.paths import AppPaths
+from roomcrew_desktop.host import RuntimeThread
 
 TEST_KEY = "synthetic-test-key-never-a-real-credential"
 TEST_MODEL = "private-test-model-identifier"
@@ -201,6 +201,11 @@ async def test_subagent_events_share_one_conversation(tmp_path: Path) -> None:
             assert runtime.store.latest_status(conversation["id"]) == "completed"
             assert (runtime.paths.session_files(conversation["id"]) / "child.txt").exists()
             assert any(e["scope"] != "main" and e["kind"] == "tool.started" for e in events)
+            assert any(
+                e["kind"] == "task.assigned" and e["payload"].get("delegation_kind") == "external"
+                for e in events
+            )
+            assert any(e["payload"].get("presentation_external") for e in events)
             assert {e["conversation_id"] for e in events} == {conversation["id"]}
         finally:
             await runtime.close()
@@ -356,9 +361,9 @@ async def test_conversations_and_model_bindings_are_independent(tmp_path: Path) 
             await runtime.submit(second["id"], "second-conversation-context", uuid4().hex)
             await wait_finished(runtime)
             assert "first-conversation-unique-context" not in json.dumps(requests[-1]["messages"])
-            # 2、配置保存产生新引用，旧历史仍可查看，但不能静默换模型续跑。
+            # 2、实际更换模型才产生新引用，旧历史仍可查看，但不能静默换模型续跑。
             await runtime.save_configuration(
-                {"base_url": endpoint, "model": TEST_MODEL, "api_key": ""}
+                {"base_url": endpoint, "model": TEST_MODEL + "-changed", "api_key": ""}
             )
             with pytest.raises(ValueError, match="模型配置已更新"):
                 await runtime.submit(first["id"], "继续", uuid4().hex)
@@ -462,3 +467,25 @@ async def test_explicit_local_proxy_is_used(tmp_path: Path) -> None:
             assert len(requests) == 1
         finally:
             await runtime.close()
+
+
+def test_unchanged_configuration_preserves_reference_and_ciphertext(tmp_path: Path) -> None:
+    """因为反复保存或测试不能让旧会话绑定失效，需要验证无修改保存保留引用且不重写秘密文件。"""
+    # 1、只使用临时目录和合成凭据，实际调用校验与 DPAPI 原子保存。
+    store = ConfigStore(AppPaths.create(tmp_path).private)
+    values = {"base_url": "https://example.invalid/v1", "model": TEST_MODEL, "api_key": TEST_KEY}
+    original = store.save(values)
+    sealed = store.path.read_bytes()
+    stamp = store.path.stat().st_mtime_ns
+    for key in ("", TEST_KEY):
+        repeated = store.save(
+            {**values, "base_url": " https://example.invalid/v1/ ", "api_key": key}
+        )
+        assert repeated.reference == original.reference
+        assert store.path.read_bytes() == sealed and store.path.stat().st_mtime_ns == stamp
+    # 2、实际更改模型或 Key 仍产生新绑定；更换端点仍不能沿用旧凭据。
+    changed = store.save({**values, "model": "other-test-model"})
+    assert changed.reference != original.reference
+    with pytest.raises(ConfigurationError):
+        store.save({**values, "base_url": "https://other.invalid/v1", "api_key": ""})
+    assert store.require_profile().reference == changed.reference

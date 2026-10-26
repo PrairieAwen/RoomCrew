@@ -1,0 +1,371 @@
+/* 沉浸工作空间：世界覆盖整个客户区，工具面板浮在场景之上。 */
+.studio-mode {
+    display: block;
+    background: #e5dbc8;
+}
+.studio-mode main,
+.studio-mode .conversation-body,
+.studio-mode .chat-panel,
+.studio-mode #studio-panel {
+    position: absolute;
+    inset: 0;
+    display: block;
+    min-height: 0;
+}
+.studio-mode .canvas-wrap {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+.studio-mode #room-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    filter: none;
+    touch-action: none;
+    cursor: grab;
+}
+.studio-mode #room-canvas.panning {
+    cursor: grabbing;
+}
+.studio-mode .topbar {
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    top: 16px;
+    height: 58px;
+    z-index: 40;
+    padding: 0 16px;
+    gap: 15px;
+    border: 1px solid #f6f2dc44;
+    border-radius: 13px;
+    background: #26392ce8;
+    backdrop-filter: blur(16px);
+    box-shadow: 0 7px 25px #4b432d25;
+}
+.drawer-toggle {
+    font-size: 11px;
+    padding: 8px 10px;
+    border: 1px solid #647156;
+    border-radius: 7px;
+    background: #354b38;
+    color: #e4ead5;
+    white-space: nowrap;
+}
+.chat-mode .drawer-toggle {
+    display: none;
+}
+.studio-mode #toggle-details {
+    display: none;
+}
+.studio-mode .topbar > div:first-of-type {
+    flex: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    font-size: 11px;
+}
+.studio-mode .sidebar {
+    position: absolute;
+    left: 18px;
+    top: 88px;
+    bottom: 20px;
+    z-index: 35;
+    width: 234px;
+    border: 1px solid #d4d9bd33;
+    border-radius: 14px;
+    background: #25382de8;
+    backdrop-filter: blur(18px);
+    box-shadow: 0 14px 35px #48402b25;
+    transform: translateX(-280px);
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+        transform 0.18s,
+        visibility 0.18s;
+}
+.studio-mode.workspace-open .sidebar {
+    transform: translateX(0);
+    visibility: visible;
+    pointer-events: auto;
+}
+.studio-mode .team-panel {
+    position: absolute;
+    top: 88px;
+    right: 18px;
+    bottom: 20px;
+    z-index: 35;
+    width: 306px;
+    min-width: 0;
+    border: 1px solid #d4d9bd33;
+    border-radius: 14px;
+    background: #25382deb;
+    backdrop-filter: blur(18px);
+    box-shadow: 0 14px 35px #48402b25;
+    transform: translateX(350px);
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+        transform 0.18s,
+        visibility 0.18s;
+}
+.studio-mode.team-open .team-panel {
+    transform: translateX(0);
+    visibility: visible;
+    pointer-events: auto;
+}
+.studio-mode .scene-toolbar {
+    top: 98px;
+    left: 30px;
+    right: 28px;
+    z-index: 2;
+    color: #3a493e;
+}
+.studio-mode .scene-toolbar h1 {
+    font-size: 21px;
+    text-shadow: 0 1px 0 #fff8;
+}
+.studio-mode .scene-toolbar .eyebrow {
+    color: #7e8c6c;
+    text-shadow: 0 1px 0 #fff8;
+}
+.studio-mode .scene-toolbar p {
+    color: #738069;
+}
+.studio-mode .scene-tools button {
+    background: #365b40e8;
+    color: #ecedd8;
+    border: 1px solid #e4e3c566;
+    box-shadow: 0 4px 14px #4d503326;
+    padding: 10px 13px;
+}
+.studio-mode .scene-footer {
+    left: 30px;
+    right: 28px;
+    bottom: 208px;
+    z-index: 3;
+    color: #495a45;
+}
+.studio-mode .scene-footer > span {
+    background: #f1ead6d9;
+    backdrop-filter: blur(8px);
+    border: 1px solid #ffffff80;
+    border-radius: 16px;
+    padding: 7px 13px;
+    font-size: 10px;
+}
+.studio-mode .scene-footer button {
+    background: #365b40e8;
+    color: #ecedd8;
+    border-color: #f0edcf66;
+    width: 33px;
+    height: 32px;
+}
+.studio-mode .composer-area {
+    position: absolute;
+    z-index: 30;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(720px, calc(100vw - 60px));
+    padding: 12px 16px 10px;
+    border: 1px solid #d4d9bd55;
+    border-radius: 16px;
+    background: #243b2ce8;
+    backdrop-filter: blur(18px);
+    box-shadow: 0 15px 40px #413c2833;
+    transition:
+        left 0.18s,
+        width 0.18s;
+}
+.studio-mode.team-open .composer-area {
+    left: calc(50% - 160px);
+    width: min(720px, calc(100vw - 380px));
+}
+.studio-mode.workspace-open .composer-area {
+    left: calc(50% + 125px);
+    width: min(720px, calc(100vw - 310px));
+}
+.studio-mode.workspace-open.team-open .composer-area {
+    left: calc(50% - 38px);
+    width: calc(100vw - 620px);
+}
+.studio-mode #composer {
+    padding: 5px 8px 3px;
+    background: #eef0de0a;
+    border-color: #c9d2b742;
+}
+.studio-mode #prompt {
+    min-height: 48px;
+    height: 54px;
+    padding: 8px 5px;
+    color: #f2f3df;
+}
+.studio-mode #prompt::placeholder {
+    color: #b2bea6;
+}
+.studio-mode .run-status {
+    color: #bac9ad;
+    margin-bottom: 7px;
+}
+.studio-mode .composer-hint {
+    color: #afbea0;
+    margin-top: 7px;
+}
+.sprite-pixel {
+    image-rendering: pixelated;
+}
+.sprite-smooth {
+    image-rendering: auto;
+}
+#member-dialog {
+    width: min(900px, 96vw);
+}
+.material-card {
+    display: grid;
+    grid-template-columns: 190px 1fr;
+    gap: 24px;
+    padding: 15px;
+    border: 1px solid #4c6143;
+    border-radius: 12px;
+    background: #29392b;
+    margin: 12px 0 18px;
+}
+.material-preview {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(ellipse, #9caf8566, #25372c);
+    border: 1px solid #81957144;
+    border-radius: 10px;
+    min-height: 230px;
+}
+#avatar-preview {
+    width: 100%;
+    height: 210px;
+    overflow: visible;
+}
+.material-preview small {
+    font-size: 9px;
+    color: #bdd0ad;
+    padding: 8px 0 10px;
+}
+.material-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+.material-controls label {
+    margin: 0;
+}
+.material-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+.material-actions button {
+    font-size: 10px;
+    padding: 7px 10px;
+}
+.preview-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+.preview-controls select {
+    min-height: 34px;
+    padding: 6px;
+    font-size: 10px;
+}
+#avatar-feedback {
+    margin: 0;
+    font-size: 10px;
+}
+.room-object:focus-visible,
+.crew-avatar:focus-visible {
+    outline: none;
+    filter: drop-shadow(0 0 7px #c2c98c);
+}
+@media (max-width: 1100px) {
+    .studio-mode .scene-toolbar h1 {
+        font-size: 17px;
+    }
+    .studio-mode .topbar {
+        left: 12px;
+        right: 12px;
+        gap: 7px;
+        padding: 0 10px;
+    }
+    .studio-mode .topbar-right {
+        gap: 7px;
+    }
+    .studio-mode .team-panel {
+        width: 276px;
+        right: 12px;
+    }
+    .studio-mode.team-open .composer-area {
+        left: calc(50% - 145px);
+        width: calc(100vw - 330px);
+    }
+    .studio-mode.workspace-open.team-open .composer-area {
+        left: calc(50% - 22px);
+        width: calc(100vw - 570px);
+    }
+    .studio-mode .composer-hint span {
+        display: none;
+    }
+    .material-card {
+        grid-template-columns: 160px 1fr;
+        gap: 16px;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .studio-mode .sidebar,
+    .studio-mode .team-panel,
+    .studio-mode .composer-area {
+        transition: none;
+    }
+}
+
+/* 空间目录保持悬浮，会议室画布继续覆盖完整客户区。 */
+#workspaces {
+    max-height: 32vh;
+    overflow-y: auto;
+}
+button.workspace-card {
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    color: inherit;
+    border: 1px solid transparent;
+}
+button.workspace-card.selected {
+    background: #40543e;
+    border-color: #90a076;
+    color: #f1efd9;
+}
+button.workspace-card.selected small {
+    color: #c5d2ba;
+}
+.workspace-title {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+.workspace-controls {
+    display: flex;
+    gap: 10px;
+    margin: 4px 0 16px;
+}
+.room-name {
+    color: #605a4a;
+    font-size: 12px;
+    padding: 8px;
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
