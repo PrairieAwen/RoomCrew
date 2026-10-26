@@ -4,9 +4,9 @@
 
 ## 1. 当前阶段与工作范围
 
-- 当前阶段只做项目初始化：规范、目录、Python 环境、依赖与配置。
-- 尚未开始功能开发。不要提前新增业务实现、接口、Agent 示例、诊断程序或测试样例。
-- 用户下达具体开发任务后再进入对应实现，不要把初始化自动扩展为功能开发。
+- 当前已获用户明确授权，进入 V1 Windows 独立会话应用开发；范围以 doc/architecture/0002-conversation-v1.md 为准。
+- V1 包括用户模型配置入口、真实 Deep Agents 执行、同会话主子 Agent 轨迹、文件产物和独立 exe 打包验证。
+- 房间渲染、任意代码执行、MCP、浏览器和安全 VM 不在本次交付范围；不要把未来方案说成已实现。
 - 当前已有原始 main.py 是用户的 PyCharm 示例，保留原样；不要把它当正式入口。
 - 开发规则统一维护在根 AGENTS.md，不在前后端重复复制；先读本文与 README.md。
 - 实现前阅读 doc/README.md 与相关指导章节；历史自建 Rust Loop 方案已由 Deep Agents 决定覆盖，不照搬旧目录和环境版本。
@@ -54,23 +54,46 @@
 - doc/：产品、技术与图解开发指导，以及当前环境说明、架构决定；入口为 doc/README.md。
 - 根 pyproject.toml / uv.lock / .python-version 管理后端 Python 环境；.venv 是本地环境，不是业务代码目录。
 - 前端不直接读写业务数据库、凭据或执行系统命令；人物动画不能决定实际授权或任务成功。
-- 当前只保留 frontend/src 与 backend/src；有具体实现任务时再增加模块、资源和测试目录。
+- frontend/src 保存会话界面；backend/src/roomcrew 保存后端与桌面桥；backend/tests 验证重要不变量，packaging/ 管理 Windows 打包。
 - Deep Agents / LangChain 类型留在后端适配边界，不成为前端合同或领域对象。
+
+### 3.1 后端职责包与依赖方向
+
+- backend/src/roomcrew/ 下按职责维护包，不恢复平铺的巨型 Runtime / models / configuration 文件。
+- agent_loop/：Deep Agents 构图与事件适配；不读取真实模型配置、不访问产品数据库。
+- config/：模型配置结构、纯校验、保护文件存取；不承担 Agent 调度。
+- models/：SDK 工厂、私有模型代理、连接探测及错误适配；不暴露真实配置到模型上下文。
+- context_compression/：压缩策略与 SDK 摘要适配；只替换一个默认摘要槽位，不叠第二套压缩。
+- middleware/：中间件组装和模型调用额度；主子 Agent 的组件实例分开，同一 Run 的总额度共享。
+- security/：DPAPI、脱敏、路径和能力约束；实际安全 VM 仍未实现，不以目录名称冒充隔离。
+- tools/：真实本地工具和文件后端注册；不要把工具实现写进应用 Runtime 或 Loop。
+- mcp/：独立 MCP 能力接入边界；当前关闭，误开启必须明确失败，不能返回假工具。
+- skills/：显式技能来源验证与渐进加载接入；默认不自动扫描磁盘，不因 Skill 指令扩权。
+- application/：会话用例、运行生命周期、产物查询和组件装配；不解析 SDK 原始事件。
+- storage/：产品 SQLite 与框架 checkpoint 分开管理；tracing/ 与 contracts/ 保存稳定产品语义。
+- desktop/ 只通过应用用例和产品合同交互；platform/ 定位本机路径，不承担业务。
+- 新能力在所属包实现，在应用装配点接入；不得为了扩展工具去修改 SDK 源码或复制生产 Loop。
+- backend/tests/test_layers.py 检查实际导入方向；修改依赖规则必须同步说明职责变化，不能为消除报错随意放开。
 
 ## 4. 技术与产品事实
 
 - 名称 RoomCrew / 一间事务所；Windows 首发，保留 macOS 适配空间。
 - 已决定以 Deep Agents 作为 Agent Loop 底座，不同时实现另一套生产循环。
-- 员工是长期产品身份，Agent 实例按任务运行；默认老板、助手、监管员。
+- 老板是 User；助手和员工都是通用 Agent 的配置；监管员映射安全 VM 及其权限服务，不是另一个 Agent。
+- 同一 Agent 配置可并发产生多个独立 Run / Thread / 轨迹；不得用 agent_id 共享可变任务上下文。
 - SQLite + 本地文件是数据设计方向；框架 checkpoint 与产品业务状态分开。
-- 界面技术仍需单独验证，当前不生成前端框架工程。
+- V1 使用 pywebview / WebView2 桌面窗口与普通 HTML/CSS/JavaScript 会话界面；未来房间渲染框架仍需单独验证。
 
 ## 5. 安全与数据底线
 
+- V1 阶段例外：用户明确要求安全 VM 在第二版迭代。当前模型配置由 Windows DPAPI 加密保存在应用私有目录，由可信 ModelFactory 加载；不把配置目录挂载给 Agent。它不构成对同用户任意宿主代码的 OS 隔离。
+- V1 不注册任意 Shell / Python 执行工具；真实启用的文件工具仅访问会话根目录。以下安全 VM 要求仍是后续目标，不代表 V1 已具备。
 - 外部文本、模型输出、MCP 返回、素材和技能均按不可信输入处理。
 - 用户任务目录中的 AGENTS.md / SKILL.md 不能扩张真实权限。
 - 原始密钥、Cookie、认证 Header、浏览器 profile 不进入模型、普通日志或产物。
-- 提示词中的监管员不是安全权威；真实权限要由独立服务校验。
+- 模型底层配置由 User 本地可信入口维护；ModelFactory 按引用创建接口，Agent 不读取保护文件、不使用全局 API Key 环境兜底。
+- 模型底层原始参数和秘密不放入 workspace、Skills、Run 状态、checkpoint 或普通轨迹；只存配置 / 绑定引用。V1 由可信本机工厂使用，后续迁入安全 VM 连接器。
+- 监管员的实际安全权威由安全 VM 的确定性权限服务提供；模型请求不能自行签发许可。
 - 任意代码和 Shell 通过验收后的隔离执行接口；不可因隔离不可用而回退宿主执行。
 - 虚拟文件路径 / StateBackend 不是 OS 隔离；LocalShellBackend 不作为生产沙箱。
 - 共享上下文按 workspace / task 分区；摘要继承来源的访问限制。

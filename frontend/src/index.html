@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'">
+  <title>RoomCrew · 一间事务所</title>
+  <link rel="stylesheet" href="app.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="brand"><span class="brand-icon">R</span><div>RoomCrew<small>一间事务所</small></div><span class="version">01</span></div>
+  <button id="new-chat" class="new-chat"><span>＋</span> 新建会话 <kbd>Ctrl N</kbd></button>
+  <div class="section-label">我的会话 <span id="session-count">0</span></div>
+  <nav id="conversations" aria-label="会话列表"></nav>
+  <div class="sidebar-bottom"><div class="local-badge"><span class="dot"></span>本地运行 <span>SQLite + 文件</span></div><button id="open-settings" class="settings-button">⚙ <span>模型配置</span><span id="config-state">未配置</span></button></div>
+</aside>
+<main>
+  <header class="topbar"><div><span class="breadcrumb">我的工作空间</span><span class="slash">/</span><strong id="chat-title">新会话</strong></div><div class="topbar-right"><span class="pill"><span class="dot"></span>Deep Agents</span><button id="toggle-details" class="quiet-button">执行详情 ☷</button></div></header>
+  <div class="conversation-body">
+    <section class="chat-panel">
+      <div id="timeline" aria-live="polite"><div id="welcome" class="welcome"><div class="welcome-icon">R<span>✦</span></div><div class="eyebrow">YOUR LOCAL AI CREW</div><h1>把想法，交给你的团队。</h1><p>从一个任务开始。规划、工具和协作过程，<br>都会留在同一个会话里。</p><div class="welcome-cards"><div><span>01</span><strong>配置你的模型</strong><p>填入接口地址、模型 ID 和 API Key</p></div><div><span>02</span><strong>提交真实任务</strong><p>由 Deep Agents 自主规划和执行</p></div><div><span>03</span><strong>核对过程与产物</strong><p>查看工具记录、子 Agent 和文件</p></div></div><button id="welcome-settings" class="primary-button">配置模型 →</button></div></div>
+      <div class="composer-area"><div id="run-status" class="run-status"><span class="dot"></span><span>准备就绪</span></div><form id="composer"><textarea id="prompt" rows="2" maxlength="32000" placeholder="告诉助手，你想完成什么…" aria-label="任务内容"></textarea><div class="composer-footer"><span>工具执行 · 会话独立文件 · 本地轨迹</span><div><button id="stop" type="button" class="stop-button" hidden>■ 停止</button><button id="send" type="submit" class="send-button" aria-label="发送任务">↑</button></div></div></form><div class="composer-hint">Enter 发送 · Shift + Enter 换行 <span>模型可能出错，请核对实际产物</span></div></div>
+    </section>
+    <aside id="details-panel" class="details-panel"><div class="details-heading">会话详情 <span>LIVE</span></div><div class="detail-section"><h3>执行概况</h3><div class="stats"><div><strong id="stat-model">0</strong><span>模型调用</span></div><div><strong id="stat-tools">0</strong><span>工具调用</span></div><div><strong id="stat-agents">1</strong><span>参与者</span></div></div></div><div class="detail-section"><h3>参与者 <span>同一会话</span></h3><div id="participants"><div class="participant"><span class="avatar">R</span><div>助手<small>通用 Agent</small></div><span class="participant-dot"></span></div></div></div><div class="detail-section"><h3>产物文件 <button id="refresh-files" class="text-button">刷新</button></h3><div id="artifacts" class="artifacts"><p class="muted">执行后，真实文件会出现在这里。</p></div></div><div class="detail-section capability-box"><h3>当前能力</h3><p>文件读写与检索<br>任务规划与子 Agent 委派<br>本机日期时间</p><div class="scope-note">首版未接入 Shell、MCP、浏览器和安全 VM。</div></div></aside>
+  </div>
+</main>
+<dialog id="settings-dialog"><form id="settings-form" class="settings-form"><div class="modal-heading"><div><div class="eyebrow">MODEL CONNECTION</div><h2>连接你的模型</h2></div><button id="close-settings" type="button" class="close-button" aria-label="关闭配置">×</button></div><p class="modal-intro">配置只供本地程序创建模型使用，不放入 Agent 的任务目录或会话上下文。</p><label>连接协议<input value="OpenAI 兼容 · Chat Completions" disabled></label><div class="form-grid"><label>配置名称<input id="model-label" value="默认模型" maxlength="80" required></label><label>模型 ID<input id="model-id" placeholder="填写服务商提供的准确模型 ID" maxlength="200" required></label></div><label>Base URL<input id="base-url" type="url" placeholder="https://api.example.com/v1" required><small>填写 API 根地址，通常以 /v1 结尾，不包含 /chat/completions。</small></label><label>代理地址（可选）<input id="model-proxy" type="url" placeholder="http://127.0.0.1:7897"><small>需要本机代理时填写；留空直接连接，不继承系统代理。</small></label><label>API Key<input id="api-key" type="password" placeholder="首次必填；保存后不回显" autocomplete="new-password"><small id="key-hint">使用 Windows 本地加密保护，不保存到源码或 .env。</small></label><div class="form-grid"><label>单次请求超时（秒）<input id="model-timeout" type="number" min="10" max="600" value="90" required></label><label>上下文窗口（Token）<input id="context-window" type="number" min="4096" max="2000000" value="32768" required></label></div><div class="config-note">模型必须支持标准工具调用。保存后先测试连接，再用真实任务验证；修改配置后请新建会话。</div><div id="settings-result" class="settings-result" role="status"></div><div class="modal-footer"><button id="test-model" type="button" class="secondary-button">测试已保存配置</button><button id="save-model" type="submit" class="primary-button">保存配置</button></div></form></dialog>
+<dialog id="file-dialog"><div class="modal-heading"><h2 id="file-title">文件预览</h2><button id="close-file" class="close-button" aria-label="关闭预览">×</button></div><pre id="file-content"></pre></dialog>
+<div id="toast" class="toast" role="alert" hidden></div>
+</body>
+</html>

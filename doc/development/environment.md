@@ -7,10 +7,11 @@
 - 项目托管解释器位于 .tools/python/，缓存位于 .cache/uv/。
 - Deep Agents 0.7.32；其他依赖以根 uv.lock 为准。
 - OpenAI / Anthropic / Google 模型适配器、MCP 和 SQLite checkpoint 支持已安装。
-- Ruff、mypy、pytest 仅预装和配置，没有业务代码或测试用例。
+- pywebview 6.2.1、pythonnet 3.2.1；原生窗口使用系统 WebView2 与 .NET Framework 4.8。
+- 构建组 PyInstaller 6.22.3；Ruff、mypy、pytest 已用于 V1 会话版验证。
 
 所有项目工具 / 缓存 / 环境目录均 Git 忽略，不替换系统 Python，不改全局 PATH / 注册表。
-pyproject 的 package=false 表示只管理依赖；当前不安装 RoomCrew 包或入口。
+pyproject 的 package=false 表示使用源码和明确的冻结入口，不安装全局 RoomCrew 包。源码入口为 packaging/desktop_entry.py，发行入口为 dist/RoomCrew/RoomCrew.exe。
 
 ## PyCharm
 
@@ -35,6 +36,8 @@ $env:UV_PYTHON_INSTALL_DIR = Join-Path (Get-Location) '.tools/python'
 
 ## 配置与验证边界
 
-.env.example 只提供不含秘密的开发变量模板，当前没有程序读取它。不要提交真实 API Key。
-当前仅检查解释器、依赖一致性、配置可解析与目录；不调用模型、不启动 VM / 浏览器、不运行 Agent Demo。
-前端 Node / Rust / 构建链在对应界面开发任务中准备，不在本轮安装系统组件。
+.env.example 只提供不含秘密的开发变量模板，程序不加载它。用户在原生窗口手动配置模型，DPAPI 文件位于本地应用 private/ 目录；不在 .env 填写 API Key，不从系统环境兜底。V1 由可信工厂创建模型，安全 VM 后续迭代。具体边界见 [ADR-0002](../architecture/0002-conversation-v1.md)。
+
+测试使用真实 Deep Agents / SDK / 工具，但远程响应由本机协议服务替代；原生窗口测试验证实际表单与桌面桥。真实服务验证由用户在应用内填写 Key 后执行。详见根 README 与验证记录。
+
+前端为普通 HTML/CSS/JavaScript，运行和打包不需要 Node / Rust；node --check 仅用于开发期语法检查。Windows 用户只需要完整发行目录和 WebView2 / .NET 系统前提。
