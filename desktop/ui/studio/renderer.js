@@ -244,16 +244,16 @@ class CrewRenderer {
             patternUnits: "userSpaceOnUse",
         });
         pattern.append(
-            crewSvg("rect", { width: 96, height: 48, fill: "#e5dbc8" }),
+            crewSvg("rect", { width: 96, height: 48, fill: "#f3f3ef" }),
             crewSvg("path", {
                 d: "M0,24 L48,0 L96,24 L48,48Z M-48,0 L0,24 L48,0 M48,48 L96,24 L144,48",
                 fill: "none",
-                stroke: "#c8bba2",
+                stroke: "#dcdfdc",
                 "stroke-width": 0.6,
             }),
             crewSvg("path", {
                 d: "M0,25 L48,49 M49,1 L95,24",
-                stroke: "#f8efdc",
+                stroke: "#ffffff",
                 "stroke-width": 0.7,
             }),
         );
@@ -269,9 +269,9 @@ class CrewRenderer {
             }),
         );
         // 2、软装保持原格网，高墙单独延伸到镜头外，窗户与标识随新墙面抬高。
-        this.rug(floor, [2, 7], 11, 5, "#b2b9a4");
-        this.rug(floor, [15, 2], 8, 7, "#aebdbc");
-        this.rug(floor, [1, 14], 6, 4, "#c9ad85");
+        this.rug(floor, [2, 7], 11, 5, "#dce3de");
+        this.rug(floor, [15, 2], 8, 7, "#dbe3e8");
+        this.rug(floor, [1, 14], 6, 4, "#e8dfd0");
         this.environment.drawWalls(floor);
         for (let i = 0; i < 12; i++) {
             const p = crewProject([0.1, 3 + i * 3.1]),
@@ -563,9 +563,17 @@ class CrewRenderer {
                     view.member.avatar_id,
                     sample,
                 );
+                const loading =
+                    view.member.avatar_id?.startsWith("avatar:") &&
+                    !custom &&
+                    !this.skins.errors.has(view.member.avatar_id);
                 view.rig.root.setAttribute(
+                    "display",
+                    custom || loading ? "none" : "inline",
+                );
+                view.bubbleActor.setAttribute(
                     "visibility",
-                    custom ? "hidden" : "visible",
+                    loading ? "hidden" : "visible",
                 );
                 if (!custom) this.rig.paint(view.rig, sample, dt);
                 if (view.bubbleText) this.positionBubble(view, sample, custom);
@@ -649,7 +657,11 @@ class CrewRenderer {
         if (sample.material_binding?.clip)
             seat =
                 sample.material_binding.clip.split(".")[2] === "seated" ? 1 : 0;
-        const anchor = crewBubbleAnchor(manifest, seat);
+        const registration =
+            custom && view.member.material_profile?.normalize !== false
+                ? this.skins.cache.get(view.member.avatar_id)?.registration
+                : null;
+        const anchor = crewBubbleAnchor(manifest, seat, registration);
         const key = `${anchor.x.toFixed(3)},${anchor.y.toFixed(3)}`;
         // 2、挂点位于共用人物变换的提示根节点，镜头由共同 world 继承，不单独追踪屏幕位置。
         if (key !== view.bubblePosition) {

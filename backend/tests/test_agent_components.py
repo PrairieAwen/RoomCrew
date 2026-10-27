@@ -41,6 +41,14 @@ async def test_parent_worker_share_budget_before_real_requests(tmp_path: Path) -
         options = RunOptions(limits=RunLimits(model_calls=2))
         runtime = await configured_runtime(tmp_path, endpoint, options)
         try:
+            worker = await runtime.save_member({"name": "额度验收员"}, 0)
+            responses[0] = tool_message(
+                "task",
+                {
+                    "description": "保存给定资料",
+                    "subagent_type": "member_" + worker["id"],
+                },
+            )
             conversation = await runtime.new_conversation()
             await runtime.submit(conversation["id"], "委派员工保存资料", uuid4().hex)
             await wait_finished(runtime)

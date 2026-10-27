@@ -31,6 +31,7 @@ class CrewMaterialPanel {
             "member-skin",
             "member-hair",
             "member-glasses",
+            "member-normalize",
         ])
             el(key).addEventListener("input", this.appearance.bind(this));
         for (const key of [
@@ -164,6 +165,9 @@ class CrewMaterialPanel {
         );
         el("avatar-preview").replaceChildren(group);
         this.view = { group, rig, badge };
+        this.view.member = {
+            material_profile: { normalize: el("member-normalize").checked },
+        };
     }
 
     /** 因为预览切换不能继承旧片段进度，需要从新动作起点播放。 */
@@ -377,8 +381,8 @@ class CrewMaterialPanel {
                 sample,
             );
             this.view.rig.root.setAttribute(
-                "visibility",
-                custom ? "hidden" : "visible",
+                "display",
+                custom ? "none" : "inline",
             );
             if (!custom) this.rig.paint(this.view.rig, sample, dt);
             el("avatar-preview").dataset.action = action;

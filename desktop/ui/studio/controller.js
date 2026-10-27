@@ -455,7 +455,7 @@ class CrewStudio {
         document.body.classList.remove("conversation-open");
     }
 
-    /** 因为未读泡泡可能来自旧任务，需要打开通知对应的会话，成功后才保存该条结果的已读回执。 */
+    /** 因为未读泡泡可能积累同会话多轮结果，需要成功展示后按实际加载上界一起确认该人物的结果。 */
     async openConversation(identifier, notice = null) {
         // 1、固定点击时的通知身份，不能被新任务的会话或并行轮询替换。
         const fact = this.renderer.facts.get(identifier);
@@ -470,15 +470,31 @@ class CrewStudio {
                 state.conversation?.id !== conversation
             )
                 return false;
-            // 2、打开人工表单不等于答复；完成结果只有成功展示后才持久化已读。
+            // 2、打开人工表单不等于答复；只确认已加载的同会话结果，不吞掉其他会话和后来新结果。
             if (
                 notice?.kind === "question" ||
                 (!notice && fact?.requires_input)
             )
                 await this.showQuestions(notice?.request_id);
             else if (notice?.kind === "result") {
-                await api("acknowledge_bubble", identifier, notice.id);
-                if (epoch === state.workspaceEpoch) await this.refresh();
+                await api(
+                    "acknowledge_bubble",
+                    identifier,
+                    notice.id,
+                    state.cursor,
+                );
+                if (epoch === state.workspaceEpoch) {
+                    await this.refresh();
+                    const remaining =
+                        this.renderer.facts.get(identifier)?.bubble_notice;
+                    if (
+                        remaining?.kind === "result" &&
+                        remaining.conversation_id !== conversation
+                    )
+                        toast(
+                            "本会话结果已查看；该成员还有其他会话的未读结果。",
+                        );
+                }
             }
             return true;
         } catch (error) {
@@ -522,6 +538,10 @@ class CrewStudio {
             this.openFurniture(identifier);
             return;
         }
+        if (this.data.scene.room.objects.find(crewArchiveObject, identifier)) {
+            el("archive-dialog").showModal();
+            return;
+        }
         const anchor = this.data.scene.anchors.find(
             crewObjectAnchor,
             identifier,
@@ -535,6 +555,7 @@ class CrewStudio {
         // 1、新人物默认独立 Agent，也可选择引用现有定义。
         this.fillMember({
             name: "新成员",
+            avatar_id: this.data.default_avatars?.employee || "builtin:crew-v1",
             color: "#759c8c",
             skin: "#edc39b",
             hair: "#51443e",
@@ -1006,4 +1027,10 @@ async function crewLoadAvatar(identifier) {
 function crewQuestionPresenter(member) {
     // 1、仅改变表单显示，实际答复仍使用原 request_id 恢复原子任务。
     return member.id === String(this);
+}
+
+/** 因为档案室只是基础设施入口，需要按家具类型识别而不把它当可执行员工。 */
+function crewArchiveObject(object) {
+    // 1、只匹配当前房间注册的档案室，不读取其他空间。
+    return object.id === String(this) && object.type === "archive";
 }

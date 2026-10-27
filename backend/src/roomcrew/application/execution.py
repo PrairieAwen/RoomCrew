@@ -12,6 +12,7 @@ from roomcrew.config.schema import ModelProfile
 from roomcrew.config.store import ConfigStore
 from roomcrew.contracts.agents import AgentSpec
 from roomcrew.contracts.errors import ERROR_MESSAGES, ExecutionError
+from roomcrew.middleware.delegation import ConfiguredDelegationMiddleware
 from roomcrew.middleware.limits import ModelCallBudget
 from roomcrew.middleware.stack import build_middleware
 from roomcrew.models.factory import create_model
@@ -145,7 +146,10 @@ class ExecutionService:
                 model=model,
                 backend=backend,
                 tools=extra_tools,
-                middleware=build_middleware(model, backend, self.options.compression),
+                middleware=[
+                    *build_middleware(model, backend, self.options.compression),
+                    ConfiguredDelegationMiddleware(workers),
+                ],
                 worker_middleware={
                     worker.tool_name: build_middleware(model, backend, self.options.compression)
                     for worker in workers

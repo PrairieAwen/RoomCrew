@@ -45,7 +45,7 @@ async def test_bubbles_persist_on_member_without_entering_agent_snapshot(tmp_pat
                     "action_overrides": {"completed": "listen"},
                 },
             },
-            1,
+            (await runtime.member("assistant"))["revision"],
         )
         assert "bubble" not in str(runtime.accounts.binding())
         conversation = runtime.store.create_conversation("synthetic-profile-reference")

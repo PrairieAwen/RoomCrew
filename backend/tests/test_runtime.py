@@ -168,7 +168,7 @@ async def test_real_loop_writes_reads_and_preserves_context(tmp_path: Path) -> N
                     and endpoint not in context
                 )
                 names = {item["function"]["name"] for item in request["tools"]}
-                assert "execute" not in names and "task" in names
+                assert "execute" not in names and "task" not in names
             await runtime.submit(conversation["id"], "接着处理", uuid4().hex)
             await wait_finished(runtime)
             assert any(m.get("role") == "tool" for m in requests[-1]["messages"])
@@ -197,6 +197,14 @@ async def test_subagent_events_share_one_conversation(tmp_path: Path) -> None:
     with model_server(responses) as (endpoint, _):
         runtime = await configured_runtime(tmp_path, endpoint)
         try:
+            worker = await runtime.save_member({"name": "文件员工"}, 0)
+            responses[0] = tool_message(
+                "task",
+                {
+                    "description": "将给定资料写到 /child.txt。",
+                    "subagent_type": "member_" + worker["id"],
+                },
+            )
             conversation = await runtime.new_conversation()
             await runtime.submit(conversation["id"], "委派员工保存给定资料", uuid4().hex)
             await wait_finished(runtime)
@@ -205,10 +213,10 @@ async def test_subagent_events_share_one_conversation(tmp_path: Path) -> None:
             assert (runtime.paths.session_files(conversation["id"]) / "child.txt").exists()
             assert any(e["scope"] != "main" and e["kind"] == "tool.started" for e in events)
             assert any(
-                e["kind"] == "task.assigned" and e["payload"].get("delegation_kind") == "external"
+                e["kind"] == "task.assigned" and e["payload"].get("delegation_kind") == "configured"
                 for e in events
             )
-            assert any(e["payload"].get("external_worker") for e in events)
+            assert any(e.get("member_id") == worker["id"] for e in events)
             assert {e["conversation_id"] for e in events} == {conversation["id"]}
         finally:
             await runtime.close()

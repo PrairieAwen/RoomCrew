@@ -3,7 +3,12 @@
 from collections.abc import AsyncIterator, Callable, Mapping, Sequence
 from typing import Any
 
-from deepagents import create_deep_agent
+from deepagents import (
+    GeneralPurposeSubagentProfile,
+    HarnessProfile,
+    create_deep_agent,
+    register_harness_profile,
+)
 from deepagents.backends.protocol import BackendProtocol
 from deepagents.middleware.subagents import SubAgent
 from langchain.agents.middleware import AgentMiddleware
@@ -22,6 +27,11 @@ from roomcrew.contracts.agents import ActorRef, AgentSpec
 from roomcrew.contracts.errors import ExecutionError
 from roomcrew.contracts.limits import RunLimits
 from roomcrew.tracing.events import TraceEvent
+
+register_harness_profile(
+    "roomcrew:private",
+    HarnessProfile(general_purpose_subagent=GeneralPurposeSubagentProfile(enabled=False)),
+)
 
 
 class DeepAgentsLoop:
@@ -45,11 +55,7 @@ class DeepAgentsLoop:
         """因为图框架不能承担配置和产品存储职责，需要通过公开参数注入本轮已组装好的组件。"""
         # 1、主子 Agent 使用同一类底座；显式声明 worker，避免自定义策略只作用于主 Agent。
         main = main or AgentSpec(ActorRef(), "main", "通用助手", "")
-        workers = (
-            list(workers)
-            if workers is not None
-            else [AgentSpec(main.actor, "general-purpose", "执行通用子任务", "")]
-        )
+        workers = [spec for spec in (workers or []) if spec.tool_name != "general-purpose"]
         subagents: list[SubAgent] = [
             {
                 "name": spec.tool_name,

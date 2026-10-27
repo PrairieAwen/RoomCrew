@@ -158,16 +158,8 @@ class AccountService:
             and item["id"] != member_id
         ]
         main = self._spec(root, "main")
-        # 2、默认通用子任务归属于当前人物的独立上下文，不伪造一个已招募员工。
-        general = AgentSpec(
-            main.actor,
-            "general-purpose",
-            "通用子任务执行",
-            main.prompt,
-            main.revision,
-            main.configuration,
-        )
-        workers = [general, *[self._spec(item, "member_" + item["id"]) for item in members]]
+        # 2、只装配本空间显式配置的成员或独立定义，不再隐式增加通用外援。
+        workers = [self._spec(item, "member_" + item["id"]) for item in members]
         attached = {item.get("agent_id") for item in self.repository.members()}
         for definition in self.repository.agent_definitions():
             if definition["id"] not in attached:

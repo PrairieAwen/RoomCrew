@@ -3,10 +3,18 @@
 const CREW_BUBBLE_SOCKET_CACHE = new WeakMap();
 
 /** 因为人物移动和镜头变化应由同一个父变换带动，需要只计算角色局部挂点。 */
-function crewBubbleAnchor(manifest, seatMix = 0) {
+function crewBubbleAnchor(manifest, seatMix = 0, registration = null) {
     // 1、起坐使用连续姿态插值；行走帧和相机信息不能改变局部挂点。
     const seat = Math.max(0, Math.min(1, seatMix));
     if (!manifest) return { x: 0, y: -116 + seat * 13 };
+    if (registration?.sockets)
+        return {
+            x: 0,
+            y:
+                registration.sockets.standing +
+                (registration.sockets.seated - registration.sockets.standing) *
+                    seat,
+        };
     let sockets = CREW_BUBBLE_SOCKET_CACHE.get(manifest);
     if (!sockets) {
         sockets = crewAtlasBubbleSockets(manifest);

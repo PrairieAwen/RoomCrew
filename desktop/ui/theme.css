@@ -1,0 +1,316 @@
+/* 唯一界面配色层：白色面板、深色正文、少量蓝灰强调；场景美术保留柔和木色。 */
+:root {
+    color-scheme: light;
+    --bg: #ffffff;
+    --panel: #ffffff;
+    --surface-soft: #f6f7f9;
+    --line: #e3e7ed;
+    --text: #202936;
+    --muted: #667385;
+    --accent: #315d91;
+}
+body,
+.studio-mode {
+    background: var(--bg);
+    color: var(--text);
+}
+button:hover {
+    filter: none;
+}
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 2px solid #6c93c2;
+    outline-offset: 3px;
+}
+.studio-mode .topbar,
+.studio-mode .sidebar,
+.studio-mode .team-panel,
+.studio-mode .composer-area,
+.studio-mode.conversation-open #timeline,
+.details-panel,
+dialog {
+    color: var(--text);
+    background: #fffffff7;
+    border-color: var(--line);
+    box-shadow: 0 6px 28px #2030480c;
+    backdrop-filter: blur(12px);
+}
+.studio-mode.conversation-open #timeline {
+    padding: 22px;
+}
+.studio-mode .topbar {
+    border-radius: 12px;
+}
+dialog::backdrop {
+    background: #26364955;
+    backdrop-filter: blur(3px);
+}
+#questions-dialog {
+    background: #fff;
+    border-color: #dbe2ec;
+    box-shadow: 0 24px 90px #15243b33;
+    backdrop-filter: none;
+}
+#questions-dialog::backdrop {
+    background: #19233255;
+    backdrop-filter: blur(8px);
+}
+#questions-dialog .modal-intro {
+    font-size: 13px;
+}
+#questions-dialog .question-choices button {
+    background: #fff;
+    border-color: #d6dee8;
+    border-radius: 9px;
+}
+#questions-dialog .question-choices button:hover,
+#questions-dialog .question-choices button:focus-visible {
+    background: #edf3fc;
+    border-color: #8eadd2;
+    color: #264f81;
+}
+.drawer-toggle,
+.question-button,
+.settings-button,
+.new-chat,
+.secondary-button,
+.view-switch,
+.studio-mode .scene-tools button,
+.studio-mode .scene-footer button,
+.member-config-tabs button,
+.team-card,
+.welcome-cards > div,
+.workspace-card,
+.material-card,
+.agent-abilities,
+.question-card,
+.scope-note,
+.idle-options {
+    background: var(--surface-soft);
+    color: var(--text);
+    border-color: var(--line);
+}
+.drawer-toggle:hover,
+.settings-button:hover,
+.new-chat:hover,
+.team-card:hover,
+.secondary-button:hover,
+.workspace-card:hover {
+    background: #edf2f8;
+}
+.workspace-card > span,
+.brand small,
+.version,
+.eyebrow,
+.pill,
+.detail-section h3,
+.details-heading > span,
+.member-config-tabs button,
+.agent-abilities summary,
+.selected-avatar,
+.welcome-icon,
+.welcome-icon span {
+    color: var(--accent);
+}
+.brand-icon,
+.send-button,
+.primary-button,
+#quick-create-workspace {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+}
+.view-switch button.active,
+.member-config-tabs button[aria-selected="true"],
+button.workspace-card.selected,
+.conversation-item.active,
+.team-card.selected {
+    background: #eaf0f8;
+    color: #264f81;
+    border-color: #c9d8ec;
+}
+.studio-mode #view-room,
+.studio-mode.conversation-open #view-chat,
+.chat-mode #view-chat {
+    background: #eaf0f8;
+    color: #264f81;
+}
+.studio-mode.conversation-open #view-room {
+    background: transparent;
+    color: var(--muted);
+}
+button.workspace-card.selected small {
+    color: #4e6381;
+}
+.studio-mode #composer {
+    background: #fff;
+    border-color: #dce3ec;
+    padding: 10px 12px 8px;
+}
+.studio-mode #prompt,
+input,
+select,
+textarea,
+.message-text,
+.tool-event pre {
+    color: var(--text);
+}
+input:not([type="checkbox"]):not([type="color"]),
+select,
+dialog textarea {
+    background: #fff;
+    border: 1px solid #d6dee8;
+    border-radius: 8px;
+}
+input::placeholder,
+textarea::placeholder,
+.studio-mode #prompt::placeholder {
+    color: #7a8798;
+}
+.message.user .message-text {
+    background: #f0f4fa;
+    border-color: #e3eaf3;
+    color: #27384f;
+}
+.message.assistant .message-text {
+    color: var(--text);
+}
+.message-header,
+.message-meta,
+.message-role,
+.tool-event,
+.tool-event .tool-name,
+.model-event,
+.run-event,
+.subagent-label,
+.run-status,
+.studio-mode .run-status,
+.composer-hint,
+.studio-mode .composer-hint,
+.muted,
+.modal-intro,
+.scope-note,
+.section-label,
+.section-label span,
+.breadcrumb,
+.slash,
+kbd,
+.quiet-button,
+.material-preview small,
+.room-name,
+.detail-section p,
+.agent-abilities small {
+    color: var(--muted);
+}
+.tool-event pre,
+pre,
+code {
+    background: #f5f7fa;
+    border-color: var(--line);
+    color: #35445c;
+}
+.tool-event summary {
+    color: #56657a;
+}
+.run-event.error,
+.error,
+.stop-button {
+    color: #a94438;
+}
+.success,
+.local-badge {
+    color: #386859;
+}
+.scope-note {
+    line-height: 1.85;
+}
+.studio-mode.conversation-open .message-text {
+    font-size: 14px;
+    line-height: 1.9;
+}
+.material-preview {
+    background: radial-gradient(ellipse, #eef1f5, #e1e7ee);
+    border-color: var(--line);
+}
+.material-card {
+    background: #f8fafc;
+}
+.crew-speech-bubble {
+    background: #fff;
+    color: #26374b;
+    border-color: #8798ae;
+}
+.crew-speech-bubble:hover {
+    background: #f8fbff;
+    border-color: var(--accent);
+}
+.crew-bubble-pointer {
+    fill: #fff;
+    stroke: #8798ae;
+}
+.studio-mode .scene-footer > span {
+    background: #fffffff0;
+    color: var(--muted);
+    border-color: var(--line);
+}
+.toast {
+    background: #fff;
+    color: var(--text);
+    border-color: #d4deeb;
+    box-shadow: 0 8px 28px #20304820;
+}
+.archive-state {
+    background: #f5f8fc;
+    padding: 26px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    margin: 24px 0;
+}
+.archive-state > span {
+    display: block;
+    font-size: 32px;
+    color: var(--accent);
+    margin-bottom: 16px;
+}
+.archive-state p {
+    color: var(--muted);
+    line-height: 1.9;
+    margin-bottom: 0;
+}
+#open-archive {
+    justify-content: flex-start;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+#open-archive small {
+    margin-left: auto;
+    color: var(--muted);
+}
+.studio-mode #task-member {
+    background: #f0f4fa;
+    color: #2b4c72;
+    border-color: #d6e0ed;
+}
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+.checkbox-label input {
+    width: auto;
+}
+@media (max-width: 1200px) {
+    .studio-mode .topbar {
+        gap: 7px;
+        padding: 0 12px;
+    }
+    .studio-mode .topbar-right {
+        gap: 7px;
+    }
+    #quick-create-workspace {
+        font-size: 11px;
+        padding: 8px;
+    }
+}

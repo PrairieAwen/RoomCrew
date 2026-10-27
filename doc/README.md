@@ -1,8 +1,14 @@
 # RoomCrew 开发指导
 
+最新界面与工作区规范见 [ADR-0011](architecture/0011-coherent-studio-and-workspace-roster.md)：统一视觉注册、独立工作区与配置名单。它覆盖旧文档中隐式通用外援和深色界面的描述；档案室仅有规划入口，归档与长期记忆尚未开发。
+
 先读本页，再阅读相关 HTML。三份 HTML 是此前讨论中最后生成的版本，正文原样保留；后续已确定的选型和项目约定按本页与当前规范执行。
 
 ## 当前交付：Windows 独立工作空间原型
+
+泡泡真实鼠标点击与同会话多轮结果已读规则见 [ADR-0013](architecture/0013-bubble-pointer-and-read-receipts.md)：成功展示后清除已读完成提示，人工问题仍需实际答复。
+
+消息正文已支持本地 Markdown 排版，历史消息同步生效；工具日志保留原文。格式、链接边界与原生验收见 [ADR-0012](architecture/0012-message-markdown.md)。
 
 最新人物属性和默认工具见 [ADR-0010](architecture/0010-member-materials-and-default-tools.md)：Agent 配置与员工素材页分开，支持触发类型→图集变体/帧序列，泡泡按人物头部跟随；所有 Agent 默认加载补充文件工具，Python 包含子任务及报错修正验收。
 

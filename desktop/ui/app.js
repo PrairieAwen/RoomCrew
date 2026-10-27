@@ -138,7 +138,11 @@ function renderEvent(event) {
         );
         if (event.scope !== "main")
             label.append(node("span", "subagent-label", "子 Agent"));
-        block.append(label, node("div", "message-text", p.text));
+        const content = node("div", "message-text");
+        crewRenderMarkdown(content, p.text, {
+            onArtifact: openArtifactPath.bind(null, event.conversation_id),
+        });
+        block.append(label, content);
         timeline.append(block);
     } else if (event.kind === "tool.started") {
         state.tools += 1;
@@ -676,12 +680,19 @@ async function refreshArtifacts() {
 /** 因为用户需要核对真实文件内容，需要从受限产物接口读取并以纯文本预览。 */
 async function openArtifact(event) {
     // 1、预览不执行文件内容，也不通过文件名拼接任意系统 URL。
+    if (!state.conversation) return;
+    await openArtifactPath(
+        state.conversation.id,
+        event.currentTarget.dataset.path,
+    );
+}
+
+/** 因为 Markdown 链接和产物列表应共用实际文件读取，需要按固定会话身份打开受限预览。 */
+async function openArtifactPath(conversationId, path) {
+    // 1、会话身份来自点击入口，读取后再次检查选择，不能把迟到文件显示到另一个会话。
     try {
-        const file = await api(
-            "read_artifact",
-            state.conversation.id,
-            event.currentTarget.dataset.path,
-        );
+        const file = await api("read_artifact", conversationId, path);
+        if (state.conversation?.id !== conversationId) return;
         el("file-title").textContent = file.path;
         el("file-content").textContent = file.text;
         el("file-dialog").showModal();

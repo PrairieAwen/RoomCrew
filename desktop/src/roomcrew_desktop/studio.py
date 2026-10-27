@@ -163,6 +163,7 @@ class StudioService:
             **projection,
             "actors": actors,
             "members": members,
+            "default_avatars": getattr(self.accounts, "default_avatars", {}),
             "question_presenters": question_presenters,
             "interactions": [group for group in interactions if len(group["members"]) >= 2],
             "scene": scene,

@@ -12,8 +12,15 @@ CATEGORIES = frozenset(
 def material_profile(value: Any, avatar_id: str, manifest: dict[str, Any] | None) -> dict[str, Any]:
     """因为同一 Agent 可以对应不同素材，需要验证每个人物独立的动作、变体和帧序列。"""
     # 1、没有配置时沿用默认映射；更换图集后不能把旧帧号误用于新图片。
-    if not isinstance(value, dict) or set(value) - {"version", "avatar_id", "bindings"}:
+    if not isinstance(value, dict) or set(value) - {
+        "version",
+        "avatar_id",
+        "bindings",
+        "normalize",
+    }:
         raise ValueError("员工素材配置字段无效")
+    if "normalize" in value and not isinstance(value["normalize"], bool):
+        raise ValueError("体型校准必须是布尔值")
     if type(value.get("version", 1)) is not int or value.get("version", 1) != 1:
         raise ValueError("员工素材配置版本无效")
     bindings = value.get("bindings", {})
@@ -64,7 +71,12 @@ def material_profile(value: Any, avatar_id: str, manifest: dict[str, Any] | None
                 raise ValueError("帧率需要 1～60 的整数，循环需要布尔值")
             result.update(clip=clip_key(clip), frames=list(frames), fps=fps, loop=loop)
         normalized[category] = result
-    return {"version": 1, "avatar_id": avatar_id, "bindings": normalized}
+    return {
+        "version": 1,
+        "avatar_id": avatar_id,
+        "bindings": normalized,
+        **({"normalize": value["normalize"]} if "normalize" in value else {}),
+    }
 
 
 def clip_key(clip: dict[str, Any]) -> str:

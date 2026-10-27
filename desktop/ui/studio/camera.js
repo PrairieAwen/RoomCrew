@@ -68,13 +68,15 @@ class CrewCamera {
         this.center[1] = Math.max(120, Math.min(470, this.center[1]));
     }
 
-    /** 因为人物和家具点击有独立含义，需要只在空地或中键开始平移。 */
+    /** 因为人物、家具和独立图层的泡泡都有点击含义，需要只在非交互空地或中键开始平移。 */
     down(event) {
-        // 1、避免拖动相机时意外下达人物换座命令。
+        // 1、交互元素不捕获指针，否则 pointerup 被重定向到 SVG，真实鼠标不会触发按钮 click。
         if (
             event.button !== 1 &&
             (event.button !== 0 ||
-                event.target.closest(".crew-avatar,.room-object"))
+                event.target.closest(
+                    ".crew-avatar,.room-object,button,a,input,select,textarea,[role='button']",
+                ))
         )
             return;
         this.drag = {

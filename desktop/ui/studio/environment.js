@@ -104,8 +104,8 @@ class CrewEnvironment {
             left = crewProject([0, 96]),
             right = crewProject([96, 0]);
         defs.append(
-            crewWallGradient("crew-wall-left", "#e6dcc7", "#c7b89e"),
-            crewWallGradient("crew-wall-right", "#f3ead8", "#dbcbae"),
+            crewWallGradient("crew-wall-left", "#fafaf8", "#e5e8e5"),
+            crewWallGradient("crew-wall-right", "#ffffff", "#edf0ec"),
         );
         shell.append(defs);
         this.walls = [];

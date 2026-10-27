@@ -81,6 +81,10 @@
             el("binding-apply").click();
             if (!el("binding-summary").textContent.includes("7 fps"))
                 throw new Error("custom frame configuration did not apply");
+        } else {
+            await until(builtinSelectable);
+            el("member-avatar").value = "builtin:crew-v1";
+            el("member-avatar").dispatchEvent(new Event("change"));
         }
         el("member-question-bubble").value = "老板，请帮我选一下。";
         el("member-completed-bubble").value = "验收完成，点击查看产物。";
@@ -185,7 +189,9 @@
             view.bubbleLink.dataset.speaker !== "assistant"
         )
             throw new Error("bubble is not bound to its actor");
-        await new Promise(delay);
+        if (__USE_ATLAS__) await until(configuredFrameReady);
+        if (__USE_ATLAS__ && view.rig.root.getAttribute("display") !== "none")
+            throw new Error("hidden rig could leak its explicitly visible face nodes");
         if (
             __USE_ATLAS__ &&
             (!view.sprite ||
@@ -258,6 +264,8 @@
             phase: window.__capabilityPhase,
             walkMetrics: window.__bubbleWalkMetrics,
             toast: el("toast")?.textContent,
+            sprite: studio.renderer.views.get("assistant")?.sprite?.dataset,
+            skinErrors: [...studio.renderer.skins.errors],
         };
     }
     /** 因为点击泡泡后表单需要异步加载，需要确认真实问题卡已展示。 */
@@ -275,6 +283,22 @@
             el("member-avatar").value.startsWith("avatar:") &&
             studio.memberConfiguration.actions.manifest?.clips?.length
         );
+    }
+    /** 因为图片解码与体型校准异步完成，需要等待正式播放器实际呈现选定帧。 */
+    function configuredFrameReady() {
+        // 1、只观察生产图集与保存的帧列表，不用固定延迟猜测资源是否就绪。
+        const current = studio.renderer.views.get("assistant");
+        return (
+            current.sprite &&
+            current.member.material_profile.bindings.completed.frames.includes(
+                Number(current.sprite.dataset.frame),
+            )
+        );
+    }
+    /** 因为默认人物现在使用统一手绘素材，需要在骨架专用验收中显式选择内置骨架。 */
+    function builtinSelectable() {
+        // 1、等待正式素材目录，不添加假的选项。
+        return el("member-avatar").querySelector('option[value="builtin:crew-v1"]');
     }
     /** 因为逐帧裁切框会变化，需要以实际人物根节点的位置作为移动参照。 */
     function actualHead() {

@@ -109,7 +109,7 @@ class CrewSkins {
                 y: -manifest.pivot[1] * scale,
                 width: manifest.frame_size[0] * scale,
                 height: manifest.frame_size[1] * scale,
-                overflow: "hidden",
+                overflow: "visible",
                 class: manifest.pixel_art ? "sprite-pixel" : "sprite-smooth",
             });
             const images = [];
@@ -154,6 +154,12 @@ class CrewSkins {
         if (asset.manifest.version >= 2) {
             const item = asset.manifest.frame_rects[frame],
                 [x, y, width, height] = item.rect;
+            const registration =
+                view.member?.material_profile?.normalize !== false
+                    ? asset.registration?.frames[frame]
+                    : null;
+            const offset = registration?.offset || item.offset;
+            const scale = registration?.scale ?? item.scale ?? 1;
             const page = item.page || 0;
             if (view.spritePage !== page) {
                 for (let index = 0; index < view.spriteImages.length; index++)
@@ -164,10 +170,10 @@ class CrewSkins {
                 view.spritePage = page;
             }
             view.sprite.dataset.page = String(page);
-            view.spriteFrame.setAttribute("x", item.offset[0]);
-            view.spriteFrame.setAttribute("y", item.offset[1]);
-            view.spriteFrame.setAttribute("width", width * (item.scale ?? 1));
-            view.spriteFrame.setAttribute("height", height * (item.scale ?? 1));
+            view.spriteFrame.setAttribute("x", offset[0]);
+            view.spriteFrame.setAttribute("y", offset[1]);
+            view.spriteFrame.setAttribute("width", width * scale);
+            view.spriteFrame.setAttribute("height", height * scale);
             view.spriteFrame.setAttribute(
                 "viewBox",
                 `${x} ${y} ${width} ${height}`,
@@ -206,9 +212,9 @@ function crewSelectClip(manifest, sample) {
     const posture = sample.posture;
     let matches = manifest.clips.filter(crewClipPosture, posture);
     const exact = matches.filter(crewClipAction, sample.action);
-    if (CREW_LEISURE_ACTIONS.has(sample.action) && !exact.length) return null;
     matches = exact.length ? exact : matches.filter(crewClipAction, "idle");
-    if (!matches.length) return null;
+    if (!matches.length)
+        matches = manifest.clips.filter(crewClipAction, "idle");
     // 3、表情优先于近邻朝向，中性是合法回退；有限数组比较不加载额外资源。
     let selected = null,
         best = Infinity;

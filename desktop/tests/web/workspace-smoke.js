@@ -92,10 +92,17 @@
         el("prompt").value = "甲空间未发送草稿";
         // 2、通过用户创建表单进入乙空间，甲任务在后台继续。
         window.__workspaceStage = "create";
-        workspacePanel.create();
+        el("quick-create-workspace").click();
         el("workspace-title").value = "乙空间";
         el("workspace-form").requestSubmit();
         await until(secondReady);
+        el("open-archive").click();
+        if (
+            !el("archive-dialog").open ||
+            !el("archive-dialog").textContent.includes("尚未启用")
+        )
+            throw new Error("archive placeholder was not explicit");
+        el("close-archive").click();
         second = state.workspace.id;
         if (state.conversation || state.cursor || el("prompt").value)
             throw new Error("old conversation or draft leaked");
@@ -105,8 +112,7 @@
             new Set(directory.workspaces.map(roomIdentity)).size !== 2
         )
             throw new Error("wrong room mapping");
-        if (!directory.workspaces.find(isFirst).active_runs)
-            throw new Error("background task unexpectedly stopped");
+        // 默认素材初始化期间旧任务可以自然完成，最终以真实产物证明其未被切换取消。
         await until(backgroundFinished);
         window.__workspaceStage = "second-task";
         await newConversation();

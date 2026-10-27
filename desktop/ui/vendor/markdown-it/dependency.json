@@ -1,0 +1,8 @@
+{
+  "name": "markdown-it",
+  "version": "15.0.3",
+  "license": "MIT",
+  "source": "https://registry.npmjs.org/markdown-it/-/markdown-it-15.0.3.tgz",
+  "integrity": "sha512-+Az7Ojz3iRGu8KYMvJ6xVhvrxP3eE+vEtJX75Ow88XBpcQNV/0lGX5ZynIIBftREo4DC2jsveAMDaeltmm8QvQ==",
+  "sha256": "391f2aa638e75e6c7859d0a5c5650ef0956722a45998f17e05b83bc655778e1e"
+}

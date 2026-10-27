@@ -10,6 +10,65 @@ from roomcrew.platform.paths import AppPaths
 from roomcrew_desktop.runtime import DesktopRuntime
 
 
+async def test_viewed_conversation_acknowledges_only_loaded_results_for_the_clicked_member(
+    tmp_path: Path,
+) -> None:
+    """因为同会话多轮结果一次展示，需要一起已读但保留其他人物、会话、人工问题和迟到结果。"""
+    # 1、为同一个主人物建立两轮完成，并混入另一人物及另一会话的完成结果。
+    paths = AppPaths.create(tmp_path)
+    runtime = DesktopRuntime(paths)
+    await runtime.start()
+    try:
+        conversation = runtime.store.create_conversation("synthetic")
+        for index in range(2):
+            run = runtime.store.begin(conversation["id"], "一轮结果", f"viewed-round-{index}")
+            runtime.store.finish(run, "completed", {})
+        initial = (await runtime.studio_feed())["actors"][0]["bubble_notice"]
+        worker = await runtime.save_member({"name": "另一个入口"}, 0)
+        other_run = runtime.store.begin(
+            conversation["id"],
+            "其他入口",
+            "other-entry-result",
+            worker["name"],
+            worker["agent_id"],
+            worker["id"],
+        )
+        runtime.store.finish(other_run, "completed", {})
+        other = runtime.store.create_conversation("synthetic")
+        other_run = runtime.store.begin(other["id"], "其他会话", "other-thread-result")
+        runtime.store.finish(other_run, "completed", {})
+        # 2、模拟页面实际拉取到的上界；随后产生的新结果不能被这次回执吞掉。
+        through = runtime.store.events(conversation["id"])[-1]["seq"]
+        late = runtime.store.begin(conversation["id"], "晚到结果", "late-result")
+        runtime.store.finish(late, "completed", {})
+        question = runtime.store.begin(conversation["id"], "人工问题", "unanswered")
+        runtime.store.append(
+            conversation["id"], question, "human.requested", request_id="keep-question"
+        )
+        await runtime.studio_feed()
+        for invalid in (True, initial["source_seq"] - 1):
+            with pytest.raises(ValueError, match="加载"):
+                await runtime.acknowledge_bubble("assistant", initial["id"], invalid)
+        await runtime.acknowledge_bubble("assistant", initial["id"], through)
+        await runtime.acknowledge_bubble("assistant", initial["id"], through)
+        actors = {a["member_id"]: a for a in (await runtime.studio_feed())["actors"]}
+        assert actors["assistant"]["bubble_pending_count"] == 3
+        assert actors["assistant"]["bubble_notice"]["kind"] == "question"
+        assert actors[worker["id"]]["bubble_pending_count"] == 1
+        with sqlite3.connect(paths.data / "bubbles.sqlite") as db:
+            assert (
+                db.execute("SELECT count(*) FROM bubble_notices WHERE status='seen'").fetchone()[0]
+                == 2
+            )
+        # 3、查看当前会话全部结果后仅剩其他会话与未答问题，任务权威状态保持原样。
+        through = runtime.store.events(conversation["id"])[-1]["seq"]
+        await runtime.acknowledge_bubble("assistant", initial["id"], through)
+        assert (await runtime.studio_feed())["actors"][0]["bubble_pending_count"] == 2
+        assert runtime.store.latest_status(other["id"]) == "completed"
+    finally:
+        await runtime.close()
+
+
 async def test_unread_result_survives_new_tasks_restart_and_projection_rebuild(
     tmp_path: Path,
 ) -> None:

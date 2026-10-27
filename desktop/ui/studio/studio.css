@@ -575,43 +575,59 @@ input[type="checkbox"] {
     background: #bbcea8;
     color: #263021;
 }
-#questions-dialog {
-    width: 640px;
-    padding: 25px;
-}
 .question-card {
-    padding: 18px;
+    padding: 20px;
     background: #293429;
     border: 1px solid #47553d;
-    border-radius: 9px;
-    margin: 14px 0;
+    border-radius: 12px;
+    margin: 16px 0;
 }
 .question-card small {
-    font-size: 10px;
-    color: #9ead91;
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    overflow-wrap: anywhere;
 }
 .question-card h3 {
-    font-size: 14px;
-    font-weight: 500;
+    display: block;
+    font-size: 17px;
+    font-weight: 600;
     line-height: 1.8;
+    margin: 10px 0 18px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
 }
 .question-choices {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 12px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
 }
 .question-choices button {
-    font-size: 11px;
-    padding: 7px 10px;
+    font-size: 14px;
+    line-height: 1.6;
+    padding: 11px 13px;
+    min-height: 46px;
+    text-align: left;
+    white-space: normal;
+    overflow-wrap: anywhere;
 }
 .question-card textarea {
     width: 100%;
-    margin-bottom: 15px;
+    min-height: 104px;
+    max-height: 240px;
+    padding: 12px;
+    font-size: 14px;
+    line-height: 1.7;
+    margin-bottom: 16px;
 }
 .question-card > button {
-    font-size: 11px;
-    margin-right: 10px;
+    font-size: 13px;
+    min-height: 42px;
+    padding: 10px 14px;
+    margin: 0 10px 6px 0;
+    max-width: 100%;
+    white-space: normal;
 }
 .toast {
     z-index: 100;

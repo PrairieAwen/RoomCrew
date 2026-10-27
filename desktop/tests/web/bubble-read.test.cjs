@@ -3,7 +3,7 @@ const vm = require("node:vm");
 const assert = require("node:assert/strict");
 const calls = [];
 const context = vm.createContext({
-    state: { workspaceEpoch: 1, conversation: { id: "old" } },
+    state: { workspaceEpoch: 1, conversation: { id: "old" }, cursor: 123 },
     calls,
 });
 vm.runInContext(
@@ -15,6 +15,8 @@ async function api(...args) { /* 1、只记录调用顺序，不修改生产数�
 function resetConversation(value) { /* 1、仅用于模拟页面选择状态。 */ state.conversation=value; }
 /** 因为加载失败应保留未读，需要收集错误而不抛出到测试外部。 */
 function showError(error) { /* 1、记录错误被正常处理。 */ calls.push(["error",error.message]); }
+/** 因为其他会话仍有结果时应解释剩余提示，需要记录成功查看后的界面反馈。 */
+function toast(text) { /* 1、只记录说明，不更改任何回执。 */ calls.push(["toast",text]); }
 globalThis.CrewStudio=CrewStudio;
 `,
     context,
@@ -49,8 +51,18 @@ async function verifyReadLifecycle() {
         "acknowledge_bubble",
         "member",
         "result:one",
+        123,
     ]);
-    // 3、打开问题表单不算答复，不能调用完成已读入口。
+    // 3、剩余提示属于其他会话时明确告知，不能伪装为原结果未读或静默清空它。
+    studio.renderer.facts.set("member", {
+        bubble_notice: { kind: "result", conversation_id: "another" },
+    });
+    calls.length = 0;
+    await studio.openConversation("member", notice);
+    assert.equal(calls.at(-1)[0], "toast");
+    assert.ok(calls.at(-1)[1].includes("其他会话"));
+    studio.renderer.facts.clear();
+    // 4、打开问题表单不算答复，不能调用完成已读入口。
     calls.length = 0;
     await studio.openConversation("member", {
         ...notice,
@@ -59,7 +71,7 @@ async function verifyReadLifecycle() {
     });
     assert.deepEqual(calls.map(firstItem), ["loaded", "question"]);
     assert.equal(calls[1][1], "child-question");
-    // 4、等待期间切到其他工作空间，不能把回执写入错误空间。
+    // 5、等待期间切到其他工作空间，不能把回执写入错误空间。
     calls.length = 0;
     studio.chatMode = switchedWorkspace;
     assert.equal(await studio.openConversation("member", notice), false);

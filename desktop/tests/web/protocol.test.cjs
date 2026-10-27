@@ -244,8 +244,8 @@ function verifyAtlasVariants() {
             posture: "seated",
             direction: "se",
             expression: "neutral",
-        }),
-        null,
+        }).action,
+        "idle",
     );
 }
 
@@ -413,7 +413,7 @@ function verifyLeisure() {
         ).action,
         "report",
     );
-    // 4、自绘生活片段可精确选择；缺少生活片段返回内置骨架，不能用闲置帧冒充手机动作。
+    // 4、自绘片段精确选择；缺帧保留同一人物的静态姿态，避免切成另一种画风。
     const clip = {
         action: "phone",
         posture: "seated",
@@ -422,8 +422,8 @@ function verifyLeisure() {
     };
     assert.equal(crewSelectClip({ clips: [clip] }, phone), clip);
     assert.equal(
-        crewSelectClip({ clips: [{ ...clip, action: "idle" }] }, phone),
-        null,
+        crewSelectClip({ clips: [{ ...clip, action: "idle" }] }, phone).action,
+        "idle",
     );
     const poses = ["phone", "game", "water", "relax"].map(leisurePose);
     assert.equal(new Set(poses.map(JSON.stringify)).size, 4);

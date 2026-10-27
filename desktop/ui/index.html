@@ -11,6 +11,10 @@
         <link rel="stylesheet" href="app.css" />
         <link rel="stylesheet" href="studio/studio.css" />
         <link rel="stylesheet" href="studio/immersive.css" />
+        <link rel="stylesheet" href="theme.css" />
+        <link rel="stylesheet" href="message-markdown.css" />
+        <script src="vendor/markdown-it/markdown-it.min.js" defer></script>
+        <script src="message-markdown.js" defer></script>
         <script src="studio/protocol.js" defer></script>
         <script src="studio/navigation.js" defer></script>
         <script src="studio/motion.js" defer></script>
@@ -58,6 +62,9 @@
             </div>
             <nav id="conversations" aria-label="会话列表"></nav>
             <div class="sidebar-bottom">
+                <button id="open-archive" class="settings-button">
+                    ▤ 档案室 <small>规划中</small>
+                </button>
                 <div class="local-badge">
                     <span class="dot"></span>本地运行 <span>SQLite + 文件</span>
                 </div>
@@ -83,6 +90,9 @@
                     ☰ 我的空间
                 </button>
                 <div class="topbar-right">
+                    <button id="quick-create-workspace" class="drawer-toggle">
+                        ＋ 新建工作区
+                    </button>
                     <div class="view-switch">
                         <button id="view-room">会议室</button
                         ><button id="view-chat">会话</button>
@@ -343,6 +353,34 @@
                 </aside>
             </div>
         </main>
+        <dialog id="archive-dialog" aria-labelledby="archive-title">
+            <div class="modal-heading">
+                <div>
+                    <div class="eyebrow">ROOMCREW ARCHIVE</div>
+                    <h2 id="archive-title">档案室</h2>
+                </div>
+                <button
+                    id="close-archive"
+                    class="close-button"
+                    aria-label="关闭档案室"
+                >
+                    ×
+                </button>
+            </div>
+            <p class="modal-intro">
+                跨会议室的长期记忆入口，当前仅展示设计位置。
+            </p>
+            <div class="archive-state">
+                <span>▤</span><strong>先把资料留好，再让记忆生长</strong>
+                <p>
+                    后续将在此管理经你确认的归档资料、知识摘要和个人偏好。Agent
+                    默认不读取跨空间记忆，必要时才按授权检索。
+                </p>
+            </div>
+            <p class="scope-note">
+                尚未启用自动提取、跨空间检索或会议室删除。未来删除前需要明确归档与保留范围；当前不会读取、汇总或迁移你的任务内容。
+            </p>
+        </dialog>
         <dialog id="workspace-dialog">
             <form id="workspace-form" class="settings-form">
                 <div class="modal-heading">
@@ -511,6 +549,14 @@
                 >
                     <details class="agent-abilities">
                         <summary>人物交互 · 仅影响桌面表现</summary>
+                        <label class="checkbox-label"
+                            ><input
+                                type="checkbox"
+                                id="member-normalize"
+                                checked
+                            />
+                            统一动作体型（按头部尺度校准，特殊素材可关闭）</label
+                        >
                         <label
                             >需要人工介入时的泡泡<input
                                 id="member-question-bubble"
@@ -786,16 +832,26 @@
                 </div>
             </form>
         </dialog>
-        <dialog id="questions-dialog">
+        <dialog
+            id="questions-dialog"
+            aria-labelledby="questions-title"
+            aria-describedby="questions-intro"
+        >
             <div class="modal-heading">
                 <div>
-                    <div class="eyebrow">YOUR DECISIONS</div>
-                    <h2>老板的待答复事项</h2>
+                    <div class="eyebrow">YOUR DECISION</div>
+                    <h2 id="questions-title">需要你的确认</h2>
                 </div>
-                <button id="close-questions" class="close-button">×</button>
+                <button
+                    id="close-questions"
+                    class="close-button"
+                    aria-label="稍后答复，关闭窗口"
+                >
+                    ×
+                </button>
             </div>
-            <p class="modal-intro">
-                这些事项来自真实任务中断。答复后恢复原线程；这里的信息确认不授予系统权限。
+            <p id="questions-intro" class="modal-intro">
+                选择或补充答复后，成员会继续当前任务。你也可以关闭窗口，稍后再答。
             </p>
             <div id="questions-list"></div>
         </dialog>

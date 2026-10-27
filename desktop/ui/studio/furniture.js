@@ -161,23 +161,23 @@ class CrewFurniture {
             bookcase: "furniture-07",
             coffee: "decor-09",
             lamp: "decor-07",
+            archive: "furniture-07",
         };
-        const identifier =
-            obj.id === "guardian-station"
-                ? "furniture-06"
-                : obj.id === "reception-desk"
-                  ? "furniture-01"
-                  : mapping[obj.type];
+        const identifier = mapping[obj.type];
         const material = crewEnvironmentMaterial(identifier);
         if (!material) return false;
         const sizes = {
-            plant: 68,
-            fridge: 86,
-            cabinet: 85,
-            bookcase: 112,
-            coffee: 65,
-            lamp: 55,
-            screen: 190,
+            desk: 136,
+            sofa: 164,
+            meeting: 210,
+            plant: 54,
+            fridge: 64,
+            cabinet: 57,
+            bookcase: 72,
+            archive: 72,
+            coffee: 46,
+            lamp: 44,
+            screen: 112,
         };
         const span =
                 sizes[obj.type] || Math.max(135, (width + depth) * 24 * 0.95),
@@ -194,14 +194,40 @@ class CrewFurniture {
                 "#c2a27d",
                 "#a18566",
             );
-        crewEnvironmentPicture(
-            group,
-            material,
-            p[0] - span / 2,
-            p[1] + (obj.type === "coffee" ? -23 : 14) - height,
-            span,
+        const anchor = this.renderer.scene.anchors.find(
+            crewAnchorMatches,
+            obj.id,
         );
+        const seat = anchor ? crewProject(anchor.position) : null;
+        let left = p[0] - span / 2;
+        let top = p[1] + (obj.type === "coffee" ? -23 : 8) - height;
+        // 2、桌面与沙发按实际手部/座面接触点注册，不能只按图片外框摆在占地中心。
+        if (seat && obj.type === "desk") {
+            left = seat[0] - 4 - span * 0.55;
+            top = seat[1] - 46 - height * 0.48;
+        } else if (seat && obj.type === "sofa") {
+            left = seat[0] - span * 0.48;
+            top = seat[1] - 28 - height * 0.63;
+        }
+        crewEnvironmentPicture(group, material, left, top, span);
         group.dataset.material = identifier;
+        if (obj.type === "archive")
+            group.append(
+                crewSvg(
+                    "text",
+                    {
+                        x: p[0],
+                        y: top - 10,
+                        "text-anchor": "middle",
+                        "font-size": 10,
+                        fill: "#526174",
+                        "paint-order": "stroke",
+                        stroke: "#fff",
+                        "stroke-width": 3,
+                    },
+                    "档案室 · 规划中",
+                ),
+            );
         if (obj.type === "desk") {
             const anchor = this.renderer.scene.anchors.find(
                 crewAnchorMatches,
@@ -307,6 +333,26 @@ class CrewFurniture {
     chair(group, position, color) {
         // 1、地面脚底保持同一投影，不参与路径阻塞计算。
         const p = crewProject(position);
+        const material = crewEnvironmentMaterial("furniture-04");
+        if (material) {
+            const chair = crewSvg("g", {
+                "data-depth": position[0] + position[1] + 0.05,
+                "data-entity": `chair:${position.join(",")}`,
+                "pointer-events": "none",
+            });
+            const width = 48,
+                height =
+                    (width * material.frames[0][3]) / material.frames[0][2];
+            crewEnvironmentPicture(
+                chair,
+                material,
+                p[0] - width * 0.52,
+                p[1] - height,
+                width,
+            );
+            this.renderer.depth.append(chair);
+            return;
+        }
         group.append(
             crewSvg("path", {
                 d: `M${p[0] - 10},${p[1] + 2} l2,-18 M${p[0] + 10},${p[1] + 2} l-2,-18`,

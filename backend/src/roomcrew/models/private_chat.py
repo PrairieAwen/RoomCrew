@@ -16,6 +16,7 @@ from roomcrew.security.redaction import redact_value
 
 
 class PrivateChatModel(BaseChatModel):
+    model_name: str = "roomcrew:private"
     _delegate: Runnable[Any, Any] = PrivateAttr()
     _key: str = PrivateAttr()
     _budget: ModelCallBudget = PrivateAttr()

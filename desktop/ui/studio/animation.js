@@ -161,8 +161,8 @@ class CrewAnimator {
             externalCall = true;
             caption =
                 layer?.kind === "meeting"
-                    ? "协作讨论 · 同时电话联系外援"
-                    : "电话联系外援 · 仅轨迹";
+                    ? "协作讨论 · 同时联系已配置协作者"
+                    : "联系已配置协作者 · 仅轨迹";
             if (!moving && !transition && layer?.kind !== "meeting")
                 action = "phone";
             expression = "focused";

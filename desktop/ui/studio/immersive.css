@@ -511,15 +511,25 @@ button.workspace-card.selected small {
 }
 #questions-dialog {
     position: fixed;
-    left: auto;
-    right: 18px;
-    top: 88px;
-    margin: 0;
-    width: min(420px, calc(100vw - 36px));
-    max-height: calc(100vh - 110px);
+    inset: 0;
+    margin: auto;
+    width: min(680px, calc(100vw - 48px));
+    height: fit-content;
+    max-height: calc(100dvh - 48px);
+    padding: 28px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
 }
-#questions-dialog::backdrop {
-    background: #16261c33;
+@media (max-width: 560px) {
+    #questions-dialog {
+        width: calc(100vw - 24px);
+        max-height: calc(100dvh - 24px);
+        padding: 20px;
+    }
+    #questions-dialog .question-choices {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }
 @media (max-width: 1000px) {
     .studio-mode.conversation-open #timeline,

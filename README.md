@@ -2,6 +2,8 @@
 
 属于你的会议室，一群陪你做事的伙伴。
 
+本版采用白底阅读界面、统一人物体型与家具接触点；顶部可直接新建独立工作区。Agent 只委派本空间已配置名单，同一成员不能并发克隆，跨会议室不共享任务上下文。档案室已有设施入口，归档、习惯提取与跨空间记忆尚未启用。详见 [ADR-0011](doc/architecture/0011-coherent-studio-and-workspace-roster.md)，其现行规则覆盖下文旧外援说明。
+
 当前是 Windows 本地工作空间原型：铺满客户区的 2.5D 场景、连续走跑/表情/起坐、可导入角色图集、人物与 Agent 定义、事项与按需轨迹，以及保留的完整会话视图。底层仍真实运行 Deep Agents，配置、历史和实际产物保存在本机；安全 VM 尚未接入。
 
 ## Windows 用户验证
@@ -126,6 +128,9 @@ node desktop/tests/web/workspaces.test.cjs
 node desktop/tests/web/model-settings.test.cjs
 node desktop/tests/web/material-bindings.test.cjs
 node desktop/tests/web/bubble-read.test.cjs
+node desktop/tests/web/camera-pointer.test.cjs
+node desktop/tests/web/markdown.test.cjs
+& .\.venv\Scripts\python.exe desktop/tests/markdown_smoke.py
 
 # 独立 exe + 发行目录 + zip。
 & .\packaging\build.ps1

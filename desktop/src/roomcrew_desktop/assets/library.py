@@ -14,6 +14,7 @@ from typing import Any
 from PIL import Image, UnidentifiedImageError
 
 from roomcrew_desktop.assets.paths import atlas_filenames
+from roomcrew_desktop.assets.registration import register_frames
 from roomcrew_desktop.assets.schema import validate_manifest
 
 BUILTIN = "builtin:crew-v1"
@@ -58,6 +59,7 @@ class AvatarLibrary:
         self.root = root
         self._lock = threading.Lock()
         self._clip_catalog: dict[str, dict[str, Any]] = {}
+        self._registrations: dict[str, dict[str, Any] | None] = {}
 
     def clip_catalog(self, identifier: str) -> dict[str, Any] | None:
         """因为保存帧绑定只需要图集清单，需要缓存不可变素材元数据而不反复编码 PNG。"""
@@ -203,9 +205,14 @@ class AvatarLibrary:
             "data:image/png;base64," + base64.b64encode(encoded).decode("ascii")
             for encoded in pages
         ]
+        if identifier not in self._registrations:
+            if len(self._registrations) >= 32:
+                self._registrations.clear()
+            self._registrations[identifier] = register_frames(manifest, pages)
         return {
             "id": identifier,
             "manifest": manifest,
+            "registration": self._registrations[identifier],
             **(
                 {"image_pages": encoded_pages}
                 if manifest["version"] == 3

@@ -31,6 +31,7 @@ class DesktopRuntime(Runtime):
         """因为桌面需要验证人物素材，需要在客户端组合点扩展通用人员服务。"""
         # 1、素材路径与动作规则不会导入后端执行模块。
         self._avatars = AvatarLibrary(self.paths.data / "avatars")
+        self._fresh_room = not self._account_repository.members()
         return DesktopAccountService(
             self._account_repository, self._avatars.require_id, self._avatars.clip_catalog
         )
@@ -39,9 +40,35 @@ class DesktopRuntime(Runtime):
         """因为场景缓存不应阻止后端独立使用，需要由桌面启动时单独装配。"""
         # 1、先启动后端，再初始化只读表现消费者。
         await super().start()
+        await self._prepare_default_art()
         self._studio = StudioService(
             self.paths, self.accounts, self.generate_auxiliary, self.configuration
         )
+
+    async def _prepare_default_art(self) -> None:
+        """因为新会议室不能混用几何占位和手绘人物，需要准备统一画风默认素材并保留旧用户选择。"""
+        # 1、既有内容寻址素材优先；导入在线程执行，不能阻塞其他会议室的模型调用。
+        if not isinstance(self.accounts, DesktopAccountService):
+            return
+        known = {item["name"]: item["id"] for item in await self.avatar_catalog()}
+        for role, name in (
+            ("assistant", "小禾 · 助手"),
+            ("employee", "小岚 · 员工"),
+            ("guardian", "守望 · 监管员"),
+        ):
+            try:
+                identifier = known.get(name) or (await self.import_avatar_bundle(role))["id"]
+            except (ValueError, OSError):
+                continue
+            self.accounts.default_avatars[role] = identifier
+        # 2、只为全新空间绑定默认人物；旧空间的形象和动作配置不被升级覆盖。
+        if self._fresh_room:
+            for member in self.accounts.members():
+                avatar = self.accounts.default_avatars.get(member["role"])
+                if avatar:
+                    self.accounts.save(
+                        {"id": member["id"], "avatar_id": avatar}, member["revision"]
+                    )
 
     async def close(self) -> None:
         """因为桌面缓存与执行资源各自持有连接，需要先结束客户端辅助任务再释放后端。"""
@@ -56,11 +83,13 @@ class DesktopRuntime(Runtime):
         # 1、返回版本化的普通字典，不提供 SDK 状态或原始消息。
         return await self._studio.feed(after)
 
-    async def acknowledge_bubble(self, member_id: str, notice_id: str) -> dict[str, bool]:
-        """因为完成泡泡只能由用户查看后消除，需要提供桌面专属的幂等已读入口。"""
+    async def acknowledge_bubble(
+        self, member_id: str, notice_id: str, through_seq: int | None = None
+    ) -> dict[str, bool]:
+        """因为同会话多条完成结果可以一起展示，需要按人物和页面实际加载上界保存幂等回执。"""
         # 1、只登记人物显示回执，不改变任务、工具权限或人工答复。
         self.accounts.get(member_id)
-        await asyncio.to_thread(self._studio.bubbles.acknowledge, member_id, notice_id)
+        await asyncio.to_thread(self._studio.bubbles.acknowledge, member_id, notice_id, through_seq)
         return {"acknowledged": True}
 
     async def scene_move(

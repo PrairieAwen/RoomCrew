@@ -59,19 +59,35 @@ class BubbleStore:
                 result.setdefault(row[0], []).append(json.loads(row[1]))
             return result
 
-    def acknowledge(self, member_id: str, notice_id: str) -> None:
-        """因为只有成功查看结果才算已读，需要按人物和稳定通知 ID 保存幂等回执。"""
+    def acknowledge(self, member_id: str, notice_id: str, through_seq: int | None = None) -> None:
+        """因为一个会话可能已有多轮完成，需要按实际加载序号确认该人物在此会话中已展示的结果。
+
+        未提供 through_seq 时兼容单通知回执；不能消除人工问题、其他会话或随后新增结果。
+        """
         # 1、客户端不能通过已读接口消除人工问题；问题只由真实答复或任务取消解决。
         with self._lock, closing(self._connect()) as db, db:
             row = db.execute(
-                "SELECT kind,status FROM bubble_notices WHERE id=? AND member_id=?",
+                "SELECT kind,status,body,source_seq FROM bubble_notices WHERE id=? AND member_id=?",
                 (notice_id, member_id),
             ).fetchone()
             if row is None or row[1] == "retired":
                 raise ValueError("该人物没有这条泡泡提示")
             if row[0] != "result":
                 raise ValueError("人工问题需要提交答复后才会消失")
-            db.execute("UPDATE bubble_notices SET status='seen' WHERE id=?", (notice_id,))
+            # 2、旧客户端只确认单条；新客户端必须已经完整加载点击通知及其之前的会话记录。
+            if through_seq is None:
+                db.execute("UPDATE bubble_notices SET status='seen' WHERE id=?", (notice_id,))
+                return
+            if type(through_seq) is not int or not row[3] <= through_seq <= 9007199254740991:
+                raise ValueError("请先成功加载这条完成结果")
+            conversation = json.loads(row[2])["conversation_id"]
+            # 3、按人物、会话和已展示上界原子确认，重试不吞掉问题或更晚完成的任务。
+            db.execute(
+                "UPDATE bubble_notices SET status='seen' WHERE member_id=? AND kind='result' "
+                "AND status='pending' AND source_seq<=? "
+                "AND json_extract(body,'$.conversation_id')=?",
+                (member_id, through_seq, conversation),
+            )
 
     def _connect(self) -> sqlite3.Connection:
         """因为回执不属于可丢弃的投影缓存，需要在工作空间独立的桌面数据库建立稳定表。"""

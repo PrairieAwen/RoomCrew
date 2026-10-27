@@ -12,6 +12,18 @@ class CrewWorkspaces {
             "click",
             this.create.bind(this),
         );
+        el("quick-create-workspace").addEventListener(
+            "click",
+            this.create.bind(this),
+        );
+        el("open-archive").addEventListener(
+            "click",
+            this.openArchive.bind(this),
+        );
+        el("close-archive").addEventListener(
+            "click",
+            this.closeArchive.bind(this),
+        );
         el("rename-workspace").addEventListener(
             "click",
             this.rename.bind(this),
@@ -166,6 +178,18 @@ class CrewWorkspaces {
     close() {
         // 1、没有提交则不写目录或创建会议室。
         el("workspace-dialog").close();
+    }
+
+    /** 因为档案室尚无归档执行能力，需要只打开说明，不触发模型、读取或迁移资料。 */
+    openArchive() {
+        // 1、基础设施入口独立于员工名单，也不改变当前会议室。
+        el("archive-dialog").showModal();
+    }
+
+    /** 因为查看规划入口不应保留模态状态，需要提供明确的关闭操作。 */
+    closeArchive() {
+        // 1、关闭说明没有数据副作用。
+        el("archive-dialog").close();
     }
 
     /** 因为创建和重命名都要落盘，需要通过用户入口提交并恢复对应房间。 */

@@ -18,6 +18,7 @@ CATALOG = {
     "bookcase": (2, 1),
     "coffee": (1, 1),
     "lamp": (1, 1),
+    "archive": (2, 1),
 }
 
 
@@ -42,6 +43,7 @@ def default_room() -> dict[str, Any]:
             {"id": "plant-2", "type": "plant", "x": 22, "y": 2},
             {"id": "plant-3", "type": "plant", "x": 14, "y": 15},
             {"id": "reading-shelf", "type": "bookcase", "x": 1, "y": 11},
+            {"id": "archive-room", "type": "archive", "x": 11, "y": 1},
             {"id": "reading-lamp", "type": "lamp", "x": 1, "y": 17},
             {"id": "coffee-corner", "type": "coffee", "x": 22, "y": 13},
             {"id": "lounge-sofa", "type": "sofa", "x": 16, "y": 16},
@@ -93,8 +95,8 @@ def anchors(room: dict[str, Any]) -> list[dict[str, Any]]:
                 {
                     "id": obj["id"],
                     "object_id": obj["id"],
-                    "approach": [obj["x"], obj["y"] + height],
-                    "position": [obj["x"], obj["y"] + height + 0.3],
+                    "approach": [obj["x"] + width, obj["y"] + height],
+                    "position": [obj["x"] + width, obj["y"] + height],
                     "posture": "standing",
                 }
             )
@@ -168,6 +170,30 @@ class SceneStore:
         with self.db:
             self.db.execute("INSERT OR IGNORE INTO room VALUES(1,?)", (json.dumps(default_room()),))
         self._migrate_reception()
+        self._migrate_archive()
+
+    def _migrate_archive(self) -> None:
+        """因为已有会议室也需要档案室入口，需要在空闲墙边补充设施并保留用户所有原位置。"""
+        # 1、已有档案设施不重复创建，满房间保留侧栏入口，不强制移动或删除用户家具。
+        room = json.loads(self.db.execute("SELECT body FROM room WHERE id=1").fetchone()[0])
+        if any(obj["type"] == "archive" for obj in room["objects"]):
+            return
+        occupied = {
+            (obj["x"] + dx, obj["y"] + dy)
+            for obj in room["objects"]
+            for dx in range(CATALOG[obj["type"]][0])
+            for dy in range(CATALOG[obj["type"]][1])
+        }
+        for x in range(room["width"] - 4, 1, -1):
+            if {(x, 1), (x + 1, 1)} & occupied:
+                continue
+            # 2、新设施只有展示与打开说明的能力，布局版本更新不改变任何任务或记忆。
+            identifier = "archive-" + uuid4().hex[:8]
+            room["objects"].append({"id": identifier, "type": "archive", "x": x, "y": 1})
+            room["revision"] += 1
+            with self.db:
+                self.db.execute("UPDATE room SET body=? WHERE id=1", (json.dumps(room),))
+            return
 
     def _migrate_reception(self) -> None:
         """因为旧布局保留老板工位名称，需要只迁移接待台标识而保留家具坐标及用户布置。"""

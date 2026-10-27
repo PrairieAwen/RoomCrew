@@ -62,6 +62,7 @@ class DesktopAccountService(AccountService):
         # 1、先准备扩展验证器，再让通用服务初始化最低身份。
         self._avatar_validator = avatar_validator
         self._clip_catalog = clip_catalog
+        self.default_avatars: dict[str, str] = {}
         super().__init__(repository)
 
     def _attributes(self, values: dict[str, Any]) -> dict[str, Any]:
@@ -76,7 +77,9 @@ class DesktopAccountService(AccountService):
         glasses = values.get("glasses", False)
         if not isinstance(glasses, bool):
             raise ValueError("眼镜开关必须是布尔值")
-        avatar = values.get("avatar_id", "builtin:crew-v1")
+        avatar = values.get(
+            "avatar_id", self.default_avatars.get(values.get("role", "employee"), "builtin:crew-v1")
+        )
         if avatar != "builtin:crew-v1":
             if not isinstance(avatar, str) or self._avatar_validator is None:
                 raise ValueError("请先导入并注册人物素材")

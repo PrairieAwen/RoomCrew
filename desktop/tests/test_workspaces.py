@@ -112,14 +112,14 @@ async def test_background_rooms_execute_independently_and_keep_model_private(
         hub = await configured_hub(tmp_path, endpoint)
         try:
             first = hub.current
+            directory = await hub.create("第二空间")
+            identifier = directory["active"]["id"]
+            second = hub.current
             conversation_a = await hub.invoke("default", "new_conversation", [])
             request = uuid4().hex
             submitted = await hub.invoke(
                 "default", "submit", [conversation_a["id"], "仅A空间的资料", request]
             )
-            directory = await hub.create("第二空间")
-            identifier = directory["active"]["id"]
-            second = hub.current
             conversation_b = await hub.invoke(identifier, "new_conversation", [])
             await hub.invoke(
                 identifier, "submit", [conversation_b["id"], "仅B空间的资料", uuid4().hex]

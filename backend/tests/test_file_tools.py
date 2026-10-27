@@ -65,6 +65,14 @@ async def test_worker_generates_python_and_manages_actual_outputs(tmp_path: Path
     with model_server(responses) as (endpoint, requests):
         runtime = await configured_runtime(tmp_path, endpoint)
         try:
+            worker = await runtime.save_member({"name": "归档验收员"}, 0)
+            responses[0] = tool_message(
+                "task",
+                {
+                    "description": "计算后归档真实文件",
+                    "subagent_type": "member_" + worker["id"],
+                },
+            )
             conversation = await runtime.new_conversation()
             root = runtime.paths.session_files(conversation["id"])
             numbers = [19, 71, 5, 303]

@@ -95,6 +95,8 @@ class CrewMemberConfiguration {
     loadMaterial(member) {
         // 1、旧版动作覆盖读入新编辑器，保存时统一为素材绑定。
         const profile = member.interaction_profile || {};
+        el("member-normalize").checked =
+            member.material_profile?.normalize !== false;
         el("member-question-bubble").value =
             profile.question_bubble || "老板，我有问题想问你。";
         el("member-completed-bubble").value =
@@ -106,7 +108,10 @@ class CrewMemberConfiguration {
     readMaterial() {
         // 1、旧覆盖字段归并到 material_profile，不并存两套可编辑映射。
         return {
-            material_profile: this.actions.read(),
+            material_profile: {
+                ...this.actions.read(),
+                normalize: el("member-normalize").checked,
+            },
             interaction_profile: {
                 question_bubble: el("member-question-bubble").value,
                 completed_bubble: el("member-completed-bubble").value,

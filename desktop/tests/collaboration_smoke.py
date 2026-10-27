@@ -1,5 +1,6 @@
 """真实 Windows 窗口、SDK 委派、会议与外援电话的完整验收。"""
 
+import hashlib
 import json
 import os
 import sys
@@ -37,6 +38,10 @@ def main() -> None:
             )
         )
         employee = host.call(host.runtime.save_member({"name": "原生同事", "leisure_delay": 0}, 0))
+        definition = host.call(
+            host.runtime.save_agent_configuration({"description": "无形象资料协作者"}, 0)
+        )
+        collaborator = "definition_" + hashlib.sha256(definition["id"].encode()).hexdigest()[:16]
         messages.extend(
             [
                 tool_message(
@@ -54,7 +59,7 @@ def main() -> None:
                 tool_message(
                     "task",
                     {
-                        "subagent_type": "general-purpose",
+                        "subagent_type": collaborator,
                         "description": "把指定记录写入 /external.txt",
                     },
                 ),
