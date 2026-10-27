@@ -29,6 +29,7 @@ def main() -> None:
     # 1、全部服务和 Key 都是合成验证数据，代码不读取真实用户配置。
     parser = argparse.ArgumentParser()
     parser.add_argument("--keep-open", action="store_true")
+    parser.add_argument("--builtin", action="store_true")
     options = parser.parse_args()
     root = project / ".cache/capabilities-smoke" / uuid4().hex
     skills = agent_configuration(
@@ -84,6 +85,20 @@ def main() -> None:
                 {"base_url": endpoint, "model": TEST_MODEL, "api_key": TEST_KEY}
             )
         )
+        worker = host.call(
+            host.runtime.save_member({"name": "委派验收员", "agent_id": "agent_assistant"}, 0)
+        )
+        responses.insert(
+            5,
+            tool_message(
+                "task",
+                {
+                    "description": "询问用户是否继续，得到答复后返回确认结果",
+                    "subagent_type": "member_" + worker["id"],
+                },
+            ),
+        )
+        responses.insert(7, {"role": "assistant", "content": "子任务确认完毕，请主 Agent 汇总。"})
         window = webview.create_window(
             "RoomCrew capability verification",
             str(host.runtime.paths.resources / "desktop/ui/index.html"),
@@ -98,6 +113,9 @@ def main() -> None:
             source = (project / "desktop/tests/web/capabilities-smoke.js").read_text("utf-8")
             source = source.replace("__SKILLS__", json.dumps(skills, ensure_ascii=False)).replace(
                 "__MCP_URL__", json.dumps(url)
+            )
+            source = source.replace("__USE_ATLAS__", json.dumps(not options.builtin)).replace(
+                "__VISUAL_REVIEW__", json.dumps(options.keep_open)
             )
             window.evaluate_js(source)
             try:

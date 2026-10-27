@@ -200,6 +200,12 @@ async def test_delegated_employee_keeps_identity_during_human_interrupt(tmp_path
             assert runtime.store.latest_status(conversation["id"]) == "waiting_user"
             question = (await runtime.questions())[0]
             assert question["member_id"] == employee["id"]
+            waiting = await runtime.studio_feed()
+            actors = {item["member_id"]: item for item in waiting["actors"]}
+            assert actors["assistant"]["bubble_notice"]["request_id"] == question["id"]
+            assert actors["assistant"]["requires_input"]
+            assert not actors[employee["id"]]["bubble"]
+            assert not actors[employee["id"]]["requires_input"]
             delegation = await runtime.events(conversation["id"])
             assert any(
                 item["kind"] == "task.assigned"
@@ -210,6 +216,11 @@ async def test_delegated_employee_keeps_identity_during_human_interrupt(tmp_path
             await wait_finished(runtime)
             assert runtime.store.latest_status(conversation["id"]) == "completed"
             assert not await runtime.questions() and len(requests) == 4
+            finished = await runtime.studio_feed()
+            actors = {item["member_id"]: item for item in finished["actors"]}
+            assert actors["assistant"]["bubble_pending_count"] == 1
+            assert actors["assistant"]["bubble_notice"]["kind"] == "result"
+            assert not actors[employee["id"]]["bubble"]
             events = await runtime.member_events(employee["id"], conversation["id"])
             assert any(item["kind"] == "human.requested" for item in events)
         finally:

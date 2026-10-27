@@ -432,8 +432,9 @@ button.workspace-card.selected small {
 }
 .crew-speech-bubble {
     display: block;
+    box-sizing: border-box;
     width: 100%;
-    min-height: 58px;
+    height: 100%;
     padding: 10px 16px;
     border: 2px solid #786c50;
     border-radius: 25px 25px 25px 7px;
@@ -446,7 +447,6 @@ button.workspace-card.selected small {
     box-shadow: 0 4px 8px #312b2722;
     cursor: pointer;
     overflow-wrap: anywhere;
-    max-height: 68px;
     overflow: hidden;
 }
 .member-config-tabs {

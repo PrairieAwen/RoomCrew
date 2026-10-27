@@ -67,19 +67,21 @@
             el("member-panel-material").hidden
         )
             throw new Error("agent/material tabs were not separated");
-        el("bundle-avatar").click();
-        await until(materialReady);
-        el("binding-category").value = "completed";
-        el("binding-category").dispatchEvent(new Event("change"));
-        el("binding-action").value = "report";
-        el("binding-action").dispatchEvent(new Event("change"));
-        el("binding-clip").selectedIndex = 1;
-        el("binding-clip").dispatchEvent(new Event("change"));
-        el("binding-fps").value = "7";
-        el("binding-loop").checked = false;
-        el("binding-apply").click();
-        if (!el("binding-summary").textContent.includes("7 fps"))
-            throw new Error("custom frame configuration did not apply");
+        if (__USE_ATLAS__) {
+            el("bundle-avatar").click();
+            await until(materialReady);
+            el("binding-category").value = "completed";
+            el("binding-category").dispatchEvent(new Event("change"));
+            el("binding-action").value = "report";
+            el("binding-action").dispatchEvent(new Event("change"));
+            el("binding-clip").selectedIndex = 1;
+            el("binding-clip").dispatchEvent(new Event("change"));
+            el("binding-fps").value = "7";
+            el("binding-loop").checked = false;
+            el("binding-apply").click();
+            if (!el("binding-summary").textContent.includes("7 fps"))
+                throw new Error("custom frame configuration did not apply");
+        }
         el("member-question-bubble").value = "老板，请帮我选一下。";
         el("member-completed-bubble").value = "验收完成，点击查看产物。";
         el("member-form").requestSubmit();
@@ -89,7 +91,8 @@
             !member.python_enabled ||
             member.skills.length !== 1 ||
             member.mcp_servers.length !== 1 ||
-            member.material_profile.bindings.completed.fps !== 7
+            (__USE_ATLAS__ &&
+                member.material_profile.bindings.completed.fps !== 7)
         )
             throw new Error("capabilities were not persisted");
         await studio.chatMode();
@@ -100,6 +103,14 @@
         window.__capabilityPhase = "human_interrupt";
         await until(waiting);
         const view = studio.renderer.views.get("assistant");
+        for (const [identifier, fact] of studio.renderer.facts)
+            if (
+                identifier !== "assistant" &&
+                (fact.bubble || fact.requires_input)
+            )
+                throw new Error(
+                    "delegated human question leaked to a worker bubble",
+                );
         if (view.bubbleButton.textContent !== "老板，请帮我选一下。")
             throw new Error("question bubble missing");
         view.bubbleButton.click();
@@ -115,6 +126,14 @@
         const form = el("questions-list").querySelector("form");
         if (
             !form
+                .querySelector("small")
+                .textContent.startsWith(view.member.name)
+        )
+            throw new Error(
+                "human form presenter did not match the entry agent",
+            );
+        if (
+            !form
                 .querySelector(".question-choices")
                 .textContent.includes("其他 / 补充")
         )
@@ -123,6 +142,9 @@
         form.requestSubmit();
         window.__capabilityPhase = "completion";
         await until(completed);
+        for (const [identifier, fact] of studio.renderer.facts)
+            if (identifier !== "assistant" && fact.bubble)
+                throw new Error("child completion produced a separate bubble");
         studio.closeQuestions();
         const result = await api(
             "read_artifact",
@@ -145,8 +167,15 @@
         const timeline = el("timeline").getBoundingClientRect();
         if (timeline.left < innerWidth / 2 || timeline.right > innerWidth)
             throw new Error("conversation is not docked on the right");
-        if (view.bubble.parentNode !== studio.renderer.bubbles)
-            throw new Error("bubble must remain above furniture");
+        if (
+            view.bubble.parentNode !== view.bubbleMount ||
+            view.bubbleMount.parentNode !== view.bubbleActor ||
+            view.bubbleActor.parentNode !== studio.renderer.bubbles ||
+            studio.renderer.bubbles.previousSibling !== studio.renderer.depth
+        )
+            throw new Error(
+                "bubble must share actor space above the furniture layer",
+            );
         studio.renderer.focusMember("assistant");
         await new Promise(delay);
         const bubbleBounds = view.bubble.getBoundingClientRect();
@@ -158,19 +187,20 @@
             throw new Error("bubble is not bound to its actor");
         await new Promise(delay);
         if (
-            !view.sprite ||
-            !member.material_profile.bindings.completed.frames.includes(
-                Number(view.sprite.dataset.frame),
-            )
+            __USE_ATLAS__ &&
+            (!view.sprite ||
+                !member.material_profile.bindings.completed.frames.includes(
+                    Number(view.sprite.dataset.frame),
+                ))
         )
             throw new Error("configured frame sequence was not rendered");
         studio.renderer.camera(1.1);
         await new Promise(delay);
         const zoomed = view.bubble.getBoundingClientRect();
-        if (Math.abs(zoomed.width - bubbleBounds.width) > 1)
-            throw new Error("bubble changed screen size with camera zoom");
+        if (Math.abs(zoomed.width / bubbleBounds.width - 1.1) > 0.02)
+            throw new Error("bubble did not scale together with its actor");
         verifyActualAnchor();
-        // 3、通过正式换座入口实际行走，泡泡必须跟随素材并保持未读，不能用固定偏移冒充。
+        // 3、通过正式换座入口实际行走，泡泡必须继承人物变换并保持未读。
         movementOrigin = actualHead();
         const startBubble = view.bubble.getBoundingClientRect();
         await studio.moveTo("sofa");
@@ -184,6 +214,12 @@
             ) < 20
         )
             throw new Error("bubble stayed fixed while the material moved");
+        await verifyWholeWalk();
+        // 4、可选人工观察保留真实未读结果，不注入泡泡、不改变回执。
+        if (__VISUAL_REVIEW__) {
+            window.__capabilityPhase = "visual_review";
+            await new Promise(reviewDelay);
+        }
         const oldConversation =
             studio.renderer.facts.get("assistant").bubble_notice
                 .conversation_id;
@@ -207,16 +243,20 @@
             bubbles: true,
             rightDock: true,
             separateConfig: true,
-            customFrames: true,
+            customFrames: __USE_ATLAS__,
+            material: __USE_ATLAS__ ? "atlas" : "builtin",
             bubbleFollowsActor: true,
             actualWalking: true,
             persistentUntilRead: true,
+            wholeWalk: window.__bubbleWalkMetrics,
+            mainAgentBubblesOnly: true,
         };
     } catch (error) {
         window.__capabilitiesResult = {
             ok: false,
             error: error.message,
             phase: window.__capabilityPhase,
+            walkMetrics: window.__bubbleWalkMetrics,
             toast: el("toast")?.textContent,
         };
     }
@@ -236,33 +276,41 @@
             studio.memberConfiguration.actions.manifest?.clips?.length
         );
     }
-    /** 因为图集起坐会改变实际素材边界，需要读取本帧真正显示的裁切区域。 */
+    /** 因为逐帧裁切框会变化，需要以实际人物根节点的位置作为移动参照。 */
     function actualHead() {
-        // 1、精确图集取裁切层，内置人物取骨架头部。
+        // 1、使用浏览器实际渲染的角色根矩阵，不追逐图集帧留白。
         const current = studio.renderer.views.get("assistant");
-        const box = (
-            current.spriteFrame ||
-            current.sprite ||
-            current.rig.head
-        ).getBoundingClientRect();
-        return { x: box.left + box.width / 2, y: box.top };
+        return new DOMPoint(0, 0).matrixTransform(current.group.getScreenCTM());
     }
-    /** 因为泡泡连线必须指向对应素材，需要比较实际 SVG 端点与本帧头部边界。 */
+    /** 因为连线接上不代表泡泡本体稳定，需要检查真实父子关系和本体相对人物的水平中心。 */
     function verifyActualAnchor() {
-        // 1、不使用固定身高推算，直接检查正式渲染结果。
+        // 1、泡泡中心必须在当前人物根中心，走动、转向或镜头变化不能令其横向漂移。
         const current = studio.renderer.views.get("assistant"),
             head = actualHead();
-        const path = current.bubbleLink;
-        const end = path
-            .getPointAtLength(path.getTotalLength())
-            .matrixTransform(path.getScreenCTM());
-        if (Math.hypot(end.x - head.x, end.y - head.y) > 2)
-            throw new Error("bubble pointer is detached from actual material");
+        const box = current.bubble.getBoundingClientRect();
+        if (
+            current.bubbleMount.parentNode !== current.bubbleActor ||
+            Math.abs(box.left + box.width / 2 - head.x) > 2
+        )
+            throw new Error("bubble body is detached from its actor root");
         if (
             !current.bubbleText ||
             current.bubble.getAttribute("display") === "none"
         )
             throw new Error("unread bubble disappeared");
+        // 2、尾巴与实际按钮本体必须相连，不能只检查 foreignObject 的空白容器。
+        const body = current.bubbleButton.getBoundingClientRect();
+        const pointer = current.bubbleLink.getBoundingClientRect();
+        if (body.bottom < pointer.top - 1 || body.bottom > pointer.bottom)
+            throw new Error("bubble pointer is detached from the visible body");
+        // 3、提示本体必须实际可点击，不能被前景家具盖住但几何检查仍通过。
+        if (
+            document.elementFromPoint(
+                body.left + body.width / 2,
+                body.top + body.height / 2,
+            ) !== current.bubbleButton
+        )
+            throw new Error("visible bubble button was covered");
     }
     /** 因为跟随必须在真正行走中验证，需要等待实际人物移动至少三十屏幕像素。 */
     function actorMoved() {
@@ -279,5 +327,55 @@
     function resultRead() {
         // 1、按实际页面和当前人物快照判断，不手动隐藏显示节点。
         return !studio.renderer.views.get("assistant").bubbleText;
+    }
+    /** 因为抽查几个位置会漏掉行走漂移，需要逐帧检查泡泡相对人物根节点的局部位置。 */
+    async function verifyWholeWalk() {
+        // 1、完整采样剩余路线，中途通过正式定位入口切换观察人物以覆盖镜头平移。
+        const samples = [];
+        const started = performance.now();
+        let frames = 0;
+        while (performance.now() - started < 20000) {
+            await new Promise(nextFrame);
+            const actor = studio.renderer.motion.actors.get("assistant");
+            const current = studio.renderer.views.get("assistant");
+            if (actor.phase === "moving") {
+                const local = current.group
+                    .getScreenCTM()
+                    .inverse()
+                    .multiply(current.bubble.getScreenCTM());
+                samples.push({ x: local.e, y: local.f });
+                frames += 1;
+                if (frames === 20) studio.renderer.focusMember("guardian");
+                if (frames === 40) studio.renderer.focusMember("assistant");
+            }
+            if (actor.phase === "settled" && frames > 10) break;
+        }
+        // 2、局部偏移应该稳定；不能用“尾线端点刚好连接”代替泡泡本体的固定挂载。
+        let minX = Infinity,
+            maxX = -Infinity,
+            minY = Infinity,
+            maxY = -Infinity;
+        for (const point of samples) {
+            minX = Math.min(minX, point.x);
+            maxX = Math.max(maxX, point.x);
+            minY = Math.min(minY, point.y);
+            maxY = Math.max(maxY, point.y);
+        }
+        const drift = Math.hypot(maxX - minX, maxY - minY);
+        window.__bubbleWalkMetrics = { frames, localDrift: drift };
+        if (frames < 40 || drift > 0.5)
+            throw new Error(
+                `bubble local attachment drift: ${drift.toFixed(2)}, frames=${frames}`,
+            );
+    }
+    /** 因为漂移发生在帧间，需要把采样安排到实际动画帧。 */
+    function nextFrame(resolve) {
+        // 1、只观察正式绘制结果，不修改动作时间或伪造人物位置。
+        requestAnimationFrame(resolve);
+    }
+    /** 因为原生截图需要观察真实未读泡泡，需要在可选人工模式短暂延迟点击回执。 */
+    function reviewDelay(resolve) {
+        // 1、只延迟测试操作，生产渲染和后台刷新照常进行。
+        setTimeout(resolve, 20000);
     }
 })();

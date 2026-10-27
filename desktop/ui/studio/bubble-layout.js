@@ -1,54 +1,44 @@
-/* 气泡只选择相对人物的位置，不钉在屏幕边缘。 */
+/* 人物局部空间中的稳定挂点，不读取屏幕边界或逐帧裁切框。 */
 "use strict";
+const CREW_BUBBLE_SOCKET_CACHE = new WeakMap();
 
-/** 因为泡泡应与实际素材同步移动，需要只在人物头部附近选择相对位置而不夹紧屏幕坐标。 */
-function crewBubbleLayout(anchor, viewport) {
-    // 1、候选位置全部锚定同一个头部，无法完全放入视口时也不把泡泡移到无关位置。
-    const width = 224,
-        height = 70,
-        gap = 16;
-    const positions = [
-        { left: anchor.x - width / 2, top: anchor.y - height - gap },
-        { left: anchor.x + 24, top: anchor.y - height / 2 },
-        { left: anchor.x - width - 24, top: anchor.y - height / 2 },
-        { left: anchor.x + 24, top: anchor.y + gap },
-        { left: anchor.x - width - 24, top: anchor.y + gap },
-    ];
-    let selected = positions[0],
-        best = Infinity;
-    for (const position of positions) {
-        let score =
-            Math.max(0, viewport.left - position.left) +
-            Math.max(0, position.left + width - viewport.right) +
-            Math.max(0, viewport.top - position.top) +
-            Math.max(0, position.top + height - viewport.bottom);
-        for (const obstacle of viewport.obstacles || [])
-            if (crewBubbleIntersects({ ...position, width, height }, obstacle))
-                score += width;
-        if (score < best) {
-            selected = position;
-            best = score;
-        }
+/** 因为人物移动和镜头变化应由同一个父变换带动，需要只计算角色局部挂点。 */
+function crewBubbleAnchor(manifest, seatMix = 0) {
+    // 1、起坐使用连续姿态插值；行走帧和相机信息不能改变局部挂点。
+    const seat = Math.max(0, Math.min(1, seatMix));
+    if (!manifest) return { x: 0, y: -116 + seat * 13 };
+    let sockets = CREW_BUBBLE_SOCKET_CACHE.get(manifest);
+    if (!sockets) {
+        sockets = crewAtlasBubbleSockets(manifest);
+        CREW_BUBBLE_SOCKET_CACHE.set(manifest, sockets);
     }
-    // 2、尾线始终连接实际素材锚点，平移或缩放不会改为另一个人物的坐标。
-    const { left, top } = selected;
-    const tailX = Math.max(left + 12, Math.min(anchor.x, left + width - 12));
-    const tailY =
-        anchor.y >= top + height
-            ? top + height - 4
-            : anchor.y < top
-              ? top + 4
-              : Math.max(top + 10, Math.min(anchor.y, top + height - 10));
-    return { left, top, width, height, tailX, tailY };
+    return {
+        x: 0,
+        y: sockets.standing + (sockets.seated - sockets.standing) * seat,
+    };
 }
 
-/** 因为场景按钮可能接近人物，需要给相对位置选择提供轻量遮挡判断。 */
-function crewBubbleIntersects(rect, region) {
-    // 1、仅用于比较人物附近候选位置，不能把气泡固定到按钮边缘。
-    return (
-        rect.left < region.right + 8 &&
-        rect.left + rect.width > region.left - 8 &&
-        rect.top < region.bottom + 8 &&
-        rect.top + rect.height > region.top - 8
-    );
+/** 因为图集各帧裁切留白不同，需要按整套姿态生成一次稳定挂点而不是追逐每帧边界。 */
+function crewAtlasBubbleSockets(manifest) {
+    // 1、先使用统一虚拟画布与脚底锚点，缺失姿态沿用画布挂点。
+    const scale = manifest.display_height / manifest.frame_size[1];
+    const result = {
+        standing: -manifest.pivot[1] * scale,
+        seated: -manifest.pivot[1] * scale,
+    };
+    // 2、裁切素材按整套姿态最上沿定位，切帧、转向和道具变化不改变挂点。
+    if (manifest.frame_rects)
+        for (const posture of ["standing", "seated"]) {
+            let top = Infinity;
+            for (const clip of manifest.clips)
+                if (clip.posture === posture)
+                    for (const frame of clip.frames)
+                        top = Math.min(
+                            top,
+                            manifest.frame_rects[frame].offset[1],
+                        );
+            if (Number.isFinite(top))
+                result[posture] = (top - manifest.pivot[1]) * scale;
+        }
+    return result;
 }

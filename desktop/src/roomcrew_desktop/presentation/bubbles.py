@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import Any
 
 KINDS = (
+    "run.started",
     "run.completed",
-    "task.completed",
     "human.requested",
     "human.responded",
     "run.cancelled",
@@ -26,11 +26,16 @@ class BubbleStore:
         self._lock = threading.Lock()
 
     def feed(self, cursor: int) -> dict[str, list[dict[str, Any]]]:
-        """因为人物最新状态会改变，需要按日志增量维护独立待处理提示并返回每个人物的未读队列。"""
+        """因为提示必须由任务入口转达，需要增量记录 Run 主人物并保留稳定通知与已读回执。"""
         # 1、游标与提示在一个桌面事务中提交，重试和历史回放不会生成重复泡泡。
         with self._lock, closing(self._connect()) as db, db:
             previous = db.execute("SELECT cursor FROM bubble_cursor WHERE id=1").fetchone()[0]
-            if cursor > previous:
+            migrating = db.execute("PRAGMA user_version").fetchone()[0] < 1
+            if migrating:
+                # 旧版子任务提示退役；重放只恢复有效主任务提示，已读与已答复状态保持原样。
+                db.execute("UPDATE bubble_notices SET status='retired' WHERE status='pending'")
+                previous = 0
+            if cursor > previous or migrating:
                 with closing(
                     sqlite3.connect(self.journal.as_uri() + "?mode=ro", uri=True, timeout=0.2)
                 ) as source:
@@ -44,6 +49,7 @@ class BubbleStore:
                 for row in rows:
                     self._consume(db, dict(row))
                 db.execute("UPDATE bubble_cursor SET cursor=? WHERE id=1", (cursor,))
+                db.execute("PRAGMA user_version=1")
             # 2、人工问题优先，多个完成结果逐个保留，不能被最新运行覆盖。
             result: dict[str, list[dict[str, Any]]] = {}
             for row in db.execute(
@@ -58,9 +64,10 @@ class BubbleStore:
         # 1、客户端不能通过已读接口消除人工问题；问题只由真实答复或任务取消解决。
         with self._lock, closing(self._connect()) as db, db:
             row = db.execute(
-                "SELECT kind FROM bubble_notices WHERE id=? AND member_id=?", (notice_id, member_id)
+                "SELECT kind,status FROM bubble_notices WHERE id=? AND member_id=?",
+                (notice_id, member_id),
             ).fetchone()
-            if row is None:
+            if row is None or row[1] == "retired":
                 raise ValueError("该人物没有这条泡泡提示")
             if row[0] != "result":
                 raise ValueError("人工问题需要提交答复后才会消失")
@@ -80,14 +87,25 @@ class BubbleStore:
                 status TEXT NOT NULL, body TEXT NOT NULL);
             CREATE INDEX IF NOT EXISTS bubble_pending
                 ON bubble_notices(status,member_id,source_seq);
+            CREATE TABLE IF NOT EXISTS bubble_runs(
+                run_id TEXT PRIMARY KEY, member_id TEXT NOT NULL);
         """)
         return db
 
     def _consume(self, db: sqlite3.Connection, event: dict[str, Any]) -> None:
-        """因为一个 Run 有多个成员和人工恢复，需要只按真实触发事件建立或解决对应提示。"""
-        # 1、真实人工答复和取消只解除对应问题，不能把旧的完成结果标记已读。
+        """因为子任务只对主 Agent 汇报，需要把整轮完成和人工请求呈现给该 Run 的入口人物。"""
+        # 1、主身份取自正式启动事件，不能根据当前选中人物、共享 agent_id 或子任务触发者猜测。
         payload = json.loads(event["payload"])
         kind, run = event["kind"], event["run_id"]
+        if kind == "run.started":
+            if event["scope"] != "main":
+                return
+            db.execute(
+                "INSERT OR IGNORE INTO bubble_runs VALUES(?,?)",
+                (run, event.get("member_id") or "assistant"),
+            )
+            return
+        # 2、真实人工答复和取消只解除对应问题，不能把旧的完成结果标记已读。
         if kind == "human.responded":
             db.execute(
                 "UPDATE bubble_notices SET status='resolved' "
@@ -101,14 +119,12 @@ class BubbleStore:
                 (run,),
             )
             return
-        if kind == "task.completed" and (
-            payload.get("status") == "error"
-            or payload.get("external_worker")
-            or payload.get("presentation_external")
-            or payload.get("delegation_kind") == "external"
-        ):
+        if kind == "run.completed" and event["scope"] != "main":
             return
-        # 2、完成与问题使用稳定 ID；同一工具中断恢复重复发出事件也只登记一次。
+        owner = db.execute("SELECT member_id FROM bubble_runs WHERE run_id=?", (run,)).fetchone()
+        if owner is None:
+            return
+        # 3、只有整轮完成提示结果；人工请求保留原始 ID 和来源，答复仍恢复原来的子任务。
         question = kind == "human.requested"
         request = payload.get("request_id") if question else None
         if question and not isinstance(request, str):
@@ -116,7 +132,8 @@ class BubbleStore:
         identifier = f"question:{request}" if question else f"result:{run}:{event['scope']}"
         notice = {
             "id": identifier,
-            "member_id": event.get("member_id") or "assistant",
+            "member_id": owner[0],
+            "source_member_id": event.get("member_id") or "assistant",
             "conversation_id": event["conversation_id"],
             "run_id": run,
             "kind": "question" if question else "result",
@@ -125,7 +142,10 @@ class BubbleStore:
             "scope": event["scope"],
         }
         db.execute(
-            "INSERT OR IGNORE INTO bubble_notices VALUES(?,?,?,?,?,?,?,?)",
+            "INSERT INTO bubble_notices VALUES(?,?,?,?,?,?,?,?) "
+            "ON CONFLICT(id) DO UPDATE SET member_id=excluded.member_id,body=excluded.body, "
+            "status=CASE WHEN bubble_notices.status='retired' THEN 'pending' "
+            "ELSE bubble_notices.status END",
             (
                 identifier,
                 notice["member_id"],

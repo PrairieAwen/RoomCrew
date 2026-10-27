@@ -52,8 +52,13 @@ async function verifyReadLifecycle() {
     ]);
     // 3、打开问题表单不算答复，不能调用完成已读入口。
     calls.length = 0;
-    await studio.openConversation("member", { ...notice, kind: "question" });
+    await studio.openConversation("member", {
+        ...notice,
+        kind: "question",
+        request_id: "child-question",
+    });
     assert.deepEqual(calls.map(firstItem), ["loaded", "question"]);
+    assert.equal(calls[1][1], "child-question");
     // 4、等待期间切到其他工作空间，不能把回执写入错误空间。
     calls.length = 0;
     studio.chatMode = switchedWorkspace;
@@ -73,8 +78,11 @@ async function refreshView() {
     /* 1、记录刷新。 */ calls.push(["refreshed"]);
 }
 /** 因为人工表单打开不代表提交，需要单独记录打开步骤。 */
-async function questionView() {
-    /* 1、记录显示表单。 */ calls.push(["question"]);
+async function questionView(requestId) {
+    /* 1、记录显示表单及原始人工请求身份。 */ calls.push([
+        "question",
+        requestId,
+    ]);
 }
 /** 因为异步查看可能遇到空间切换，需要模拟页面代次变化。 */
 async function switchedWorkspace() {

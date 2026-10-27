@@ -1,5 +1,7 @@
 """人物泡泡的稳定身份、已读回执和任务状态解耦验证。"""
 
+import json
+import sqlite3
 from pathlib import Path
 
 import pytest
@@ -81,15 +83,18 @@ async def test_question_bubble_requires_a_real_answer_and_keeps_old_result(tmp_p
         await runtime.close()
 
 
-async def test_worker_bubble_belongs_to_the_actual_member(tmp_path: Path) -> None:
-    """因为多位员工可复用 Agent 定义，需要验证子任务完成通知和已读不能串到另一人物。"""
-    # 1、两个形象共用配置；有形象子任务完成只登记实际执行成员。
+async def test_delegation_bubbles_belong_to_the_entry_member(tmp_path: Path) -> None:
+    """因为任务入口负责对用户汇报，需要验证子任务完成无泡泡且人工请求由非默认主人物转达。"""
+    # 1、主子人物共用定义也按 run.started 区分，子任务返回不等于主任务完成。
     runtime = DesktopRuntime(AppPaths.create(tmp_path))
     await runtime.start()
     try:
-        member = await runtime.save_member({"name": "同事", "agent_id": "agent_assistant"}, 0)
+        lead = await runtime.save_member({"name": "入口同事", "agent_id": "agent_assistant"}, 0)
+        member = await runtime.save_member({"name": "执行同事", "agent_id": "agent_assistant"}, 0)
         conversation = runtime.store.create_conversation("synthetic")
-        run = runtime.store.begin(conversation["id"], "委派", "worker-result")
+        run = runtime.store.begin(
+            conversation["id"], "委派", "worker-result", lead["name"], lead["agent_id"], lead["id"]
+        )
         runtime.store.append(
             conversation["id"],
             run,
@@ -103,17 +108,127 @@ async def test_worker_bubble_belongs_to_the_actual_member(tmp_path: Path) -> Non
         )
         data = await runtime.studio_feed()
         actors = {item["member_id"]: item for item in data["actors"]}
-        notice = actors[member["id"]]["bubble_notice"]
-        assert notice["member_id"] == member["id"]
-        assert not actors["assistant"]["bubble"]
-        with pytest.raises(ValueError, match="没有"):
-            await runtime.acknowledge_bubble("assistant", notice["id"])
-        # 2、读取真正成员的结果只消除他的泡泡，不修改真实 Run 状态。
-        await runtime.acknowledge_bubble(member["id"], notice["id"])
-        assert runtime.store.latest_status(conversation["id"]) == "running"
+        assert not any(actor["bubble"] for actor in actors.values())
+        # 2、子任务的人工请求归主人物展示，源身份、问题 ID 和恢复目标保持不变。
+        runtime.store.append(
+            conversation["id"],
+            run,
+            "human.requested",
+            member["name"],
+            "worker:two",
+            member_id=member["id"],
+            request_id="delegated-question",
+        )
+        runtime.store.append(conversation["id"], run, "run.waiting_user", member_id=lead["id"])
         data = await runtime.studio_feed()
-        assert not next(item for item in data["actors"] if item["member_id"] == member["id"])[
-            "bubble"
-        ]
+        actors = {item["member_id"]: item for item in data["actors"]}
+        notice = actors[lead["id"]]["bubble_notice"]
+        assert notice["member_id"] == lead["id"]
+        assert notice["source_member_id"] == member["id"]
+        assert actors[lead["id"]]["requires_input"]
+        assert actors[lead["id"]]["material_category"] == "human"
+        assert not actors[member["id"]]["requires_input"]
+        assert not actors[member["id"]]["bubble"]
+        assert data["question_presenters"] == {"delegated-question": lead["id"]}
+        assert all(cue["member_id"] == lead["id"] for cue in data["cues"] if cue["action"] == "ask")
+        # 3、最终仅主任务产生一个完成泡泡，错误人物不能代读，实际身份仍保留在轨迹。
+        runtime.store.append(
+            conversation["id"],
+            run,
+            "human.responded",
+            member["name"],
+            "worker:two",
+            member_id=member["id"],
+            request_id="delegated-question",
+        )
+        runtime.store.finish(run, "completed", {})
+        actors = {item["member_id"]: item for item in (await runtime.studio_feed())["actors"]}
+        notice = actors[lead["id"]]["bubble_notice"]
+        assert notice["kind"] == "result"
+        assert actors[lead["id"]]["bubble_pending_count"] == 1
+        assert not actors[member["id"]]["bubble"]
+        assert not actors.get("assistant", {}).get("bubble")
+        with pytest.raises(ValueError, match="没有"):
+            await runtime.acknowledge_bubble(member["id"], notice["id"])
+        await runtime.acknowledge_bubble(lead["id"], notice["id"])
+        assert runtime.store.latest_status(conversation["id"]) == "completed"
+    finally:
+        await runtime.close()
+
+
+async def test_legacy_child_notices_retire_without_losing_read_receipts(tmp_path: Path) -> None:
+    """因为已有用户会保存旧版子任务泡泡，需要验证迁移清理旧提示且保留主结果的已读状态。"""
+    # 1、建立真实历史事件及新版表，再模拟上一版保存的子任务提示与待处理人工问题。
+    paths = AppPaths.create(tmp_path)
+    runtime = DesktopRuntime(paths)
+    await runtime.start()
+    try:
+        worker = await runtime.save_member({"name": "子成员"}, 0)
+        conversation = runtime.store.create_conversation("synthetic")
+        seen_run = runtime.store.begin(conversation["id"], "已读结果", "seen-before-migration")
+        runtime.store.finish(seen_run, "completed", {})
+        actor = (await runtime.studio_feed())["actors"][0]
+        await runtime.acknowledge_bubble("assistant", actor["bubble_notice"]["id"])
+        run = runtime.store.begin(conversation["id"], "待回复", "old-question-run")
+        child_seq = runtime.store.append(
+            conversation["id"], run, "task.completed", scope="child:old", member_id=worker["id"]
+        )
+        question_seq = runtime.store.append(
+            conversation["id"],
+            run,
+            "human.requested",
+            scope="child:next",
+            member_id=worker["id"],
+            request_id="old-child-question",
+        )
+        with sqlite3.connect(paths.data / "bubbles.sqlite") as db:
+            for kind, identifier, seq, request in (
+                ("result", f"result:{run}:child:old", child_seq, None),
+                ("question", "question:old-child-question", question_seq, "old-child-question"),
+            ):
+                notice = {
+                    "id": identifier,
+                    "member_id": worker["id"],
+                    "run_id": run,
+                    "kind": kind,
+                    "conversation_id": conversation["id"],
+                    "request_id": request,
+                    "source_seq": seq,
+                    "scope": "child:old",
+                }
+                db.execute(
+                    "INSERT INTO bubble_notices VALUES(?,?,?,?,?,?,?,?)",
+                    (
+                        identifier,
+                        worker["id"],
+                        run,
+                        kind,
+                        request,
+                        seq,
+                        "pending",
+                        json.dumps(notice),
+                    ),
+                )
+            db.execute("PRAGMA user_version=0")
+        # 2、迁移后子完成退役，人工请求转交主人物；重放两次也不恢复已读结果。
+        for _ in range(2):
+            data = await runtime.studio_feed()
+            actors = {item["member_id"]: item for item in data["actors"]}
+            assert not actors[worker["id"]]["bubble"]
+            assert actors["assistant"]["bubble_pending_count"] == 1
+            assert actors["assistant"]["bubble_notice"]["id"] == "question:old-child-question"
+        with sqlite3.connect(paths.data / "bubbles.sqlite") as db:
+            assert (
+                db.execute(
+                    "SELECT status FROM bubble_notices WHERE id=?", (f"result:{run}:child:old",)
+                ).fetchone()[0]
+                == "retired"
+            )
+            assert (
+                db.execute(
+                    "SELECT status FROM bubble_notices WHERE run_id=?", (seen_run,)
+                ).fetchone()[0]
+                == "seen"
+            )
     finally:
         await runtime.close()

@@ -7,6 +7,7 @@ from typing import Any
 from roomcrew.accounts.service import AccountService
 from roomcrew.platform.paths import AppPaths
 from roomcrew_desktop.accounts import interaction_profile
+from roomcrew_desktop.presentation.animation import animation_hint
 from roomcrew_desktop.presentation.bubbles import BubbleStore
 from roomcrew_desktop.presentation.narration import NarrationService
 from roomcrew_desktop.presentation.projection import StudioProjection
@@ -65,10 +66,27 @@ class StudioService:
             projection["degraded"] = True
         # 2、辅助旁白立即返回规则结果；未读提示独立于最新动作，不受新任务覆盖。
         preferences = self.accounts.repository.preferences()
-        actors = self.narrator.decorate(projection["actors"], preferences["narration_enabled"])
+        actors = projection["actors"]
         members = self.accounts.members()
         definitions = {item["id"]: item for item in members}
         for actor in actors:
+            pending = notices.get(actor["member_id"], [])
+            question_count = sum(item["kind"] == "question" for item in pending)
+            was_question = actor["requires_input"]
+            actor["question_count"] = question_count
+            actor["requires_input"] = question_count > 0
+            if question_count or was_question:
+                # 人工问题由入口人物转达；实际子任务等待仍保留在原始会话轨迹。
+                activity = "question" if question_count else "waiting"
+                actor.update(
+                    activity=activity,
+                    action_id="ask" if question_count else "idle",
+                    summary="等待你答复" if question_count else "等待主 Agent 协调",
+                    idle_eligible=False,
+                    animation=animation_hint(
+                        activity, [], question_count, actor["warning_count"], []
+                    ),
+                )
             actor["external_calls"] += sum(
                 target not in definitions for target in actor.get("delegation_targets", [])
             )
@@ -94,7 +112,6 @@ class StudioService:
             )
             if binding:
                 actor["animation"] = {**actor["animation"], "gesture": binding["action"]}
-            pending = notices.get(actor["member_id"], [])
             notice = pending[0] if pending else None
             actor["bubble_notice"] = notice
             actor["bubble_pending_count"] = len(pending)
@@ -106,6 +123,26 @@ class StudioService:
                 if notice
                 else ""
             )
+        actors = self.narrator.decorate(actors, preferences["narration_enabled"])
+        question_presenters = {
+            item["request_id"]: member
+            for member, pending in notices.items()
+            for item in pending
+            if item["kind"] == "question"
+        }
+        questions_by_seq = {
+            item["source_seq"]: member
+            for member, pending in notices.items()
+            for item in pending
+            if item["kind"] == "question"
+        }
+        projection["cues"] = [
+            {**cue, "member_id": questions_by_seq[cue["source_seq"]]}
+            if cue["action"] == "ask"
+            else cue
+            for cue in projection.get("cues", [])
+            if cue["action"] != "ask" or cue["source_seq"] in questions_by_seq
+        ]
         live = {member["id"] for member in members}
         actors = [actor for actor in actors if actor["member_id"] in live]
         interactions = [
@@ -126,6 +163,7 @@ class StudioService:
             **projection,
             "actors": actors,
             "members": members,
+            "question_presenters": question_presenters,
             "interactions": [group for group in interactions if len(group["members"]) >= 2],
             "scene": scene,
             "preferences": preferences,

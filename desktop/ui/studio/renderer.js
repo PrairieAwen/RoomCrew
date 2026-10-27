@@ -128,8 +128,7 @@ class CrewRenderer {
             ]);
             if (this.views.get(member.id)?.signature !== signature) {
                 this.views.get(member.id)?.group.remove();
-                this.views.get(member.id)?.bubble.remove();
-                this.views.get(member.id)?.bubbleLink.remove();
+                this.views.get(member.id)?.bubbleActor.remove();
                 this.views.set(member.id, this.drawMember(member, signature));
             }
             this.views.get(member.id).member = member;
@@ -139,8 +138,7 @@ class CrewRenderer {
         for (const [identifier, view] of this.views) {
             if (!live.has(identifier)) {
                 view.group.remove();
-                view.bubble.remove();
-                view.bubbleLink.remove();
+                view.bubbleActor.remove();
                 this.views.delete(identifier);
                 this.motion.actors.delete(identifier);
             }
@@ -408,8 +406,8 @@ class CrewRenderer {
             visibility: "hidden",
         });
         const bubble = crewSvg("foreignObject", {
-            x: 0,
-            y: 0,
+            x: -112,
+            y: -86,
             width: 224,
             height: 70,
             display: "none",
@@ -419,9 +417,10 @@ class CrewRenderer {
             class: "crew-bubble-pointer",
             display: "none",
             "data-speaker": member.id,
-            fill: "none",
-            stroke: "#faf4df",
-            "stroke-width": 5,
+            d: "M-8,-18 L0,0 L10,-18 Z",
+            fill: "#fff9e8",
+            stroke: "#786c50",
+            "stroke-width": 1.4,
             "vector-effect": "non-scaling-stroke",
             "pointer-events": "none",
         });
@@ -432,10 +431,19 @@ class CrewRenderer {
         bubbleButton.className = "crew-speech-bubble";
         bubbleButton.dataset.member = member.id;
         bubbleButton.addEventListener("click", this.bubbleClick.bind(this));
+        bubbleButton.addEventListener("keydown", this.bubbleKey.bind(this));
         bubble.append(bubbleButton);
+        const bubbleMount = crewSvg("g", {
+            class: "crew-speech-attachment",
+            "data-member": member.id,
+            transform: "translate(0,-116) scale(0.6666666667)",
+        });
+        bubbleMount.append(bubbleLink, bubble);
+        const bubbleActor = crewSvg("g", { "data-member": member.id });
+        bubbleActor.append(bubbleMount);
         group.append(shadow, rig.root, badge, name, leisureLabel);
         this.depth.append(group);
-        this.bubbles.append(bubbleLink, bubble);
+        this.bubbles.append(bubbleActor);
         return {
             group,
             rig,
@@ -447,6 +455,8 @@ class CrewRenderer {
             leisureLabel,
             bubble,
             bubbleLink,
+            bubbleMount,
+            bubbleActor,
             bubbleButton,
         };
     }
@@ -521,10 +531,7 @@ class CrewRenderer {
                     sample.action = binding.action;
                     sample.material_binding = binding;
                 }
-                view.group.setAttribute(
-                    "transform",
-                    `translate(${p[0]},${p[1]})`,
-                );
+                crewSetActorTransform(view, p);
                 view.group.dataset.depth =
                     actor.position[0] + actor.position[1] + 0.1;
                 view.group.classList.toggle(
@@ -561,7 +568,7 @@ class CrewRenderer {
                     custom ? "hidden" : "visible",
                 );
                 if (!custom) this.rig.paint(view.rig, sample, dt);
-                if (view.bubbleText) this.positionBubble(view);
+                if (view.bubbleText) this.positionBubble(view, sample, custom);
                 view.badge.textContent = fact?.question_count
                     ? "?"
                     : fact?.warning_count
@@ -626,55 +633,30 @@ class CrewRenderer {
         else this.selectMember(identifier);
     }
 
-    /** 因为气泡必须跟随实际人物，需要在屏幕中锚定头部并回算至独立 SVG 显示层。 */
-    positionBubble(view) {
-        // 1、读取刚完成绘制的实际图集裁切区域或骨架头部，不再猜固定脚底偏移。
-        const matrix = this.world.getScreenCTM();
-        if (!matrix) return;
-        const visual = crewBubbleVisual(view);
-        const visualBounds = visual.getBoundingClientRect();
-        if (!visualBounds.width || !visualBounds.height) return;
-        const bounds = this.svg.getBoundingClientRect();
-        const scale = Math.hypot(matrix.a, matrix.b) || 1;
-        const anchor = {
-            x: visualBounds.left + visualBounds.width / 2,
-            y: visualBounds.top,
-        };
-        const dock = document.body.classList.contains("conversation-open")
-            ? document.getElementById("timeline")?.getBoundingClientRect()
+    /** 因为泡泡按钮应独立接收键盘操作，需要避免按键继续传播到场景快捷键。 */
+    bubbleKey(event) {
+        // 1、只阻止冒泡，保留原生按钮的 Enter 和空格激活行为。
+        event.stopPropagation();
+    }
+
+    /** 因为人物与泡泡必须共享空间变换，需要只更新稳定的局部挂点。 */
+    positionBubble(view, sample, custom) {
+        // 1、固定变体遵循其真实姿态，普通起坐平滑插值；行走、换帧和镜头不改变局部关系。
+        const manifest = custom
+            ? this.skins.cache.get(view.member.avatar_id)?.manifest
             : null;
-        const topbar = document
-            .querySelector(".topbar")
-            ?.getBoundingClientRect();
-        const layout = crewBubbleLayout(anchor, {
-            left: bounds.left + 12,
-            right: dock?.width ? dock.left - 12 : bounds.right - 12,
-            top: topbar?.bottom ? topbar.bottom + 10 : bounds.top + 84,
-            bottom: bounds.bottom - 12,
-            obstacles: [
-                document.querySelector(".scene-tools").getBoundingClientRect(),
-            ],
-        });
-        const inverse = matrix.inverse();
-        const origin = new DOMPoint(layout.left, layout.top).matrixTransform(
-            inverse,
-        );
-        const tail = new DOMPoint(layout.tailX, layout.tailY).matrixTransform(
-            inverse,
-        );
-        const head = new DOMPoint(anchor.x, anchor.y).matrixTransform(inverse);
-        const key = `${origin.x.toFixed(2)},${origin.y.toFixed(2)},${scale.toFixed(3)},${tail.x.toFixed(2)},${tail.y.toFixed(2)},${head.x.toFixed(2)},${head.y.toFixed(2)}`;
-        // 2、只在位置变化时写入属性；固定屏幕大小，并用连线指回对应素材。
+        let seat = sample.seatMix || 0;
+        if (sample.material_binding?.clip)
+            seat =
+                sample.material_binding.clip.split(".")[2] === "seated" ? 1 : 0;
+        const anchor = crewBubbleAnchor(manifest, seat);
+        const key = `${anchor.x.toFixed(3)},${anchor.y.toFixed(3)}`;
+        // 2、挂点位于共用人物变换的提示根节点，镜头由共同 world 继承，不单独追踪屏幕位置。
         if (key !== view.bubblePosition) {
             view.bubblePosition = key;
-            view.bubble.setAttribute("width", layout.width);
-            view.bubble.setAttribute(
+            view.bubbleMount.setAttribute(
                 "transform",
-                `translate(${origin.x},${origin.y}) scale(${1 / scale})`,
-            );
-            view.bubbleLink.setAttribute(
-                "d",
-                `M${tail.x},${tail.y} L${head.x},${head.y}`,
+                `translate(${anchor.x},${anchor.y}) scale(0.6666666667)`,
             );
         }
     }
@@ -748,8 +730,12 @@ function crewMemberSkin(member) {
     return member.avatar_id;
 }
 
-/** 因为图集缺帧会回退内置骨架，需要只选当前可见的素材节点，忽略已移除的旧裁切引用。 */
-function crewBubbleVisual(view) {
-    // 1、图集容器存在时才采用其裁切层，否则泡泡跟随正在显示的骨架头部。
-    return view.sprite ? view.spriteFrame || view.sprite : view.rig.head;
+/** 因为前景家具不能挡住未读提示，需要让人物与顶层提示同帧使用同一份局部空间变换。
+ * 输入为人物投影坐标；只写 SVG 属性，不读取布局、反算屏幕或改变真实任务状态。
+ */
+function crewSetActorTransform(view, point) {
+    // 1、人物和提示根节点共用一份变换，均直接继承 world 的相机变换。
+    const transform = `translate(${point[0]},${point[1]})`;
+    view.group.setAttribute("transform", transform);
+    view.bubbleActor.setAttribute("transform", transform);
 }

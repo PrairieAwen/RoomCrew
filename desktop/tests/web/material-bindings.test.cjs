@@ -7,7 +7,7 @@ vm.runInContext(
         fs.readFileSync("desktop/ui/studio/skins.js", "utf8") +
         fs.readFileSync("desktop/ui/studio/bubble-layout.js", "utf8") +
         fs.readFileSync("desktop/ui/studio/renderer.js", "utf8") +
-        "\nglobalThis.api={crewSelectClip,crewBubbleLayout,crewBubbleIntersects,crewBubbleVisual};",
+        "\nglobalThis.api={crewSelectClip,crewBubbleAnchor,crewAtlasBubbleSockets};",
     context,
 );
 
@@ -44,65 +44,38 @@ function verifyFrameOverride() {
     assert.deepEqual(clip.frames, [0, 1]);
 }
 
-/** 因为气泡应该跟随对应人物，需要验证移动、固定屏幕尺寸和避开场景按钮。 */
-function verifyBubbleAnchors() {
-    // 1、没有边界阻挡时，人物移动多少，泡泡同向移动多少。
-    const viewport = { left: 12, right: 900, top: 84, bottom: 700 };
-    const first = context.api.crewBubbleLayout({ x: 400, y: 350 }, viewport);
-    const second = context.api.crewBubbleLayout({ x: 470, y: 390 }, viewport);
-    assert.equal(second.left - first.left, 70);
-    assert.equal(second.top - first.top, 40);
-    assert.equal(first.width, 224);
-    // 2、头顶靠近按钮时仍保留人物指向，同时不覆盖按钮或顶栏。
-    const toolbar = { left: 620, right: 930, top: 90, bottom: 155 };
-    const edge = context.api.crewBubbleLayout(
-        { x: 610, y: 105 },
-        { ...viewport, obstacles: [toolbar] },
-    );
-    assert.equal(context.api.crewBubbleIntersects(edge, toolbar), false);
-    assert.ok(
-        edge.top >= 84 && edge.left >= 12 && edge.left + edge.width <= 900,
-    );
-    assert.ok(Math.abs(edge.tailX - 610) < 300);
-    // 3、人物被平移到视口边缘外时，泡泡仍随人物移动，不能固定在 left=12。
-    const outside = context.api.crewBubbleLayout({ x: -300, y: 350 }, viewport);
-    const shifted = context.api.crewBubbleLayout({ x: -270, y: 350 }, viewport);
-    assert.equal(shifted.left - outside.left, 30);
-    assert.ok(Math.abs(outside.left + outside.width / 2 + 300) < 260);
+/** 因为行走各帧裁切留白不同，需要验证挂点来自整套姿态而非当前帧。 */
+function verifyStableSockets() {
+    // 1、统一虚拟画布定义局部挂点，站立和坐姿仅按连续姿态插值。
+    const manifest = {
+        frame_size: [192, 168],
+        pivot: [96, 160],
+        display_height: 128,
+        clips: [
+            { posture: "standing", frames: [0, 1] },
+            { posture: "seated", frames: [2, 3] },
+        ],
+        frame_rects: [
+            { offset: [0, 3] },
+            { offset: [1, 12] },
+            { offset: [0, 40] },
+            { offset: [2, 47] },
+        ],
+    };
+    const standing = context.api.crewBubbleAnchor(manifest, 0);
+    const seated = context.api.crewBubbleAnchor(manifest, 1);
+    assert.equal(standing.x, 0);
+    assert.ok(Math.abs(standing.y - ((3 - 160) * 128) / 168) < 1e-10);
+    assert.ok(Math.abs(seated.y - ((40 - 160) * 128) / 168) < 1e-10);
+    const middle = context.api.crewBubbleAnchor(manifest, 0.5);
+    assert.ok(Math.abs(middle.y - (standing.y + seated.y) / 2) < 1e-10);
+    // 2、反复采样不接收屏幕位置或帧号，镜头和换帧不能重新选边改变挂点。
+    for (let frame = 0; frame < 500; frame += 1)
+        assert.equal(context.api.crewBubbleAnchor(manifest, 0).y, standing.y);
+    assert.equal(context.api.crewBubbleAnchor(null, 0).y, -116);
+    assert.equal(context.api.crewBubbleAnchor(null, 1).y, -103);
 }
 
 verifyFrameOverride();
-verifyBubbleAnchors();
-/** 因为缺少姿态会移除图集节点，需要验证泡泡不再读取脱离画面的旧裁切层。 */
-function verifyVisibleMaterialFallback() {
-    // 1、旧裁切引用仍存在时，当前无图集容器必须选择真实骨架头部。
-    const staleCrop = {},
-        head = {},
-        sprite = {};
-    assert.equal(
-        context.api.crewBubbleVisual({
-            sprite: null,
-            spriteFrame: staleCrop,
-            rig: { head },
-        }),
-        head,
-    );
-    assert.equal(
-        context.api.crewBubbleVisual({
-            sprite,
-            spriteFrame: staleCrop,
-            rig: { head },
-        }),
-        staleCrop,
-    );
-    assert.equal(
-        context.api.crewBubbleVisual({
-            sprite,
-            spriteFrame: null,
-            rig: { head },
-        }),
-        sprite,
-    );
-}
-verifyVisibleMaterialFallback();
-console.log("material frames + actor bubble anchors: passed");
+verifyStableSockets();
+console.log("material frames + stable local speech sockets: passed");

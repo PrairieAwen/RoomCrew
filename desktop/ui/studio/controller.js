@@ -475,7 +475,7 @@ class CrewStudio {
                 notice?.kind === "question" ||
                 (!notice && fact?.requires_input)
             )
-                await this.showQuestions();
+                await this.showQuestions(notice?.request_id);
             else if (notice?.kind === "result") {
                 await api("acknowledge_bubble", identifier, notice.id);
                 if (epoch === state.workspaceEpoch) await this.refresh();
@@ -692,13 +692,22 @@ class CrewStudio {
         el("member-leisure-delay").disabled = off;
     }
 
-    /** 因为老板需要处理所有真实瓶颈，需要按需查询跨会话的持久待答复事项。 */
-    async showQuestions() {
+    /** 因为人工问题应由任务入口人物转达，需要按请求定位原问题并保留真实恢复身份。 */
+    async showQuestions(requestId = null) {
         // 1、问题正文只在用户打开待办时读取，不广播到场景。
         try {
             const questions = await api("questions");
+            await this.refresh();
             el("questions-list").replaceChildren();
             for (const question of questions) {
+                if (typeof requestId === "string" && question.id !== requestId)
+                    continue;
+                const presenterId =
+                    this.data?.question_presenters?.[question.id];
+                const presenter = this.data?.members.find(
+                    crewQuestionPresenter,
+                    presenterId,
+                );
                 const form = node("form", "question-card");
                 form.dataset.request = question.id;
                 form.dataset.command = crypto.randomUUID();
@@ -706,7 +715,7 @@ class CrewStudio {
                     node(
                         "small",
                         "",
-                        `${question.actor} · ${question.conversation_id.slice(0, 8)} · ${{ question: "信息补充", choice: "请选择", approval: "人工审批" }[question.interaction_type] || "信息确认"}`,
+                        `${presenter?.name || question.actor} · ${question.conversation_id.slice(0, 8)} · ${{ question: "信息补充", choice: "请选择", approval: "人工审批" }[question.interaction_type] || "信息确认"}`,
                     ),
                     node("h3", "", question.question),
                 );
@@ -755,7 +764,7 @@ class CrewStudio {
                 form.addEventListener("submit", this.answerQuestion.bind(this));
                 el("questions-list").append(form);
             }
-            if (!questions.length)
+            if (!el("questions-list").childElementCount)
                 el("questions-list").append(
                     node("p", "muted", "目前没有待答复事项。"),
                 );
@@ -991,4 +1000,10 @@ function crewTeamFact(value) {
 async function crewLoadAvatar(identifier) {
     // 1、该函数不在帧循环中调用，不接收任意文件路径。
     return await api("avatar_asset", identifier);
+}
+
+/** 因为人工问题显示名属于入口人物，需要按表现层提供的稳定人物 ID 查找名称。 */
+function crewQuestionPresenter(member) {
+    // 1、仅改变表单显示，实际答复仍使用原 request_id 恢复原子任务。
+    return member.id === String(this);
 }
