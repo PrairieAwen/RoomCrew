@@ -1,6 +1,6 @@
 """唯一生产 Loop 适配；工具、策略和持久化由外层注入。"""
 
-from collections.abc import AsyncIterator, Callable, Sequence
+from collections.abc import AsyncIterator, Callable, Mapping, Sequence
 from typing import Any
 
 from deepagents import create_deep_agent
@@ -16,6 +16,7 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.types import Command
 
 from roomcrew.agent_loop.event_adapter import EventAdapter
+from roomcrew.agent_loop.native_events import native_event
 from roomcrew.agent_loop.prompts import SYSTEM_PROMPT
 from roomcrew.contracts.agents import ActorRef, AgentSpec
 from roomcrew.contracts.errors import ExecutionError
@@ -31,13 +32,15 @@ class DeepAgentsLoop:
         backend: BackendProtocol,
         tools: Sequence[BaseTool],
         middleware: Sequence[AgentMiddleware[Any, Any, Any]],
-        worker_middleware: Sequence[AgentMiddleware[Any, Any, Any]],
+        worker_middleware: Mapping[str, Sequence[AgentMiddleware[Any, Any, Any]]],
         skills: list[str],
         checkpointer: BaseCheckpointSaver[Any] | None,
         limits: RunLimits,
         redact: Callable[[Any], Any],
         main: AgentSpec | None = None,
         workers: Sequence[AgentSpec] | None = None,
+        worker_tools: Mapping[str, Sequence[BaseTool]] | None = None,
+        worker_skills: dict[str, list[str]] | None = None,
     ) -> None:
         """因为图框架不能承担配置和产品存储职责，需要通过公开参数注入本轮已组装好的组件。"""
         # 1、主子 Agent 使用同一类底座；显式声明 worker，避免自定义策略只作用于主 Agent。
@@ -53,9 +56,9 @@ class DeepAgentsLoop:
                 "description": spec.description,
                 "system_prompt": SYSTEM_PROMPT + "\n人员配置：" + spec.prompt,
                 "model": model,
-                "tools": list(tools),
-                "middleware": list(worker_middleware),
-                "skills": skills,
+                "tools": list((worker_tools or {}).get(spec.tool_name, tools)),
+                "middleware": list(worker_middleware.get(spec.tool_name, [])),
+                "skills": (worker_skills or {}).get(spec.tool_name, skills),
             }
             for spec in workers
         ]
@@ -75,6 +78,7 @@ class DeepAgentsLoop:
             redact, main.actor, {item.tool_name: item.actor for item in workers}
         )
         self._limits = limits
+        self._redact = redact
         self._member_id = main.actor.member_id
 
     async def stream(
@@ -100,6 +104,9 @@ class DeepAgentsLoop:
                 config=config,
                 version="v2",
             ):
+                native = native_event(dict(event), self._redact)
+                if native:
+                    yield TraceEvent("sdk.event", payload={"native": native})
                 for projected in self._events.project(dict(event)):
                     yield projected
             snapshot = await self._graph.aget_state(config)

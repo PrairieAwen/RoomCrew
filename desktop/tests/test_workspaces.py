@@ -13,6 +13,7 @@ from roomcrew.platform.paths import AppPaths
 from roomcrew.storage.workspaces import WorkspaceRepository
 from roomcrew_desktop.api import DesktopAPI
 from roomcrew_desktop.host import RuntimeThread
+from roomcrew_desktop.runtime import DESKTOP_METHODS, DesktopRuntime
 
 
 def test_workspace_directory_keeps_unique_rooms_and_selection(tmp_path: Path) -> None:
@@ -44,7 +45,7 @@ def test_workspace_directory_keeps_unique_rooms_and_selection(tmp_path: Path) ->
 async def configured_hub(root: Path, endpoint: str) -> WorkspaceHub:
     """因为验证不能使用真实凭据，需要通过生产入口保存模拟配置并启动空间装配。"""
     # 1、使用真实 DPAPI 和 Runtime，不替换生产用例或 Agent 循环。
-    hub = WorkspaceHub(AppPaths.create(root))
+    hub = WorkspaceHub(AppPaths.create(root), DesktopRuntime, DESKTOP_METHODS)
     await hub.start()
     await hub.invoke(
         "default",
@@ -93,9 +94,7 @@ async def test_room_switch_preserves_legacy_and_scopes_every_request(tmp_path: P
             await hub.invoke("../private", "overview", [])
         with pytest.raises(ValueError):
             hub.paths.for_workspace("../private")
-        assert (await hub.invoke("default", "studio_feed", [0]))["workspace"][
-            "room_id"
-        ] == "room_default"
+        assert hub.repository.get("default")["room_id"] == "room_default"
     finally:
         await hub.close()
 
@@ -168,7 +167,7 @@ async def test_unopened_pending_room_protects_shared_model_configuration(tmp_pat
         await hub.select("default")
         await hub.close()
     # 2、只启动默认会议室，侧栏仍能看见其他房间待办，但不返回问题正文。
-    reopened = WorkspaceHub(AppPaths.create(tmp_path))
+    reopened = WorkspaceHub(AppPaths.create(tmp_path), DesktopRuntime, DESKTOP_METHODS)
     await reopened.start()
     try:
         directory = await reopened.state()

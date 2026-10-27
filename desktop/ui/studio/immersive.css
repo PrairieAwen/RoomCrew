@@ -1,4 +1,7 @@
 /* 沉浸工作空间：世界覆盖整个客户区，工具面板浮在场景之上。 */
+.studio-mode.conversation-open .scene-toolbar > div:first-child {
+    visibility: hidden;
+}
 .studio-mode {
     display: block;
     background: #e5dbc8;
@@ -368,4 +371,165 @@ button.workspace-card.selected small {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* 会话停靠在右侧；世界仍铺满窗口，用户按需打开团队面板。 */
+.studio-mode.conversation-open #timeline {
+    display: block;
+    position: absolute;
+    z-index: 25;
+    top: 88px;
+    right: 18px;
+    bottom: 224px;
+    left: auto;
+    width: min(420px, calc(100vw - 36px));
+    max-width: none;
+    margin: 0;
+    padding: 20px;
+    overflow-y: auto;
+    border: 1px solid #71836a66;
+    border-radius: 14px;
+    background: #21382ded;
+    backdrop-filter: blur(18px);
+    box-shadow: 0 12px 36px #26312533;
+}
+.studio-mode.conversation-open .composer-area,
+.studio-mode.conversation-open.workspace-open .composer-area {
+    right: 18px;
+    left: auto;
+    transform: none;
+    bottom: 20px;
+    width: min(420px, calc(100vw - 36px));
+}
+.studio-mode.conversation-open .welcome {
+    padding: 22px 0;
+}
+.studio-mode.conversation-open .welcome h1 {
+    font-size: 23px;
+}
+.studio-mode.conversation-open .welcome-cards {
+    display: none;
+}
+.studio-mode.conversation-open .message {
+    max-width: 100%;
+    margin: 14px 0;
+}
+.studio-mode.conversation-open .message-text {
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+.studio-mode.conversation-open .scene-tools {
+    margin-right: 440px;
+}
+.studio-mode.conversation-open .scene-footer {
+    right: 460px;
+    bottom: 28px;
+}
+.studio-mode.team-open #timeline,
+.studio-mode.team-open.conversation-open .composer-area {
+    visibility: hidden;
+    pointer-events: none;
+}
+.crew-speech-bubble {
+    display: block;
+    width: 100%;
+    min-height: 58px;
+    padding: 10px 16px;
+    border: 2px solid #786c50;
+    border-radius: 25px 25px 25px 7px;
+    background: #fff9e8;
+    color: #344337;
+    font:
+        600 13px/1.6 "Microsoft YaHei",
+        sans-serif;
+    text-align: center;
+    box-shadow: 0 4px 8px #312b2722;
+    cursor: pointer;
+    overflow-wrap: anywhere;
+    max-height: 68px;
+    overflow: hidden;
+}
+.member-config-tabs {
+    display: flex;
+    gap: 8px;
+    margin: 12px 0 18px;
+}
+.member-config-tabs button {
+    flex: 1;
+    padding: 12px;
+    border: 1px solid #647156;
+    border-radius: 8px;
+    background: #26392c;
+    color: #cbd6bd;
+}
+.member-config-tabs button[aria-selected="true"] {
+    background: #c6d6ad;
+    color: #25382c;
+}
+#member-panel-agent[hidden],
+#member-panel-material[hidden] {
+    display: none !important;
+}
+.action-binding-editor {
+    border: 1px solid #58704c;
+    border-radius: 10px;
+    padding: 14px;
+    margin: 16px 0;
+}
+.action-binding-editor legend {
+    color: #d8e3c6;
+    padding: 0 8px;
+}
+#binding-summary {
+    white-space: pre-wrap;
+    line-height: 1.8;
+}
+.crew-speech-bubble:hover {
+    background: #fffdf4;
+    border-color: #47755b;
+}
+.agent-abilities {
+    padding: 12px 15px;
+    margin: 12px 0;
+    border: 1px solid #58704c;
+    border-radius: 9px;
+}
+.agent-abilities summary {
+    cursor: pointer;
+    color: #d8e3c6;
+    margin-bottom: 12px;
+}
+.agent-abilities small {
+    display: block;
+    color: #9daa94;
+    line-height: 1.6;
+    margin: 6px 0 12px;
+}
+.agent-abilities textarea {
+    font-family: Consolas, "Microsoft YaHei", monospace;
+    font-size: 12px;
+}
+#questions-dialog {
+    position: fixed;
+    left: auto;
+    right: 18px;
+    top: 88px;
+    margin: 0;
+    width: min(420px, calc(100vw - 36px));
+    max-height: calc(100vh - 110px);
+}
+#questions-dialog::backdrop {
+    background: #16261c33;
+}
+@media (max-width: 1000px) {
+    .studio-mode.conversation-open #timeline,
+    .studio-mode.conversation-open .composer-area {
+        width: 350px;
+    }
+    .studio-mode.conversation-open .scene-tools {
+        margin-right: 365px;
+    }
+    .studio-mode.conversation-open .scene-toolbar h1 {
+        font-size: 17px;
+    }
 }

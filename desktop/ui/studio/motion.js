@@ -66,6 +66,7 @@ class CrewMotion {
             generation: plan.generation,
             revision: plan.scene_revision,
             planId: plan.plan_id,
+            manual: plan.manual === true,
             position: [...position],
             groundCell: [...plan.route[0]],
             posture: "standing",
@@ -88,6 +89,7 @@ class CrewMotion {
         // 1、动画时钟不驱动 Agent；暂停页面后允许直接恢复稳定显示目标。
         const dt = Math.min(0.05, Math.max(0, seconds));
         for (const actor of this.actors.values()) {
+            if (actor.interactionHold && actor.phase === "moving") continue;
             actor.elapsed += dt;
             if (actor.phase === "stand_up") {
                 actor.progress = Math.min(1, actor.progress + dt / 0.32);

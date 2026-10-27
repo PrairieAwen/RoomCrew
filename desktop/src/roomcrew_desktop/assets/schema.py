@@ -3,8 +3,8 @@
 import math
 from typing import Any
 
-from roomcrew.assets.paths import atlas_filenames
-from roomcrew.contracts.animation import DIRECTIONS, EXPRESSIONS, GESTURES, POSTURES
+from roomcrew_desktop.assets.paths import atlas_filenames
+from roomcrew_desktop.presentation.contracts import DIRECTIONS, EXPRESSIONS, GESTURES, POSTURES
 
 
 def integer(value: Any, minimum: int, maximum: int, label: str) -> int:

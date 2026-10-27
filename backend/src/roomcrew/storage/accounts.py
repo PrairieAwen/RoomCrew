@@ -5,6 +5,8 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
+AGENT_FIELDS = ("prompt", "description", "model_binding", "skills", "mcp_servers", "python_enabled")
+
 
 class SqliteAccountRepository:
     def __init__(self, path: Path) -> None:
@@ -50,7 +52,7 @@ class SqliteAccountRepository:
             saved = {**member, "revision": current + 1}
             agent_id = saved.get("agent_id")
             if agent_id:
-                definition = {key: saved[key] for key in ("prompt", "description", "model_binding")}
+                definition = {key: saved[key] for key in AGENT_FIELDS if key in saved}
                 previous_agent = self._db.execute(
                     "SELECT revision,body FROM agent_definitions WHERE id=?", (agent_id,)
                 ).fetchone()
@@ -68,7 +70,7 @@ class SqliteAccountRepository:
             body = {
                 key: value
                 for key, value in saved.items()
-                if key not in {"prompt", "description", "model_binding", "agent_revision"}
+                if key not in {*AGENT_FIELDS, "agent_revision"}
             }
             self._db.execute(
                 "INSERT INTO members VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET "
@@ -81,6 +83,34 @@ class SqliteAccountRepository:
         """因为关闭应用要释放元数据连接，需要独立关闭账号仓库。"""
         # 1、账号配置不因关闭被删除。
         self._db.close()
+
+    def agent_definitions(self) -> list[dict[str, Any]]:
+        """因为执行定义可以独立于人物管理，需要直接查询专门的 Agent 表。"""
+        # 1、仅返回本空间的配置数据，不包含模型私有文件或凭据。
+        return [
+            {"id": row["id"], "revision": row["revision"], **json.loads(row["body"])}
+            for row in self._db.execute("SELECT * FROM agent_definitions ORDER BY id")
+        ]
+
+    def save_agent(
+        self, identifier: str, body: dict[str, Any], expected_revision: int
+    ) -> dict[str, Any]:
+        """因为管理员修改定义不能覆盖人物属性，需要只在 Agent 表内进行版本比较和更新。"""
+        # 1、版本检查和写入使用同一事务，不改动引用它的任何人物行。
+        with self._db:
+            row = self._db.execute(
+                "SELECT revision FROM agent_definitions WHERE id=?", (identifier,)
+            ).fetchone()
+            revision = row[0] if row else 0
+            if revision != expected_revision:
+                raise ValueError("Agent 配置已被修改，请刷新后保存")
+            revision += 1
+            self._db.execute(
+                "INSERT INTO agent_definitions VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET "
+                "revision=excluded.revision,body=excluded.body",
+                (identifier, revision, json.dumps(body, ensure_ascii=False)),
+            )
+        return {"id": identifier, "revision": revision, **body}
 
     def preferences(self) -> dict[str, Any]:
         """因为应用重启后应保持人工选择，需要返回不含凭据的账号偏好。"""

@@ -49,7 +49,7 @@ def main() -> None:
         host = RuntimeThread(AppPaths.create(test_root))
         window = webview.create_window(
             "RoomCrew studio integration",
-            str(host.runtime.paths.desktop_ui / "index.html"),
+            str(host.runtime.paths.resources / "desktop/ui" / "index.html"),
             js_api=DesktopAPI(host, pick_avatar),
             hidden=False,
             width=1100,

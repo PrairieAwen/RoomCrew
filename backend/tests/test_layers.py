@@ -6,9 +6,9 @@ from pathlib import Path
 import pytest
 
 from roomcrew.contracts.errors import ExecutionError
-from roomcrew.mcp.provider import McpPolicy, mcp_tools
-from roomcrew.security.capabilities import CapabilityPolicy
+from roomcrew.mcp.provider import configured_mcp_tools
 from roomcrew.security.paths import resolve_task_path
+from roomcrew.tools.python import python_runtime
 
 LAYERS = {
     "contracts": {"contracts"},
@@ -17,15 +17,13 @@ LAYERS = {
     "models": {"models", "config", "security", "middleware", "contracts"},
     "context_compression": {"context_compression"},
     "middleware": {"middleware", "context_compression", "contracts"},
-    "tools": {"tools", "security"},
+    "tools": {"tools", "security", "contracts"},
     "mcp": {"mcp", "contracts"},
     "skills": {"skills", "security", "contracts"},
     "agent_loop": {"agent_loop", "tracing", "contracts"},
     "tracing": {"tracing"},
     "storage": {"storage"},
     "accounts": {"accounts", "contracts"},
-    "presentation": {"presentation", "contracts"},
-    "assets": {"assets", "contracts"},
     "platform": {"platform"},
 }
 LAYERS["application"] = set(LAYERS) | {"application"}
@@ -73,10 +71,13 @@ def test_desktop_depends_only_on_application_contracts_and_paths() -> None:
                     "application",
                     "contracts",
                     "platform",
+                    "accounts",
                 }:
                     failures.append(f"{path.name} -> {name}")
-                if name.startswith(("deepagents", "langchain", "langgraph", "sqlite3")):
+                if name.startswith(("deepagents", "langchain", "langgraph")):
                     failures.append(f"{path.name} -> {name}")
+                if name.startswith("sqlite3") and path.parent.name != "presentation":
+                    failures.append(f"{path.name} -> non-presentation database access")
     assert not failures, failures
 
 
@@ -116,12 +117,15 @@ def test_shared_task_path_policy_rejects_host_paths(tmp_path: Path, path: str) -
         resolve_task_path(tmp_path, path)
 
 
-def test_mcp_and_unimplemented_execution_fail_closed() -> None:
-    """因为未实现能力不能伪装可用，需要验证关闭时无连接、误开启时明确失败。"""
-    # 1、MCP 默认返回空工具集合，不启动服务；真实连接能力仍未开放。
-    assert mcp_tools(McpPolicy()) == []
-    with pytest.raises(ExecutionError, match="CAPABILITY_UNAVAILABLE"):
-        mcp_tools(McpPolicy(enabled=True))
-    # 2、任何代码执行开关不能绕过当前发行范围。
-    with pytest.raises(ExecutionError, match="CAPABILITY_UNAVAILABLE"):
-        CapabilityPolicy(code_execution=True).validate_release()
+async def test_empty_mcp_and_missing_python_fail_closed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """因为能力入口不能静默回退，需要验证无配置不连接，缺少随包解释器时拒绝宿主执行。"""
+    # 1、空服务器集合不创建连接或发现工具。
+    assert await configured_mcp_tools([]) == []
+    # 2、缺少冻结包资源不能改用宿主 Python 或 PATH 中其他解释器。
+    import sys
+
+    monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path), raising=False)
+    with pytest.raises(ExecutionError, match="PYTHON_UNAVAILABLE"):
+        python_runtime(tmp_path / "cache")

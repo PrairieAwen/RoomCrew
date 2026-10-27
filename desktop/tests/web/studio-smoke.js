@@ -65,9 +65,10 @@
         return event.kind === "run.completed";
     }
     try {
-        // 1、默认场景不得加载全日志；通过实际招募表单保存新人物。
+        // 1、收起右侧会话后场景不加载全日志；通过实际招募表单保存新人物。
         window.__studioStage = "boot";
         await until(ready);
+        studio.roomMode();
         const canvasBox = el("room-canvas").getBoundingClientRect();
         if (
             Math.abs(canvasBox.left) > 1 ||
@@ -86,6 +87,7 @@
         el("add-member").click();
         el("member-name").value = "窗口资料员";
         el("member-description").value = "整理用户资料";
+        el("member-tab-material").click();
         el("member-glasses").checked = true;
         el("member-leisure-action").value = "random";
         for (const box of el("member-leisure-pool").querySelectorAll("input"))
@@ -264,13 +266,14 @@
         const fact = studio.renderer.facts.get(member.id);
         if (!fact?.requires_input || fact.activity !== "question")
             throw new Error("human state not projected");
-        /** 因为真实提问和赴约应能同时展示，需要检查跑步没有抹去人工表情。 */
+        /** 因为待答复需要面向用户停顿，需要检查人工表情与工作状态同时生效。 */
         function runningQuestion() {
             // 1、读取生产帧循环写入的实际角色状态。
             const group = studio.renderer.views.get(member.id).group;
             return (
                 group.dataset.expression === "curious" &&
-                group.dataset.leisure === "false"
+                group.dataset.leisure === "false" &&
+                group.dataset.direction === "s"
             );
         }
         await until(runningQuestion);
@@ -290,8 +293,10 @@
         form.requestSubmit();
         await until(completed);
         el("close-questions").click();
-        // 3、完成后先观察自动恢复生活，再点击员工中止摸鱼并展开真实轨迹。
+        // 3、完成提示经用户点击后才恢复生活，再点击员工中止摸鱼并展开真实轨迹。
         window.__studioStage = "resume-leisure";
+        await studio.refresh();
+        studio.renderer.views.get(member.id).bubbleButton.click();
         await until(memberRelaxing);
         await studio.refresh();
         document
@@ -309,10 +314,10 @@
         if (file.text !== "原生窗口真实工具记录")
             throw new Error("wrong artifact");
         const replay = await api("studio_feed", 0);
-        /** 因为快速工具状态可能被轮询合并，需要验证源轨迹留下了可丢弃的书写线索。 */
+        /** 因为快速工具状态可能被轮询合并，需要验证源轨迹留下了使用电脑的线索。 */
         function writeCue(value) {
             // 1、线索只有动作语义，不包含工具输入或输出正文。
-            return value.action === "write" && value.visual_only;
+            return value.action === "work" && value.visual_only;
         }
         if (!replay.cues.some(writeCue))
             throw new Error("missing real tool animation cue");

@@ -67,7 +67,7 @@ def main() -> None:
         )
         window = webview.create_window(
             "RoomCrew collaboration integration",
-            str(host.runtime.paths.desktop_ui / "index.html"),
+            str(host.runtime.paths.resources / "desktop/ui" / "index.html"),
             js_api=DesktopAPI(host),
             width=1280,
             height=800,

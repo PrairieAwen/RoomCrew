@@ -44,7 +44,7 @@ def main() -> None:
         host.call(host.runtime.save_member({"name": "仅甲空间员工"}, 0))
         window = webview.create_window(
             "RoomCrew workspace integration",
-            str(host.runtime.paths.desktop_ui / "index.html"),
+            str(host.runtime.paths.resources / "desktop/ui" / "index.html"),
             js_api=DesktopAPI(host),
             width=1380,
             height=900,

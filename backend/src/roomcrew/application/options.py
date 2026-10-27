@@ -4,7 +4,6 @@ from dataclasses import dataclass, field
 
 from roomcrew.context_compression.policy import CompressionPolicy
 from roomcrew.contracts.limits import RunLimits
-from roomcrew.mcp.provider import McpPolicy
 from roomcrew.security.capabilities import CapabilityPolicy
 from roomcrew.skills.registry import SkillPolicy
 
@@ -14,5 +13,4 @@ class RunOptions:
     limits: RunLimits = field(default_factory=RunLimits)
     compression: CompressionPolicy = field(default_factory=CompressionPolicy)
     capabilities: CapabilityPolicy = field(default_factory=CapabilityPolicy)
-    mcp: McpPolicy = field(default_factory=McpPolicy)
     skills: SkillPolicy = field(default_factory=SkillPolicy)

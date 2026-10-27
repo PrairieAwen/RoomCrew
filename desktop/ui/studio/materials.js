@@ -170,6 +170,7 @@ class CrewMaterialPanel {
     changePreview() {
         // 1、跑步和坐姿互斥，与实际场景保持同一约束。
         this.stopSequence();
+        this.binding = null;
         if (["walk", "run", "stand_up"].includes(el("preview-action").value))
             el("preview-posture").value = "standing";
         this.clock = 0;
@@ -234,6 +235,8 @@ class CrewMaterialPanel {
         ])
             el(key).disabled = imported;
         this.skins.ensure(el("member-avatar").value);
+        this.binding = null;
+        el("member-avatar").dispatchEvent(new Event("crew-avatar-change"));
         this.clock = 0;
         el("avatar-feedback").textContent =
             "缺少工作动作回退到同姿态 idle；缺少摸鱼动作或姿态则使用内置骨架。";
@@ -359,6 +362,7 @@ class CrewMaterialPanel {
                 seat = 1 - crewEase(Math.min(1, this.clock / 0.32));
             const sample = {
                 action,
+                material_binding: this.binding,
                 expression: el("preview-expression").value,
                 direction: el("preview-direction").value,
                 posture: seat === 1 ? "seated" : "standing",

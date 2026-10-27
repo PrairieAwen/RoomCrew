@@ -52,4 +52,12 @@ class DesktopAPI:
                 return {"cancelled": True}
             args = [selected]
         # 2、共享模型配置仍在可信本机入口，日志和请求不打印表单内容。
-        return self._host.call(self._host.hub.invoke(workspace_id, method, args))
+        return self._host.call(self._invoke(workspace_id, method, args))
+
+    async def _invoke(self, workspace_id: str, method: str, args: list[Any]) -> Any:
+        """因为空间目录的 SQLite 连接属于运行时线程，需要在同一事件循环组装桌面响应。"""
+        # 1、先分派后端请求，再在桌面层添加会议室显示信息；不跨线程直接读取仓库。
+        result = await self._host.hub.invoke(workspace_id, method, args)
+        if method == "studio_feed":
+            result = {**result, "workspace": self._host.hub.repository.get(workspace_id)}
+        return result

@@ -9,21 +9,31 @@ import pytest
 from test_runtime import (
     TEST_KEY,
     TEST_MODEL,
-    configured_runtime,
     model_server,
     tool_message,
     wait_finished,
 )
+from test_runtime import (
+    configured_runtime as configured_core_runtime,
+)
 
-from roomcrew.accounts.service import AccountService
-from roomcrew.application.narration import validate_decoration
 from roomcrew.application.options import RunOptions
-from roomcrew.application.runtime import Runtime
 from roomcrew.contracts.limits import RunLimits
 from roomcrew.platform.paths import AppPaths
-from roomcrew.presentation.reducer import actor_view, reduce_event
-from roomcrew.presentation.scene import SceneStore, default_room, path_to
 from roomcrew.storage.accounts import SqliteAccountRepository
+from roomcrew_desktop.accounts import DesktopAccountService as AccountService
+from roomcrew_desktop.presentation.narration import validate_decoration
+from roomcrew_desktop.presentation.reducer import actor_view, reduce_event
+from roomcrew_desktop.presentation.scene import SceneStore, default_room, path_to
+from roomcrew_desktop.runtime import DesktopRuntime as Runtime
+
+
+async def configured_runtime(
+    root: Path, endpoint: str, options: RunOptions | None = None
+) -> Runtime:
+    """因为场景验证需要客户端组合层，需要复用后端模拟配置工厂并显式选择桌面运行时。"""
+    # 1、不改变真实 Agent Loop，只替换应用组合点。
+    return await configured_core_runtime(root, endpoint, options, runtime_class=Runtime)
 
 
 def event(seq: int, kind: str, run: str = "r1", scope: str = "main", **payload):

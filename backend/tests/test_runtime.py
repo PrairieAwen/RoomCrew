@@ -113,11 +113,14 @@ def model_server(
 
 
 async def configured_runtime(
-    root: Path, endpoint: str, options: RunOptions | None = None
+    root: Path,
+    endpoint: str,
+    options: RunOptions | None = None,
+    runtime_class: type[Runtime] = Runtime,
 ) -> Runtime:
     """因为每个测试必须独立存储，需要在临时目录建立真实配置和运行时。"""
     # 1、使用明确标注的模拟 Key，调用与桌面表单相同的配置入口。
-    runtime = Runtime(AppPaths.create(root), options)
+    runtime = runtime_class(AppPaths.create(root), options)
     await runtime.start()
     await runtime.save_configuration(
         {"base_url": endpoint, "model": TEST_MODEL, "api_key": TEST_KEY}
@@ -205,7 +208,7 @@ async def test_subagent_events_share_one_conversation(tmp_path: Path) -> None:
                 e["kind"] == "task.assigned" and e["payload"].get("delegation_kind") == "external"
                 for e in events
             )
-            assert any(e["payload"].get("presentation_external") for e in events)
+            assert any(e["payload"].get("external_worker") for e in events)
             assert {e["conversation_id"] for e in events} == {conversation["id"]}
         finally:
             await runtime.close()

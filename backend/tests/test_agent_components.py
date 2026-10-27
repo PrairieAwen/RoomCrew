@@ -148,7 +148,8 @@ async def test_compression_preserves_raw_history_and_uses_same_budget(tmp_path: 
                 build_middleware(model, backend, policy),
                 build_middleware(model, backend, policy),
             )
-            assert len(left) == 1 and left[0].name == right[0].name
+            assert len([item for item in left if item.name == middleware.name]) == 1
+            assert len([item for item in right if item.name == middleware.name]) == 1
             assert left[0] is not right[0]
         finally:
             await model.close()

@@ -14,9 +14,9 @@ sys.path[:0] = [
 
 import webview
 
-from roomcrew.assets.library import AvatarLibrary
 from roomcrew.platform.paths import AppPaths
 from roomcrew_desktop.api import DesktopAPI
+from roomcrew_desktop.assets.library import AvatarLibrary
 from roomcrew_desktop.host import RuntimeThread
 
 
@@ -33,7 +33,7 @@ def main() -> None:
     result: dict = {}
     window = webview.create_window(
         "RoomCrew avatar export",
-        str(host.runtime.paths.desktop_ui / "index.html"),
+        str(host.runtime.paths.resources / "desktop/ui" / "index.html"),
         js_api=DesktopAPI(host),
         hidden=True,
         width=1100,

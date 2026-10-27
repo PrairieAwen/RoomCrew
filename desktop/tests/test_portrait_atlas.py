@@ -6,9 +6,9 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from roomcrew.application.runtime import Runtime
-from roomcrew.assets.schema import validate_manifest
 from roomcrew.platform.paths import AppPaths
+from roomcrew_desktop.assets.schema import validate_manifest
+from roomcrew_desktop.runtime import DesktopRuntime as Runtime
 
 
 def portrait_manifest() -> tuple[dict, tuple[int, int]]:

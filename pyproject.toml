@@ -48,6 +48,7 @@ ignore = ["RUF001", "RUF002", "RUF003"]
 # 独立验证和素材脚本先定位源码，不依赖用户全局 PYTHONPATH。
 "desktop/tests/*_smoke.py" = ["E402"]
 "desktop/tools/python/*.py" = ["E402"]
+"backend/tests/live_agent_verification.py" = ["E402"]
 
 [tool.mypy]
 python_version = "3.13"
@@ -57,7 +58,7 @@ mypy_path = ["backend/src", "desktop/src"]
 
 [tool.pytest.ini_options]
 testpaths = ["backend", "desktop/tests"]
-pythonpath = ["backend/src", "backend/tests", "desktop/src"]
+pythonpath = ["backend/src", "backend/tests", "desktop/src", "desktop/tests"]
 addopts = "-ra --strict-markers --strict-config"
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"

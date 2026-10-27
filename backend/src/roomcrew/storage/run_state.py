@@ -120,6 +120,9 @@ class RunStateStore:
             ).fetchone()
             if row is None or row["status"] != "pending" or row["run_status"] != "waiting_user":
                 raise ValueError("该问题已回答、取消或不再等待")
+            body = json.loads(row["body"])
+            if not body.get("allow_other", True) and answer not in body.get("choices", []):
+                raise ValueError("请从该事项给出的选项中选择")
             self.db.execute(
                 "UPDATE human_requests SET status='answered',answer=?,command_id=? WHERE id=?",
                 (answer, command_id, request_id),

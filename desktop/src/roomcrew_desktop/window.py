@@ -53,7 +53,7 @@ def main() -> None:
 
         window = webview.create_window(
             "RoomCrew",
-            str(paths.desktop_ui / "index.html"),
+            str(paths.resources / "desktop/ui" / "index.html"),
             js_api=DesktopAPI(host, pick_avatar),
             width=width,
             height=height,

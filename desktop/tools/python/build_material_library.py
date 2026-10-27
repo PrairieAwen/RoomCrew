@@ -15,9 +15,9 @@ sys.path[:0] = [
     str(Path(__file__).resolve().parents[3] / "desktop/src"),
 ]
 
-from roomcrew.assets.library import AvatarLibrary
-from roomcrew.assets.schema import validate_manifest
-from roomcrew.contracts.animation import GESTURES
+from roomcrew_desktop.assets.library import AvatarLibrary
+from roomcrew_desktop.assets.schema import validate_manifest
+from roomcrew_desktop.presentation.contracts import GESTURES
 
 ROOT = Path(__file__).resolve().parents[3]
 LIBRARY = ROOT / "desktop/ui/studio/assets/library-v1"

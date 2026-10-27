@@ -12,10 +12,10 @@
 
 1. 打开模型配置，手动填 Base URL、模型 ID、API Key、超时和上下文窗口。首版使用 **OpenAI 兼容 Chat Completions**，要求标准工具调用支持。
 2. 点击“保存并测试连接”，程序会先保存当前表单，再向对应服务商发起一次真实模型请求；无需先单独保存。也可用“仅保存配置”只在本机保存。
-3. 展开“我的团队”添加成员，可调整外观、导入 PNG+JSON 素材并配置职责。多个形象可复用 Agent 定义。用户本人就是老板，不显示老板人物；最低保留助手和监管员，默认由助手接待。
+3. 展开“我的团队”添加成员，可调整外观、导入 PNG+JSON 素材，并配置系统提示词、Skills、HTTP MCP、Python 开关和提示泡泡。多个形象可复用 Agent 定义。用户本人就是老板，不显示老板人物；最低保留助手和监管员，默认由助手接待。
 4. 通过下方成员选择框或 `@准确名字` 指派任务；未指定时由助手自行使用工具或委派已配置员工。人物动作由真实结构化事件转换，赴约与换座不阻塞后台工作。
-5. 点击人物查看事项，主动展开“执行轨迹”才查询该人物在当前会话中的全部 scope。切换顶部“会话”可查看完整会话和真实产物。
-6. 若 Agent 使用 `ask_user` 请求信息，顶部待答复会增加；用户答复后沿用原 Run 继续，可正常关闭应用后再答。这里不是系统权限审批。
+5. 完整会话固定在右侧；“会议室”可收起会话。点击人物查看事项与按需轨迹。人物泡泡只提示待答复或完成，点击打开完整内容。
+6. 若 Agent 使用 `ask_user` 请求信息、选择或人工确认，人物面向用户并暂停动作；支持选项及可选的“其他 / 补充”。答复后沿用原 Run 继续，可正常关闭应用后再答。这里不是系统权限审批。
 7. 可用“让 Agent 写一份日记”验收；按需要提供真实经历及文件要求。程序没有日记模板或专用处理逻辑。
 
 点击人物后再点击沙发、工位或会议座位，可让他换座；“布置会议室”使用统一格网坐标表单添加和移动家具。场景支持拖动、滚轮缩放和人物定位，导航/团队/输入区为悬浮界面。角色素材导入已开放，制作说明见 `doc/assets/crew-avatar-example/README.md`。家具仍使用内置目录，家具拖拽编辑与应用内绘画编辑器尚未提供。
@@ -26,9 +26,15 @@
 
 顶部“素材总览”提供四套可选形象（阿晨、小禾、小岚、监管员），共 496 个登记姿态，每套覆盖 20 种动作语义和 5 种闲置表情；可切换变体、暂停逐帧并检查真实覆盖矩阵。在人物属性选择角色后“导入完整角色”，保存才绑定，不自动覆盖原人物。另备齐 12 件家具、16 件装饰和 8 组四帧特效，常用家具与灯/咖啡机已接入房间，其余装饰和特效按总览详情标明用途。完整目录、约束与美术缺口见 `desktop/ui/studio/assets/library-v1/README.md`；专业逐帧精修与所有方向/站坐/表情组合仍待完善。
 
-配置与数据默认在 `%LOCALAPPDATA%/RoomCrew`。配置由 Windows DPAPI 加密，独立于 Agent 文件视图；原始配置和 Key 不注入消息、普通轨迹或 checkpoint。该边界不是 OS 沙箱，所以 V1 不开放任意代码工具。模型请求仍会将任务内容发往用户配置的服务商。
+配置与数据默认在 `%LOCALAPPDATA%/RoomCrew`。模型配置由 Windows DPAPI 加密，独立于 Agent 文件视图；原始配置和 Key 不注入消息、普通轨迹或 checkpoint。Python 使用另一个随包解释器，在无网络 AppContainer 与受限 Job 中执行会话文件副本，不继承父进程秘密环境。模型请求仍会将任务内容发往用户配置的服务商。
 
-当前支持文件读写/检索、规划、子 Agent 委派、本机时间、人工信息确认、人物配置与空间交互。未接入 Shell、MCP、浏览器、Computer Use、安全 VM、云端账号同步与用户 Skills 管理。当前每个空间同时执行一个会话，最多四个空间并行执行；成功会话可多轮继续，失败或取消会话只保留查看，继续需新建。同一 Agent 定义绑定的不同人物仍使用独立主线程上下文。
+当前支持文件读写/检索、规划、成员发现与子 Agent 委派、本机时间、人工信息确认、配置 Skills、HTTP MCP 和隔离 Python。未接入 Shell、浏览器、Computer Use、安全 VM 与云端账号同步。当前每个空间同时执行一个会话，最多四个空间并行执行；成功会话可多轮继续，失败或取消会话只保留查看，继续需新建。同一 Agent 定义绑定的不同人物仍使用独立主线程上下文。
+
+Agent 配置与执行流程见 [ADR-0009](doc/architecture/0009-agent-foundation.md)。Skills 表单目前使用 JSON，框架先读名称与描述，再按任务读取完整说明及附带文本；MCP 目前支持无认证的 Streamable HTTP 服务。Python 仅包含标准库，不支持 pip、外网和子进程；用户无需预装 Python。安全审核对应的动作映射已预留，真实安全 VM 尚未实现。
+
+人物属性分为“Agent 配置”和“员工素材配置”。在素材页可为 MCP、普通工具、Python、人工、完成等触发类型选择动作，导入图集后可编辑具体变体、帧号、帧率与循环，预览和场景使用同一播放器。泡泡按当前人物头部跟随，平移/缩放时保持归属。默认文件工具另补 file_info、make_directory、copy_file、move_file、delete_file，主子 Agent 均可使用；二进制复制不转码，文本工具不等于 Office/PDF 解析。详见 [ADR-0010](doc/architecture/0010-member-materials-and-default-tools.md)。
+
+泡泡锚定本帧实际素材，走动、起坐、平移与缩放都会跟随。完成提示只有点击并成功查看对应结果后才消失；人工提示在实际答复或取消相应任务后解除。未读与已读单独保存在各空间 bubbles.sqlite，新任务、切空间和重启不清除未读，也不恢复已经读过的结果。
 
 ## 工作空间与会议室
 
@@ -73,9 +79,9 @@ RoomCrew/
 本地 .venv、.tools、.cache 均 Git 忽略。
 原有 main.py 为 PyCharm 示例，保持不变，不是正式入口。
 
-后端结构与依赖见 [分层设计](doc/architecture/0003-backend-layers.md)。`agent_loop/` 只适配 Deep Agents；`application/` 负责会话和调度；配置、模型、压缩、中间件、安全、工具、MCP、Skills、存储和桌面分别维护。MCP 仍关闭，Skills 已有显式来源和渐进加载接入，尚无用户技能管理界面。
+后端结构与依赖见 [分层设计](doc/architecture/0003-backend-layers.md) 与 [最新底座](doc/architecture/0009-agent-foundation.md)。`agent_loop/` 只适配 Deep Agents；`application/` 负责会话和调度；配置、模型、压缩、中间件、安全、工具、MCP、Skills、存储分别维护。后端不导入桌面包，不产生动作或泡泡。
 
-新增 `accounts/` 管理人物与可复用定义，`presentation/` 单向消费已提交日志并生成最小状态；账号 SQLite、框架 checkpoint、任务日志、布局与表现缓存分开。迁云设计和接口见 [ADR-0004](doc/architecture/0004-studio-interaction.md)；最新动作、图集与全窗口场景见 [ADR-0005](doc/architecture/0005-game-animation.md)。
+后端 `accounts/` 管理执行身份与可复用定义；桌面 `presentation/` 单向消费已提交日志并生成最小显示状态，`assets/` 维护人物素材。账号 SQLite、框架 checkpoint、任务日志、布局与表现缓存分开。迁云设计见 [ADR-0004](doc/architecture/0004-studio-interaction.md)；图集见 [ADR-0005](doc/architecture/0005-game-animation.md)。
 
 ## 开发环境
 
@@ -106,6 +112,7 @@ $env:UV_PYTHON_INSTALL_DIR = Join-Path (Get-Location) '.tools/python'
 # 自动测试只用本机模拟模型，仍真实运行 SDK、Deep Agents 和工具。
 & .\.venv\Scripts\python.exe -m pytest -q
 & .\.venv\Scripts\python.exe desktop/tests/desktop_smoke.py
+& .\.venv\Scripts\python.exe desktop/tests/capabilities_smoke.py
 & .\.venv\Scripts\python.exe desktop/tests/studio_smoke.py
 & .\.venv\Scripts\python.exe desktop/tests/workspace_smoke.py
 & .\.venv\Scripts\python.exe desktop/tests/collaboration_smoke.py
@@ -115,6 +122,8 @@ node --check desktop/ui/app.js
 node desktop/tests/web/protocol.test.cjs
 node desktop/tests/web/workspaces.test.cjs
 node desktop/tests/web/model-settings.test.cjs
+node desktop/tests/web/material-bindings.test.cjs
+node desktop/tests/web/bubble-read.test.cjs
 
 # 独立 exe + 发行目录 + zip。
 & .\packaging\build.ps1
@@ -122,4 +131,4 @@ node desktop/tests/web/model-settings.test.cjs
 
 打包先在 `.cache/` 构建完整候选，成功后再发布。若当前 RoomCrew 正在运行，发布会拒绝替换并保留候选；关闭程序后可用 `packaging/publish.ps1 -Candidate <候选目录>` 发布，无需再次构建。
 
-受限运行环境若阻止 Windows asyncio 的本地套接字初始化，需要在允许本机网络的终端运行测试；不要为了让测试通过修改生产 Loop。真实模型效果和厂商差异需要用户在应用中填写配置后验证，自动测试不代替该验收。
+受限运行环境若阻止 Windows asyncio 的本地套接字初始化，需要在允许本机网络的终端运行测试；不要为了让测试通过修改生产 Loop。本次已使用用户保存配置完成真实模型端到端验收，包含委派、Skills、MCP、Python、日记与人工恢复；具体结果及边界见 [底座验收](doc/development/agent-foundation-validation.md)。

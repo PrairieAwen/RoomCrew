@@ -10,6 +10,7 @@ from typing import Any
 from roomcrew.application.runtime import Runtime
 from roomcrew.application.workspaces import WorkspaceHub
 from roomcrew.platform.paths import AppPaths
+from roomcrew_desktop.runtime import DESKTOP_METHODS, DesktopRuntime
 
 
 class RuntimeThread:
@@ -33,7 +34,7 @@ class RuntimeThread:
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
         try:
-            self.hub = WorkspaceHub(self._paths)
+            self.hub = WorkspaceHub(self._paths, DesktopRuntime, DESKTOP_METHODS)
             self.loop.run_until_complete(self.hub.start())
         except Exception as error:
             self._error = error

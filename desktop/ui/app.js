@@ -142,30 +142,38 @@ function renderEvent(event) {
         timeline.append(block);
     } else if (event.kind === "tool.started") {
         state.tools += 1;
-        const block = node("details", "tool-event");
-        const summary = node("summary", "", "◌ ");
+        const key = `${event.run_id}:${event.scope}:${p.tool_call_id || p.call_id}`;
+        const previous = state.calls.get(key);
+        const block = previous?.block || node("details", "tool-event");
+        const summary = previous?.summary || node("summary", "", "◌ ");
+        summary.replaceChildren();
         summary.append(
             node("span", "tool-name", p.name),
             node("span", "", `${event.actor} · 调用中`),
         );
-        block.append(
-            summary,
-            node("div", "tool-label", "INPUT"),
-            node("pre", "", JSON.stringify(p.input, null, 2)),
-        );
-        state.calls.set(p.call_id, {
+        if (!previous)
+            block.append(
+                summary,
+                node("div", "tool-label", "INPUT"),
+                node("pre", "", JSON.stringify(p.input, null, 2)),
+            );
+        state.calls.set(key, {
             block,
             summary,
             name: p.name,
             actor: event.actor,
             completed: false,
+            run: event.run_id,
+            scope: event.scope,
         });
-        timeline.append(block);
+        if (!previous) timeline.append(block);
     } else if (
         event.kind === "tool.completed" ||
         event.kind === "tool.failed"
     ) {
-        const call = state.calls.get(p.call_id);
+        const call = state.calls.get(
+            `${event.run_id}:${event.scope}:${p.tool_call_id || p.call_id}`,
+        );
         const failed = event.kind === "tool.failed" || p.status === "error";
         if (call) {
             call.completed = true;
@@ -184,6 +192,15 @@ function renderEvent(event) {
         event.kind === "human.requested" ||
         event.kind === "human.responded"
     ) {
+        if (event.kind === "human.requested") {
+            const call = state.calls.get(
+                `${event.run_id}:${event.scope}:${p.tool_call_id}`,
+            );
+            if (call) {
+                call.paused = true;
+                call.summary.textContent = `? ${call.name} · ${call.actor} · 等待人工答复`;
+            }
+        }
         timeline.append(
             node(
                 "div",
@@ -208,7 +225,7 @@ function renderEvent(event) {
         );
     } else if (event.kind.startsWith("run.") && event.kind !== "run.started") {
         for (const call of state.calls.values()) {
-            if (!call.completed) {
+            if (!call.completed && !call.paused) {
                 call.summary.textContent = `! ${call.name} · ${call.actor} · 本轮结束，未确认完成`;
                 call.completed = true;
             }
@@ -238,7 +255,11 @@ function showError(error) {
 /** 因为会话切换后的旧请求可能迟到，需要按身份校验后再应用历史事件。 */
 async function loadEvents() {
     // 1、分批拉取所有新增事件，序号让重新加载保持原始顺序。
-    if (!state.conversation || !document.body.classList.contains("chat-mode"))
+    if (
+        !state.conversation ||
+        (!document.body.classList.contains("chat-mode") &&
+            !document.body.classList.contains("conversation-open"))
+    )
         return;
     const identifier = state.conversation.id;
     let more = true;

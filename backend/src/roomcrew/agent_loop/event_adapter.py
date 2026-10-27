@@ -73,7 +73,21 @@ class EventAdapter:
                     )
                 )
             product_kind = "tool.started"
-            payload = {"name": name, "call_id": event["run_id"], "input": inputs}
+            tool_kind = event.get("metadata", {}).get("roomcrew_tool_kind", "tool")
+            if (
+                name == "read_file"
+                and isinstance(inputs, dict)
+                and str(inputs.get("file_path", "")).startswith("/skills/")
+            ):
+                tool_kind = "skill"
+            payload = {
+                "name": name,
+                "call_id": event["run_id"],
+                "sdk_run_id": event["run_id"],
+                "input": inputs,
+                "tool_kind": tool_kind,
+                "tool_call_id": event.get("metadata", {}).get("roomcrew_tool_call_id"),
+            }
         elif kind == "on_tool_end":
             output = data.get("output", "")
             product_kind = "tool.completed"
@@ -82,6 +96,8 @@ class EventAdapter:
                 "call_id": event["run_id"],
                 "output": message_text(output),
                 "status": getattr(output, "status", "success"),
+                "tool_call_id": getattr(output, "tool_call_id", None),
+                "sdk_run_id": event["run_id"],
             }
             if name == "task" and event["run_id"] in self._scopes:
                 target, child_scope = self._scopes[event["run_id"]]
@@ -137,9 +153,9 @@ class EventAdapter:
             projected = [
                 TraceEvent(
                     item.kind,
-                    "外援 · 通用子任务",
+                    "通用子任务",
                     item.scope,
-                    {**item.payload, "presentation_external": True},
+                    {**item.payload, "external_worker": True},
                     item.agent_id,
                     item.member_id,
                 )
@@ -169,6 +185,8 @@ class EventAdapter:
             "question": value.get("question", "需要你的答复"),
             "choices": value.get("choices", []),
             "tool_call_id": value.get("tool_call_id"),
+            "interaction_type": value.get("interaction_type", "question"),
+            "allow_other": value.get("allow_other", True),
         }
         return TraceEvent(
             "human.requested",

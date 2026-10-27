@@ -6,7 +6,7 @@
 
 - 当前已获用户明确授权，进入 V1 Windows 独立会话应用开发；范围以 doc/architecture/0002-conversation-v1.md 为准。
 - V1 包括用户模型配置入口、真实 Deep Agents 执行、同会话主子 Agent 轨迹、文件产物和独立 exe 打包验证。
-- 当前用户进一步授权事务所交互与人物持久化，新增范围按 doc/architecture/0004-studio-interaction.md 执行；保留会话视图。最新角色图集、正交动作和全窗口场景按 doc/architecture/0005-game-animation.md 执行。任意代码、MCP、浏览器和安全 VM 仍未开放。
+- 当前用户进一步授权 Agent 配置、Skills、HTTP MCP 与隔离 Python 执行；最新范围和边界按 doc/architecture/0009-agent-foundation.md 执行。浏览器、Shell、Computer Use 和安全 VM 尚未开放。
 - 表现协议单向消费已提交轨迹；人物动作、旁白及动画回调不能决定任务结果或批准工具。新增表现能力不能成为执行器的前置依赖。
 - 当前已有原始 main.py 是用户的 PyCharm 示例，保留原样；不要把它当正式入口。
 - 开发规则统一维护在根 AGENTS.md，不在前后端重复复制；先读本文与 README.md。
@@ -49,7 +49,7 @@
 
 ## 3. 前后端目录边界
 
-- desktop/：普通用户的 Windows 桌面应用；ui/ 保存界面、场景、人物素材与状态，src/roomcrew_desktop/ 保存原生窗口和桌面桥。
+- desktop/：普通用户的 Windows 桌面应用；ui/ 保存界面和素材，src/roomcrew_desktop/ 保存原生窗口、桥、人物属性、素材校验与只读表现投影。动作协议不进入后端。
 - frontend/：仅预留未来管理员 Web 界面，用于用户与账号管理；当前不创建管理员工程或实现。
 - backend/：Agent 编排适配、产品任务、员工身份、工作空间、数据、权限与工具网关。
 - 前后端共享合同在实际接入时再建目录；协议不包含框架私有类型或真实秘密。
@@ -69,13 +69,14 @@
 - middleware/：中间件组装和模型调用额度；主子 Agent 的组件实例分开，同一 Run 的总额度共享。
 - security/：DPAPI、脱敏、路径和能力约束；实际安全 VM 仍未实现，不以目录名称冒充隔离。
 - tools/：真实本地工具和文件后端注册；不要把工具实现写进应用 Runtime 或 Loop。
-- mcp/：独立 MCP 能力接入边界；当前关闭，误开启必须明确失败，不能返回假工具。
-- skills/：显式技能来源验证与渐进加载接入；默认不自动扫描磁盘，不因 Skill 指令扩权。
-- assets/：用户 PNG 图集与 JSON 动作清单的校验、规范化、内容寻址存储；不执行素材脚本，不读取模型配置。
-- presentation/：只读轨迹归约、有限动作提示与可丢弃线索；素材或动画不能更改 Run、权限和人工答复。
+- mcp/：按 Agent 定义装配官方 HTTP MCP 工具；当前不支持 stdio、OAuth 或认证 Header，不能返回假工具或将凭据放入 URL。
+- skills/：将用户显式配置的技能发布为只读版本目录，由 SDK 渐进加载；默认不自动扫描磁盘，不因 Skill 指令扩权。
+- desktop/src/roomcrew_desktop/assets/ 与 presentation/：分别维护素材校验、轨迹归约与动作提示；后端不得导入这些模块。素材或动画不能更改 Run、权限和人工答复。
+- ADR-0010：人物属性分 Agent 配置和员工素材配置；动作帧与泡泡按 member_id 保存，不进入 Agent 快照。主子 Agent 默认文件工具统一在 application/components 装配，不在角色或 UI 中另写一套执行。
+- 泡泡锚定本帧实际素材边界，不用固定身高或屏幕夹紧冒充跟随。未读提示与当前活动分离，回执存于桌面 bubbles.sqlite；成功查看后标记已读，人工问题由真实答复解除，不因新任务或重启清空。
 - application/：会话用例、运行生命周期、产物查询和组件装配；不解析 SDK 原始事件。
 - storage/：产品 SQLite 与框架 checkpoint 分开管理；tracing/ 与 contracts/ 保存稳定产品语义。
-- 根 desktop/src/roomcrew_desktop 只通过应用用例、产品合同和资源定位交互；platform/ 定位本机路径，不承担业务。
+- 根 desktop/src/roomcrew_desktop 通过应用用例、产品合同和资源定位交互；表现缓存和布局由桌面独立管理。platform/ 定位本机路径，不承担界面业务。
 - 新能力在所属包实现，在应用装配点接入；不得为了扩展工具去修改 SDK 源码或复制生产 Loop。
 - backend/tests/test_layers.py 检查实际导入方向；修改依赖规则必须同步说明职责变化，不能为消除报错随意放开。
 
@@ -83,6 +84,7 @@
 
 - 名称 RoomCrew；Windows 首发，保留 macOS 适配空间。
 - 已决定以 Deep Agents 作为 Agent Loop 底座，不同时实现另一套生产循环。
+- ADR-0008/0009：官方 `astream_events(version="v2")` 已通过白名单序列化写入 native_events 表；SDK 调用链、模型工具 ID 与产品 Run 分开，checkpoint 仍由官方 saver 管理。产品状态记录用于用例与兼容会话查询，不作为另一套 Agent Loop。
 - 老板是 User；助手和员工都是通用 Agent 的配置；监管员映射安全 VM 及其权限服务，不是另一个 Agent。
 - 最新场景规则见 ADR-0006：User 不创建老板形象；最低人物为助手、监管员，默认助手接待。活动池最多四项，五至十分钟随机轮换；配置委派同任务开会，通用外援仅保留轨迹并显示发起人电话。
 - 同一 Agent 配置可并发产生多个独立 Run / Thread / 轨迹；不得用 agent_id 共享可变任务上下文。
@@ -94,7 +96,7 @@
 ## 5. 安全与数据底线
 
 - V1 阶段例外：用户明确要求安全 VM 在第二版迭代。当前模型配置由 Windows DPAPI 加密保存在应用私有目录，由可信 ModelFactory 加载；不把配置目录挂载给 Agent。它不构成对同用户任意宿主代码的 OS 隔离。
-- V1 不注册任意 Shell / Python 执行工具；真实启用的文件工具仅访问会话根目录。以下安全 VM 要求仍是后续目标，不代表 V1 已具备。
+- 已开放 execute_python：使用随包标准库解释器、无网络 AppContainer 和单进程 Job，输入输出限于隔离副本；禁止继承秘密环境、调用宿主解释器或隔离失败后回退。未注册 Shell。该边界不等同于未来凭据安全 VM。
 - 外部文本、模型输出、MCP 返回、素材和技能均按不可信输入处理。
 - 用户任务目录中的 AGENTS.md / SKILL.md 不能扩张真实权限。
 - 原始密钥、Cookie、认证 Header、浏览器 profile 不进入模型、普通日志或产物。

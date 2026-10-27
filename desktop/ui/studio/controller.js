@@ -6,6 +6,7 @@ class CrewStudio {
     constructor() {
         // 1、未点击人物前，不加载任何人物原始轨迹。
         this.cursor = 0;
+        this.refreshGeneration = 0;
         this.data = null;
         this.selected = null;
         this.tab = "tasks";
@@ -20,8 +21,10 @@ class CrewStudio {
             this.selectMember.bind(this),
             this.objectClick.bind(this),
             crewLoadAvatar,
+            this.openConversation.bind(this),
         );
         this.materials = new CrewMaterialPanel(this.renderer.skins);
+        this.memberConfiguration = new CrewMemberConfiguration(this.materials);
         el("asset-library-open").addEventListener(
             "click",
             this.showAssetLibrary.bind(this),
@@ -121,6 +124,7 @@ class CrewStudio {
     resetWorkspace() {
         // 1、界面只丢弃显示状态，不取消旧空间的真实任务。
         this.cursor = 0;
+        this.refreshGeneration += 1;
         this.data = null;
         this.selected = null;
         this.tab = "tasks";
@@ -183,12 +187,15 @@ class CrewStudio {
     async refresh() {
         // 1、缓存故障保持上一次画面，并明确显示降级提示。
         let data;
+        const generation = (this.refreshGeneration || 0) + 1;
+        this.refreshGeneration = generation;
         try {
             data = await api("studio_feed", this.cursor);
         } catch (error) {
             if (!error.stale) this.renderer.factsHealthy = false;
             throw error;
         }
+        if (generation !== this.refreshGeneration) return;
         if (data.protocol_version !== 1)
             throw new Error("表现协议版本不兼容，请更新应用。");
         if (data.cursor < this.cursor) {
@@ -421,19 +428,19 @@ class CrewStudio {
         }
     }
 
-    /** 因为用户可能偏好会话工作方式，需要保留完整对话视图作为明确的观察模式。 */
-    async chatMode() {
+    /** 因为泡泡已读必须确认内容加载成功，需要允许查看入口严格等待会话和产物读取结果。 */
+    async chatMode(strict = false) {
         // 1、主动切换后才开始订阅全会话原始日志。
-        this.renderer.active = false;
-        this.renderer.motion.settle();
-        this.renderer.animator.clear();
-        document.body.classList.remove("studio-mode");
-        document.body.classList.add("chat-mode");
+        document.body.classList.add("conversation-open");
+        document.body.classList.remove("team-open");
         try {
             await loadEvents();
             await refreshArtifacts();
+            return true;
         } catch (error) {
+            if (strict === true) throw error;
             showError(error);
+            return false;
         }
     }
 
@@ -445,6 +452,39 @@ class CrewStudio {
         this.renderer.animator.clear();
         document.body.classList.add("studio-mode");
         document.body.classList.remove("chat-mode");
+        document.body.classList.remove("conversation-open");
+    }
+
+    /** 因为未读泡泡可能来自旧任务，需要打开通知对应的会话，成功后才保存该条结果的已读回执。 */
+    async openConversation(identifier, notice = null) {
+        // 1、固定点击时的通知身份，不能被新任务的会话或并行轮询替换。
+        const fact = this.renderer.facts.get(identifier);
+        const epoch = state.workspaceEpoch;
+        const conversation = notice?.conversation_id || fact?.conversation_id;
+        try {
+            if (conversation && state.conversation?.id !== conversation)
+                resetConversation({ id: conversation, title: "成员会话" });
+            await this.chatMode(true);
+            if (
+                epoch !== state.workspaceEpoch ||
+                state.conversation?.id !== conversation
+            )
+                return false;
+            // 2、打开人工表单不等于答复；完成结果只有成功展示后才持久化已读。
+            if (
+                notice?.kind === "question" ||
+                (!notice && fact?.requires_input)
+            )
+                await this.showQuestions();
+            else if (notice?.kind === "result") {
+                await api("acknowledge_bubble", identifier, notice.id);
+                if (epoch === state.workspaceEpoch) await this.refresh();
+            }
+            return true;
+        } catch (error) {
+            showError(error);
+            return false;
+        }
     }
 
     /** 因为用户可以在任务执行中让老板休息，需要只提交独立的显示移动计划。 */
@@ -463,7 +503,7 @@ class CrewStudio {
                 this.data.scene.room.revision,
                 this.movementStart(this.selected),
             );
-            this.renderer.motion.accept(plan);
+            this.renderer.motion.accept({ ...plan, manual: true });
         } catch (error) {
             showError(error);
         }
@@ -520,9 +560,7 @@ class CrewStudio {
         this.editMemberValue = member;
         this.memberRevision = member.revision || 0;
         el("member-name").value = member.name;
-        el("member-description").value =
-            member.description || "通用文件与资料处理";
-        el("member-prompt").value = member.prompt || "";
+        this.memberConfiguration.loadAgent(member);
         for (const key of ["color", "skin", "hair"])
             el("member-" + key).value = member[key];
         el("member-glasses").checked = Boolean(member.glasses);
@@ -555,6 +593,7 @@ class CrewStudio {
         this.sharedDefinition();
         el("member-dialog").showModal();
         this.materials.open(member);
+        this.memberConfiguration.loadMaterial(member);
     }
 
     /** 因为复用定义不应意外覆盖原人物的能力，需要在新建共享形象时锁定定义字段。 */
@@ -564,6 +603,9 @@ class CrewStudio {
             !this.editMemberValue?.id && Boolean(el("member-agent").value);
         el("member-description").disabled = shared;
         el("member-prompt").disabled = shared;
+        for (const key of ["member-skills", "member-mcp", "member-python"])
+            el(key).disabled =
+                shared || this.editMemberValue?.role === "guardian";
     }
 
     /** 因为人物属性需要跨重启保存，需要使用显式版本提交并处理冲突。 */
@@ -592,11 +634,12 @@ class CrewStudio {
         }
         if (el("member-agent").value)
             values.agent_id = el("member-agent").value;
-        if (!el("member-prompt").disabled) {
-            values.prompt = el("member-prompt").value;
-            values.description = el("member-description").value;
-        }
         try {
+            Object.assign(
+                values,
+                this.memberConfiguration.readAgent(),
+                this.memberConfiguration.readMaterial(),
+            );
             const member = await api(
                 "save_member",
                 values,
@@ -663,7 +706,7 @@ class CrewStudio {
                     node(
                         "small",
                         "",
-                        `${question.actor} · ${question.conversation_id.slice(0, 8)} · 信息确认`,
+                        `${question.actor} · ${question.conversation_id.slice(0, 8)} · ${{ question: "信息补充", choice: "请选择", approval: "人工审批" }[question.interaction_type] || "信息确认"}`,
                     ),
                     node("h3", "", question.question),
                 );
@@ -681,6 +724,20 @@ class CrewStudio {
                 answer.maxLength = 4000;
                 answer.required = true;
                 answer.placeholder = "填写你的答复…";
+                answer.readOnly = question.allow_other === false;
+                if (question.allow_other !== false && question.choices.length) {
+                    const other = node(
+                        "button",
+                        "secondary-button",
+                        "其他 / 补充",
+                    );
+                    other.type = "button";
+                    other.addEventListener(
+                        "click",
+                        this.supplementAnswer.bind(this),
+                    );
+                    choices.append(other);
+                }
                 const send = node(
                     "button",
                     "primary-button",
@@ -716,6 +773,16 @@ class CrewStudio {
             event.currentTarget.textContent;
     }
 
+    /** 因为建议选项可能无法完整表达用户意图，需要提供清空并聚焦自由补充的入口。 */
+    supplementAnswer(event) {
+        // 1、只调整表单内容，不自动提交或恢复任务。
+        const input = event.currentTarget
+            .closest("form")
+            .querySelector("textarea");
+        input.value = "";
+        input.focus();
+    }
+
     /** 因为用户可能重复点击答复，需要锁定按钮并使用同一幂等命令标识。 */
     async answerQuestion(event) {
         // 1、只提交人工输入，不让旁白模型代答。
@@ -730,6 +797,7 @@ class CrewStudio {
                 form.querySelector("textarea").value,
                 form.dataset.command,
             );
+            await this.refresh();
             await this.showQuestions();
         } catch (error) {
             showError(error);
@@ -742,6 +810,7 @@ class CrewStudio {
         // 1、保留原历史，只取消该 Run 的等待。
         try {
             await api("stop", event.currentTarget.dataset.run);
+            await this.refresh();
             await this.showQuestions();
         } catch (error) {
             showError(error);

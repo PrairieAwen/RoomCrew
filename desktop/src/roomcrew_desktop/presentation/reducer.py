@@ -2,8 +2,8 @@
 
 from typing import Any
 
-from roomcrew.presentation.animation import animation_hint
-from roomcrew.presentation.collaboration import reduce_delegation
+from roomcrew_desktop.presentation.animation import animation_hint
+from roomcrew_desktop.presentation.collaboration import reduce_delegation
 
 LABELS = {
     "idle": "待命",
@@ -50,10 +50,11 @@ def reduce_event(actors: dict[str, Any], event: dict[str, Any]) -> None:
     )
     if event["seq"] <= state["last_source_seq"]:
         return
+    state["conversation_id"] = event.get("conversation_id")
     reduce_delegation(actors, event)
     run_id, kind, payload = event["run_id"], event["kind"], event["payload"]
     # 2、外援内部轨迹保留在会话中，模型/工具片段不覆盖发起人的电话表现；真实提问仍显示。
-    if payload.get("presentation_external") and kind in {
+    if (payload.get("external_worker") or payload.get("presentation_external")) and kind in {
         "model.started",
         "model.completed",
         "tool.started",
@@ -122,6 +123,7 @@ def reduce_event(actors: dict[str, Any], event: dict[str, Any]) -> None:
                 "scope": scope,
                 "phase": "thinking",
                 "tools": {},
+                "tool_kinds": {},
                 "questions": [],
                 "waiting_dependency": False,
             },
@@ -132,8 +134,12 @@ def reduce_event(actors: dict[str, Any], event: dict[str, Any]) -> None:
             context["phase"] = "thinking"
         elif kind == "tool.started":
             context["tools"][payload["call_id"]] = payload.get("name", "tool")
+            context.setdefault("tool_kinds", {})[payload["call_id"]] = payload.get(
+                "tool_kind", "tool"
+            )
         elif kind in {"tool.completed", "tool.failed"}:
             context["tools"].pop(payload.get("call_id"), None)
+            context.setdefault("tool_kinds", {}).pop(payload.get("call_id"), None)
             if kind == "tool.failed" or payload.get("status") == "error":
                 state["warnings"] = ["工具返回错误，执行器可能仍在处理"]
         elif kind == "human.requested":
@@ -167,6 +173,7 @@ def actor_view(state: dict[str, Any]) -> dict[str, Any]:
         if not context["questions"] and not context["waiting_dependency"]
     ]
     tool_names = [name for context in running for name in context["tools"].values()]
+    tool_kinds = [name for context in running for name in context.get("tool_kinds", {}).values()]
     if running:
         activity = (
             "executing"
@@ -183,6 +190,7 @@ def actor_view(state: dict[str, Any]) -> dict[str, Any]:
     return {
         "protocol_version": 1,
         "member_id": state["member_id"],
+        "conversation_id": state.get("conversation_id"),
         "source_seq": state["last_source_seq"],
         "activity": activity,
         "action_id": ACTIONS.get(activity, "idle"),
@@ -202,5 +210,11 @@ def actor_view(state: dict[str, Any]) -> dict[str, Any]:
         "external_calls": sum(
             link["kind"] == "external" for link in state.get("delegations", {}).values()
         ),
-        "animation": animation_hint(activity, tool_names, questions, len(state["warnings"])),
+        "delegation_targets": [
+            link["target"] for link in state.get("delegations", {}).values() if link.get("target")
+        ],
+        "tool_kind": tool_kinds[-1] if tool_kinds else None,
+        "animation": animation_hint(
+            activity, tool_names, questions, len(state["warnings"]), tool_kinds
+        ),
     }

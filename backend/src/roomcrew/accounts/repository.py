@@ -4,6 +4,18 @@ from typing import Any, Protocol
 
 
 class AccountRepository(Protocol):
+    def agent_definitions(self) -> list[dict[str, Any]]:
+        """因为通用 Agent 配置需要独立查询，需要通过仓库合同返回定义列表。"""
+        # 1、实现方不读取人物素材或模型秘密。
+        ...
+
+    def save_agent(
+        self, identifier: str, body: dict[str, Any], expected_revision: int
+    ) -> dict[str, Any]:
+        """因为定义可能被多个入口编辑，需要提供不修改人物的版本化写入。"""
+        # 1、比较和写入必须原子完成。
+        ...
+
     def preferences(self) -> dict[str, Any]:
         """因为账号偏好未来随账号同步，需要通过独立仓库合同读取。"""
         # 1、偏好不包含秘密。

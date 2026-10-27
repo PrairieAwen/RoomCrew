@@ -24,12 +24,14 @@
         <script src="studio/environment.js" defer></script>
         <script src="studio/furniture.js" defer></script>
         <script src="studio/materials.js" defer></script>
+        <script src="studio/member-settings.js" defer></script>
         <script src="studio/renderer.js" defer></script>
+        <script src="studio/bubble-layout.js" defer></script>
         <script src="studio/controller.js" defer></script>
         <script src="workspaces.js" defer></script>
         <script src="app.js" defer></script>
     </head>
-    <body class="studio-mode">
+    <body class="studio-mode conversation-open">
         <aside class="sidebar">
             <div class="brand">
                 <span class="brand-icon">R</span>
@@ -393,7 +395,7 @@
                 <div class="modal-heading">
                     <div>
                         <div class="eyebrow">MEET YOUR CREW</div>
-                        <h2>人物与 Agent 属性</h2>
+                        <h2>人物属性</h2>
                     </div>
                     <button
                         id="close-member"
@@ -404,8 +406,9 @@
                     </button>
                 </div>
                 <p class="modal-intro">
-                    外观属于人物，职责与提示属于 Agent
-                    定义。多个形象可以复用同一份定义。
+                    Agent
+                    配置决定能做什么；员工素材配置决定怎样展示。多个形象可以复用同一
+                    Agent。
                 </p>
                 <div class="form-grid">
                     <label
@@ -417,178 +420,352 @@
                         >Agent 定义<select id="member-agent"></select
                     ></label>
                 </div>
-                <label
-                    >职责简介<input
-                        id="member-description"
-                        maxlength="300" /></label
-                ><label
-                    >工作提示<textarea
-                        id="member-prompt"
-                        rows="4"
-                        maxlength="8000"
-                        placeholder="定义他擅长什么、怎样完成工作…"
-                    ></textarea>
-                </label>
-                <div class="form-row">
-                    <label
-                        >没有工作时<select id="member-leisure-action">
-                            <option value="random">
-                                随机活动 · 每 5–10 分钟轮换
-                            </option>
-                            <option value="none">保持待命</option>
-                        </select></label
+                <div
+                    class="member-config-tabs"
+                    role="tablist"
+                    aria-label="人物配置分类"
+                >
+                    <button
+                        id="member-tab-agent"
+                        type="button"
+                        role="tab"
+                        data-panel="agent"
+                        aria-controls="member-panel-agent"
+                        aria-selected="true"
                     >
-                    <label
-                        >空闲等待（秒）<input
-                            id="member-leisure-delay"
-                            type="number"
-                            min="0"
-                            max="120"
-                            step="1"
-                            value="5"
-                            required
-                    /></label>
+                        Agent 配置
+                    </button>
+                    <button
+                        id="member-tab-material"
+                        type="button"
+                        role="tab"
+                        data-panel="material"
+                        aria-controls="member-panel-material"
+                        aria-selected="false"
+                    >
+                        员工素材配置
+                    </button>
                 </div>
-                <fieldset id="member-leisure-pool" class="idle-pool">
-                    <legend>空闲活动 · 最多四项</legend>
-                    <label><input type="checkbox" value="phone" />玩手机</label>
-                    <label><input type="checkbox" value="game" />打游戏</label>
+                <section
+                    id="member-panel-agent"
+                    role="tabpanel"
+                    aria-labelledby="member-tab-agent"
+                >
                     <label
-                        ><input
-                            type="checkbox"
-                            value="wander"
-                        />办公室散步</label
-                    >
-                    <label
-                        ><input type="checkbox" value="chat" />找同事闲聊</label
-                    >
-                    <label
-                        ><input
-                            type="checkbox"
-                            value="water"
-                        />浇花（替换项）</label
-                    >
-                    <label
-                        ><input
-                            type="checkbox"
-                            value="relax"
-                        />自绘休闲（替换项）</label
-                    >
-                </fieldset>
-                <p class="scope-note">
-                    所有工作、待答复及提醒清空后才随机活动，每 5–10
-                    分钟轮换一次；新任务或点击人物立即停止。闲聊仅作场景表演，不调用模型或生成消息；监管员保持值守。
-                </p>
-                <section class="material-card" aria-label="素材与动作预览">
-                    <div class="material-preview">
-                        <svg
-                            id="avatar-preview"
-                            viewBox="-80 -155 160 185"
-                            aria-label="人物动作预览"
-                        ></svg
-                        ><small id="preview-mode">素材预览 · 不提交任务</small>
-                    </div>
-                    <div class="material-controls">
+                        >职责简介<input
+                            id="member-description"
+                            maxlength="300" /></label
+                    ><label
+                        >系统提示词<textarea
+                            id="member-prompt"
+                            rows="4"
+                            maxlength="8000"
+                            placeholder="定义他擅长什么、怎样完成工作…"
+                        ></textarea>
+                    </label>
+                    <details id="member-abilities" class="agent-abilities" open>
+                        <summary>Agent 执行能力 · 随定义保存</summary>
+                        <label class="checkbox-label"
+                            ><input
+                                id="member-python"
+                                type="checkbox"
+                                checked
+                            />允许隔离 Python 脚本</label
+                        >
+                        <small
+                            >自带解释器和标准库，无需另装
+                            Python。脚本只处理任务文件，不能联网或读取宿主配置。</small
+                        >
                         <label
-                            >人物素材<select id="member-avatar">
-                                <option value="builtin:crew-v1">
-                                    RoomCrew · 精细骨架
+                            >Skills 技能配置（JSON）<textarea
+                                id="member-skills"
+                                rows="5"
+                                maxlength="240000"
+                                placeholder='[{"name":"note-style","description":"整理笔记","instructions":"先阅读资料，再按主题整理。"}]'
+                            ></textarea>
+                        </label>
+                        <small
+                            >每项包含 name、description、instructions；可选
+                            files 存放技能的文本或 Python
+                            辅助脚本。正文按需加载。</small
+                        >
+                        <label
+                            >MCP 服务器（HTTP，JSON）<textarea
+                                id="member-mcp"
+                                rows="4"
+                                maxlength="8000"
+                                placeholder='[{"name":"calendar","url":"http://127.0.0.1:8000/mcp","enabled":true}]'
+                            ></textarea>
+                        </label>
+                        <small
+                            >目前支持 Streamable HTTP；此处不填写 Key、认证
+                            Header 或带凭据的 URL。</small
+                        >
+                    </details>
+                </section>
+                <section
+                    id="member-panel-material"
+                    role="tabpanel"
+                    aria-labelledby="member-tab-material"
+                    hidden
+                >
+                    <details class="agent-abilities">
+                        <summary>人物交互 · 仅影响桌面表现</summary>
+                        <label
+                            >需要人工介入时的泡泡<input
+                                id="member-question-bubble"
+                                maxlength="80"
+                                placeholder="老板，我有问题想问你。"
+                        /></label>
+                        <label
+                            >任务完成时的泡泡<input
+                                id="member-completed-bubble"
+                                maxlength="80"
+                                placeholder="老板，我干完了，你看看。"
+                        /></label>
+                        <small
+                            >泡泡属于当前人物，随素材位置移动；完整内容在右侧查看。</small
+                        >
+                    </details>
+                    <div class="form-row">
+                        <label
+                            >没有工作时<select id="member-leisure-action">
+                                <option value="random">
+                                    随机活动 · 每 5–10 分钟轮换
                                 </option>
+                                <option value="none">保持待命</option>
                             </select></label
                         >
-                        <div class="material-actions">
-                            <button
-                                id="import-avatar"
-                                type="button"
-                                class="secondary-button"
+                        <label
+                            >空闲等待（秒）<input
+                                id="member-leisure-delay"
+                                type="number"
+                                min="0"
+                                max="120"
+                                step="1"
+                                value="5"
+                                required
+                        /></label>
+                    </div>
+                    <fieldset id="member-leisure-pool" class="idle-pool">
+                        <legend>空闲活动 · 最多四项</legend>
+                        <label
+                            ><input
+                                type="checkbox"
+                                value="phone"
+                            />玩手机</label
+                        >
+                        <label
+                            ><input type="checkbox" value="game" />打游戏</label
+                        >
+                        <label
+                            ><input
+                                type="checkbox"
+                                value="wander"
+                            />办公室散步</label
+                        >
+                        <label
+                            ><input
+                                type="checkbox"
+                                value="chat"
+                            />找同事闲聊</label
+                        >
+                        <label
+                            ><input
+                                type="checkbox"
+                                value="water"
+                            />浇花（替换项）</label
+                        >
+                        <label
+                            ><input
+                                type="checkbox"
+                                value="relax"
+                            />自绘休闲（替换项）</label
+                        >
+                    </fieldset>
+                    <p class="scope-note">
+                        所有工作、待答复及提醒清空后才随机活动，每 5–10
+                        分钟轮换一次；新任务或点击人物立即停止。闲聊仅作场景表演，不调用模型或生成消息；监管员保持值守。
+                    </p>
+                    <section class="material-card" aria-label="素材与动作预览">
+                        <div class="material-preview">
+                            <svg
+                                id="avatar-preview"
+                                viewBox="-80 -155 160 185"
+                                aria-label="人物动作预览"
+                            ></svg
+                            ><small id="preview-mode"
+                                >素材预览 · 不提交任务</small
                             >
-                                导入本地素材</button
-                            ><button
-                                id="example-avatar"
-                                type="button"
-                                class="text-button"
-                            >
-                                试用示例素材</button
-                            ><button
-                                id="portrait-avatar"
-                                type="button"
-                                class="secondary-button"
-                            >
-                                试用手绘角色</button
-                            ><button
-                                id="reload-avatar"
-                                type="button"
-                                class="text-button"
-                            >
-                                重新载入
-                            </button>
                         </div>
-                        <div class="material-actions">
-                            <select
-                                id="bundle-character"
-                                aria-label="完整人物素材"
-                            >
-                                <option value="owner">阿晨 · 暖木色成员</option>
-                                <option value="assistant" selected>
-                                    小禾 · 助手
-                                </option>
-                                <option value="employee">小岚 · 员工</option>
-                                <option value="guardian">
-                                    守望 · 监管员形象
-                                </option>
-                            </select>
-                            <button
-                                id="bundle-avatar"
-                                type="button"
-                                class="secondary-button"
-                            >
-                                导入完整角色
-                            </button>
-                        </div>
-                        <div class="preview-controls">
+                        <div class="material-controls">
                             <label
-                                >动作<select
-                                    id="preview-action"
-                                ></select></label
-                            ><label
-                                >表情<select
-                                    id="preview-expression"
-                                ></select></label
-                            ><label
-                                >朝向<select
-                                    id="preview-direction"
-                                ></select></label
-                            ><label
-                                >姿态<select id="preview-posture">
-                                    <option value="standing">站立</option>
-                                    <option value="seated">坐姿</option>
+                                >人物素材<select id="member-avatar">
+                                    <option value="builtin:crew-v1">
+                                        RoomCrew · 精细骨架
+                                    </option>
                                 </select></label
                             >
+                            <div class="material-actions">
+                                <button
+                                    id="import-avatar"
+                                    type="button"
+                                    class="secondary-button"
+                                >
+                                    导入本地素材</button
+                                ><button
+                                    id="example-avatar"
+                                    type="button"
+                                    class="text-button"
+                                >
+                                    试用示例素材</button
+                                ><button
+                                    id="portrait-avatar"
+                                    type="button"
+                                    class="secondary-button"
+                                >
+                                    试用手绘角色</button
+                                ><button
+                                    id="reload-avatar"
+                                    type="button"
+                                    class="text-button"
+                                >
+                                    重新载入
+                                </button>
+                            </div>
+                            <div class="material-actions">
+                                <select
+                                    id="bundle-character"
+                                    aria-label="完整人物素材"
+                                >
+                                    <option value="owner">
+                                        阿晨 · 暖木色成员
+                                    </option>
+                                    <option value="assistant" selected>
+                                        小禾 · 助手
+                                    </option>
+                                    <option value="employee">
+                                        小岚 · 员工
+                                    </option>
+                                    <option value="guardian">
+                                        守望 · 监管员形象
+                                    </option>
+                                </select>
+                                <button
+                                    id="bundle-avatar"
+                                    type="button"
+                                    class="secondary-button"
+                                >
+                                    导入完整角色
+                                </button>
+                            </div>
+                            <div class="preview-controls">
+                                <label
+                                    >动作<select
+                                        id="preview-action"
+                                    ></select></label
+                                ><label
+                                    >表情<select
+                                        id="preview-expression"
+                                    ></select></label
+                                ><label
+                                    >朝向<select
+                                        id="preview-direction"
+                                    ></select></label
+                                ><label
+                                    >姿态<select id="preview-posture">
+                                        <option value="standing">站立</option>
+                                        <option value="seated">坐姿</option>
+                                    </select></label
+                                >
+                            </div>
+                            <button
+                                id="preview-sequence"
+                                type="button"
+                                class="secondary-button"
+                            >
+                                连播核心动作
+                            </button>
+                            <p id="avatar-feedback" class="scope-note">
+                                动作由工作轨迹映射；缺失素材会明确回退。
+                            </p>
                         </div>
-                        <button
-                            id="preview-sequence"
-                            type="button"
-                            class="secondary-button"
-                        >
-                            连播核心动作
-                        </button>
-                        <p id="avatar-feedback" class="scope-note">
-                            动作由工作轨迹映射；缺失素材会明确回退。
+                    </section>
+                    <fieldset class="action-binding-editor">
+                        <legend>轨迹触发 → 人物动作帧</legend>
+                        <div class="form-grid">
+                            <label
+                                >触发类型<select id="binding-category"></select
+                            ></label>
+                            <label
+                                >表现动作<select id="binding-action"></select
+                            ></label>
+                        </div>
+                        <label
+                            >图集变体<select id="binding-clip"></select
+                        ></label>
+                        <label
+                            >帧序列（从 0 开始，逗号分隔）<input
+                                id="binding-frames"
+                                placeholder="例如：4, 5, 6, 5"
+                                maxlength="1000"
+                        /></label>
+                        <div class="form-grid">
+                            <label
+                                >播放速度（fps）<input
+                                    id="binding-fps"
+                                    type="number"
+                                    min="1"
+                                    max="60"
+                                    value="8"
+                            /></label>
+                            <label class="checkbox-label"
+                                ><input
+                                    id="binding-loop"
+                                    type="checkbox"
+                                    checked
+                                />循环播放</label
+                            >
+                        </div>
+                        <div class="material-actions">
+                            <button
+                                id="binding-apply"
+                                type="button"
+                                class="secondary-button"
+                            >
+                                应用并预览
+                            </button>
+                            <button
+                                id="binding-reset"
+                                type="button"
+                                class="text-button"
+                            >
+                                该类型恢复默认
+                            </button>
+                        </div>
+                        <p class="scope-note">
+                            导入图集后可选择具体变体并调整帧序列；自动适配保留方向和坐姿匹配。更换素材保留动作，重置旧帧号。
                         </p>
+                        <pre id="binding-summary" class="scope-note"></pre>
+                    </fieldset>
+                    <p class="scope-note">
+                        内置骨架配色；导入图集使用原图颜色。
+                    </p>
+                    <div class="appearance-fields">
+                        <label
+                            >服装<input id="member-color" type="color" /></label
+                        ><label
+                            >肤色<input id="member-skin" type="color" /></label
+                        ><label
+                            >头发<input id="member-hair" type="color" /></label
+                        ><label
+                            ><input
+                                id="member-glasses"
+                                type="checkbox"
+                            />眼镜</label
+                        >
                     </div>
                 </section>
-                <p class="scope-note">内置骨架配色；导入图集使用原图颜色。</p>
-                <div class="appearance-fields">
-                    <label>服装<input id="member-color" type="color" /></label
-                    ><label>肤色<input id="member-skin" type="color" /></label
-                    ><label>头发<input id="member-hair" type="color" /></label
-                    ><label
-                        ><input
-                            id="member-glasses"
-                            type="checkbox"
-                        />眼镜</label
-                    >
-                </div>
                 <label class="checkbox-label"
                     ><input id="member-enabled" type="checkbox" checked />
                     可接收任务</label

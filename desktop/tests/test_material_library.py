@@ -7,12 +7,12 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from roomcrew.application.runtime import Runtime
-from roomcrew.assets.library import AvatarLibrary
-from roomcrew.assets.paths import atlas_filenames
-from roomcrew.assets.schema import validate_manifest
-from roomcrew.contracts.animation import EXPRESSIONS, GESTURES
 from roomcrew.platform.paths import AppPaths
+from roomcrew_desktop.assets.library import AvatarLibrary
+from roomcrew_desktop.assets.paths import atlas_filenames
+from roomcrew_desktop.assets.schema import validate_manifest
+from roomcrew_desktop.presentation.contracts import EXPRESSIONS, GESTURES
+from roomcrew_desktop.runtime import DesktopRuntime as Runtime
 
 LIBRARY = Path(__file__).resolve().parents[2] / "desktop/ui/studio/assets/library-v1"
 

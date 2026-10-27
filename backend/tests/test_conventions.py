@@ -10,7 +10,7 @@ def test_all_python_methods_explain_background_and_steps() -> None:
     # 1、只检查项目维护的源码和测试，不触碰第三方库。
     root = Path(__file__).resolve().parents[2]
     failures = []
-    for folder in (root / "backend", root / "packaging"):
+    for folder in (root / "backend", root / "desktop", root / "packaging"):
         for path in folder.rglob("*.py"):
             source = path.read_text("utf-8")
             tree = ast.parse(source)

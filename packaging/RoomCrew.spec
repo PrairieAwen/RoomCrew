@@ -7,6 +7,7 @@ from PyInstaller.utils.hooks import collect_data_files, collect_submodules, copy
 
 project = Path(SPECPATH).parent
 datas = [(str(project / 'desktop/ui'), 'desktop/ui')]
+datas += [(str(project / '.cache/python-runtime'), 'python-runtime')]
 datas += [(str(project / 'doc/assets/crew-avatar-example'), 'materials/crew-avatar-example')]
 for package in ('deepagents', 'langchain', 'langchain_core', 'langchain_openai',
                 'langgraph', 'langgraph_checkpoint', 'langgraph_checkpoint_sqlite',
@@ -16,6 +17,7 @@ datas += collect_data_files('deepagents')
 datas += collect_data_files('webview')
 hidden = collect_submodules('langgraph') + collect_submodules('deepagents')
 hidden += ['tiktoken_ext.openai_public', 'webview.platforms.edgechromium', 'aiosqlite']
+hidden += collect_submodules('langchain_mcp_adapters')
 
 analysis = Analysis([str(project / 'packaging/desktop_entry.py')],
     pathex=[str(project / 'backend/src'), str(project / 'desktop/src')], binaries=[], datas=datas,

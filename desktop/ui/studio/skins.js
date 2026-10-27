@@ -90,12 +90,14 @@ class CrewSkins {
         if (!asset) {
             view.sprite?.remove();
             view.sprite = null;
+            view.spriteFrame = null;
             return false;
         }
         const clip = crewSelectClip(asset.manifest, sample);
         if (!clip) {
             view.sprite?.remove();
             view.sprite = null;
+            view.spriteFrame = null;
             return false;
         }
         if (!view.sprite || view.spriteId !== identifier) {
@@ -176,6 +178,7 @@ class CrewSkins {
                 `${(frame % columns) * fw} ${Math.floor(frame / columns) * fh} ${fw} ${fh}`,
             );
         const mirrored =
+            !sample.material_binding?.clip &&
             asset.manifest.mirror_west === true &&
             ["w", "nw", "sw"].includes(sample.direction);
         view.sprite.setAttribute(
@@ -191,14 +194,22 @@ class CrewSkins {
 
 /** 因为自制素材不一定覆盖所有变体，需要只选择兼容姿态并明确按优先级回退。 */
 function crewSelectClip(manifest, sample) {
-    // 1、先找实际动作；摸鱼缺帧交给内置生活骨架，工作缺帧才回退同姿态 idle。
+    // 1、人物显式选择的帧序列优先；帧引用由桌面配置入口校验，预览与正式场景共用。
+    if (sample.material_binding?.clip) {
+        const selected = manifest.clips.find(
+            crewClipKeyMatches,
+            sample.material_binding.clip,
+        );
+        if (selected) return { ...selected, ...sample.material_binding };
+    }
+    // 2、自动选帧匹配实际动作；摸鱼缺帧回退内置，工作缺帧回退同姿态 idle。
     const posture = sample.posture;
     let matches = manifest.clips.filter(crewClipPosture, posture);
     const exact = matches.filter(crewClipAction, sample.action);
     if (CREW_LEISURE_ACTIONS.has(sample.action) && !exact.length) return null;
     matches = exact.length ? exact : matches.filter(crewClipAction, "idle");
     if (!matches.length) return null;
-    // 2、表情优先于近邻朝向，中性是合法回退；有限数组比较不加载额外资源。
+    // 3、表情优先于近邻朝向，中性是合法回退；有限数组比较不加载额外资源。
     let selected = null,
         best = Infinity;
     for (const clip of matches) {
@@ -237,4 +248,17 @@ function crewClipPosture(clip) {
 function crewClipAction(clip) {
     // 1、缺失动作的回退由选择器统一处理。
     return clip.action === String(this);
+}
+
+/** 因为素材变体需要可保存的稳定引用，需要使用与桌面校验一致的组合键。 */
+function crewClipKey(clip) {
+    // 1、组成字段来自已验证素材词表。
+    return [clip.action, clip.direction, clip.posture, clip.expression].join(
+        ".",
+    );
+}
+/** 因为清单查找不能依赖数组位置，需要精确比较稳定变体键。 */
+function crewClipKeyMatches(clip) {
+    // 1、thisArg 是当前编辑器选择的键。
+    return crewClipKey(clip) === String(this);
 }

@@ -14,10 +14,19 @@ OPERATIONS = {
     "ask_user": "ask",
     "get_local_time": "think",
 }
+KIND_ACTIONS = {
+    "tool": "work",
+    "python": "work",
+    "mcp": "phone",
+    "skill": "read",
+    "security": "talk",
+    "human": "ask",
+    "directory": "read",
+}
 
 
 def animation_hint(
-    activity: str, tools: list[str], questions: int, warnings: int
+    activity: str, tools: list[str], questions: int, warnings: int, kinds: list[str] | None = None
 ) -> dict[str, str]:
     """因为同一执行状态可以包含不同工具动作，需要用有限映射细化动作并保留人工与异常表情。"""
     # 1、工具名只用于白名单映射，不读取工具正文、参数或模型自然语言。
@@ -31,7 +40,7 @@ def animation_hint(
         "receiving": "listen",
     }.get(activity, "idle")
     if activity == "executing" and tools:
-        gesture = OPERATIONS.get(tools[-1], "work")
+        gesture = KIND_ACTIONS.get((kinds or [""])[-1], OPERATIONS.get(tools[-1], "work"))
     # 2、问题与错误优先显示表情，但不令其他正在执行的上下文变成完成或暂停。
     expression = "focused" if activity in {"thinking", "executing", "delegating"} else "neutral"
     if activity == "reporting":
@@ -47,11 +56,13 @@ def visual_cue(event: dict[str, Any]) -> dict[str, Any] | None:
     """因为工具很快时轮询可能跳过活动状态，需要保留短暂且可丢弃的动作线索。"""
     # 1、只输出有限词表与序号，不能把线索当作执行指令或真实任务状态。
     kind, payload = event["kind"], event["payload"]
-    if payload.get("presentation_external"):
+    if payload.get("external_worker") or payload.get("presentation_external"):
         return None
     expression, duration = "focused", 320
     if kind == "tool.started":
-        action = OPERATIONS.get(payload.get("name", ""), "work")
+        action = KIND_ACTIONS.get(
+            payload.get("tool_kind", ""), OPERATIONS.get(payload.get("name", ""), "work")
+        )
     elif kind == "human.requested":
         action, expression, duration = "ask", "curious", 900
     elif kind in {"tool.failed", "run.failed", "run.interrupted", "task.failed"}:

@@ -13,8 +13,8 @@ from typing import Any
 
 from PIL import Image, UnidentifiedImageError
 
-from roomcrew.assets.paths import atlas_filenames
-from roomcrew.assets.schema import validate_manifest
+from roomcrew_desktop.assets.paths import atlas_filenames
+from roomcrew_desktop.assets.schema import validate_manifest
 
 BUILTIN = "builtin:crew-v1"
 
@@ -57,6 +57,19 @@ class AvatarLibrary:
         # 1、库目录在会话文件视图之外；不打开网络或扫描用户磁盘。
         self.root = root
         self._lock = threading.Lock()
+        self._clip_catalog: dict[str, dict[str, Any]] = {}
+
+    def clip_catalog(self, identifier: str) -> dict[str, Any] | None:
+        """因为保存帧绑定只需要图集清单，需要缓存不可变素材元数据而不反复编码 PNG。"""
+        # 1、内置骨架没有外部帧号；内容寻址图集的清单只在首次引用时读取。
+        if identifier == BUILTIN:
+            return None
+        if identifier not in self._clip_catalog:
+            path = self._path(identifier) / "avatar.json"
+            if path.stat().st_size > 128 * 1024:
+                raise ValueError("素材描述文件过大")
+            self._clip_catalog[identifier] = json.loads(path.read_text("utf-8"))
+        return self._clip_catalog[identifier]
 
     def import_manifest(self, path: Path) -> dict[str, Any]:
         """因为同时导入会争用内容目录和配额，需要串行化导入而不锁住 Agent 存储。"""

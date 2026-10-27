@@ -1,6 +1,6 @@
 """人物身份与可执行 Agent 定义分离，不携带真实模型连接参数。"""
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from typing import Any
 
 
@@ -18,6 +18,7 @@ class AgentSpec:
     description: str
     prompt: str
     revision: int = 1
+    configuration: dict[str, Any] = field(default_factory=dict)
 
     def snapshot(self) -> dict[str, Any]:
         """因为在途任务不能被人物编辑改变，需要保存不含凭据的定义快照。"""
@@ -34,4 +35,5 @@ class AgentSpec:
             value["description"],
             value["prompt"],
             int(value["revision"]),
+            value.get("configuration", {}),
         )

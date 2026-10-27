@@ -7,10 +7,10 @@ import pytest
 from test_avatar_assets import avatar_fixture
 from test_studio import event
 
-from roomcrew.accounts.service import AccountService
-from roomcrew.assets.library import AvatarLibrary
-from roomcrew.presentation.reducer import actor_view, reduce_event
 from roomcrew.storage.accounts import SqliteAccountRepository
+from roomcrew_desktop.accounts import DesktopAccountService as AccountService
+from roomcrew_desktop.assets.library import AvatarLibrary
+from roomcrew_desktop.presentation.reducer import actor_view, reduce_event
 
 
 def test_leisure_is_personal_persistent_and_outside_agent_context(tmp_path: Path) -> None:

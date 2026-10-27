@@ -12,7 +12,7 @@ class AppPaths:
     private: Path
     data: Path
     sessions: Path
-    desktop_ui: Path
+    resources: Path
 
     @classmethod
     def create(cls, root: Path | None = None) -> "AppPaths":
@@ -26,7 +26,7 @@ class AppPaths:
             base / "private",
             base / "data",
             base / "data/sessions",
-            resources / "desktop/ui",
+            resources,
         )
         # 2、提前建立数据目录；配置始终位于 Agent 会话根目录之外。
         for folder in (paths.private, paths.data, paths.sessions):
@@ -56,4 +56,4 @@ class AppPaths:
         sessions = data / "sessions"
         # 2、空间目录不包含凭据；User 私有目录不挂载到任何 Agent 会话文件视图。
         sessions.mkdir(parents=True, exist_ok=True)
-        return AppPaths(self.root, self.private, data, sessions, self.desktop_ui)
+        return AppPaths(self.root, self.private, data, sessions, self.resources)

@@ -1,0 +1,725 @@
+{
+  "example_kind": "simulated_not_a_live_capture",
+  "contract": {
+    "event_api": "Runnable.astream_events",
+    "event_api_version": "v2",
+    "message_json_encoding": "BaseMessage.model_dump(mode='json')",
+    "installed_packages": {
+      "deepagents": "0.7.32",
+      "langgraph": "1.2.17",
+      "langchain-core": "1.7.0",
+      "langgraph-checkpoint": "4.3.0",
+      "langgraph-checkpoint-sqlite": "3.1.2",
+      "langchain-mcp-adapters": "0.3.2",
+      "mcp": "1.30.0"
+    },
+    "omitted": [
+      "内部 chain 事件与系统提示",
+      "逐 token 事件",
+      "MCP 初始化、工具发现、认证与传输细节"
+    ],
+    "note": "顶层容器是文档样例；framework_events 使用官方字段；所有 ID、时间、日程均为合成数据。"
+  },
+  "roomcrew_context": {
+    "workspace_id": "workspace_demo",
+    "conversation_id": "conversation_demo",
+    "product_run_id": "product_run_demo",
+    "framework_thread_id": "conversation_demo",
+    "sdk_root_run_id": "00000000-0000-4000-8000-000000000001"
+  },
+  "framework_events": [
+    {
+      "event": "on_chain_start",
+      "name": "roomcrew-assistant",
+      "run_id": "00000000-0000-4000-8000-000000000001",
+      "parent_ids": [],
+      "tags": [],
+      "metadata": {},
+      "data": {
+        "input": {
+          "messages": [
+            {
+              "content": "先读取本机时间，再通过日程 MCP 查询今天的安排，最后给我一个简要汇总。",
+              "additional_kwargs": {},
+              "response_metadata": {},
+              "type": "human",
+              "name": null,
+              "id": "human_demo_1"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "event": "on_chat_model_start",
+      "name": "RoomCrewModel",
+      "run_id": "00000000-0000-4000-8000-000000000011",
+      "parent_ids": [
+        "00000000-0000-4000-8000-000000000001",
+        "00000000-0000-4000-8000-000000000021"
+      ],
+      "tags": [],
+      "metadata": {},
+      "data": {
+        "input": {
+          "messages": [
+            [
+              {
+                "content": "先读取本机时间，再通过日程 MCP 查询今天的安排，最后给我一个简要汇总。",
+                "additional_kwargs": {},
+                "response_metadata": {},
+                "type": "human",
+                "name": null,
+                "id": "human_demo_1"
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "event": "on_chat_model_end",
+      "name": "RoomCrewModel",
+      "run_id": "00000000-0000-4000-8000-000000000011",
+      "parent_ids": [
+        "00000000-0000-4000-8000-000000000001",
+        "00000000-0000-4000-8000-000000000021"
+      ],
+      "tags": [],
+      "metadata": {},
+      "data": {
+        "input": {
+          "messages": [
+            [
+              {
+                "content": "先读取本机时间，再通过日程 MCP 查询今天的安排，最后给我一个简要汇总。",
+                "additional_kwargs": {},
+                "response_metadata": {},
+                "type": "human",
+                "name": null,
+                "id": "human_demo_1"
+              }
+            ]
+          ]
+        },
+        "output": {
+          "content": "",
+          "additional_kwargs": {},
+          "response_metadata": {},
+          "type": "ai",
+          "name": null,
+          "id": "ai_demo_1",
+          "tool_calls": [
+            {
+              "name": "get_local_time",
+              "args": {},
+              "id": "call_time_1",
+              "type": "tool_call"
+            }
+          ],
+          "invalid_tool_calls": [],
+          "usage_metadata": null
+        }
+      }
+    },
+    {
+      "event": "on_tool_start",
+      "name": "get_local_time",
+      "run_id": "00000000-0000-4000-8000-000000000031",
+      "parent_ids": [
+        "00000000-0000-4000-8000-000000000001",
+        "00000000-0000-4000-8000-000000000041"
+      ],
+      "tags": [],
+      "metadata": {},
+      "data": {
+        "input": {}
+      }
+    },
+    {
+      "event": "on_tool_end",
+      "name": "get_local_time",
+      "run_id": "00000000-0000-4000-8000-000000000031",
+      "parent_ids": [
+        "00000000-0000-4000-8000-000000000001",
+        "00000000-0000-4000-8000-000000000041"
+      ],
+      "tags": [],
+      "metadata": {},
+      "data": {
+        "input": {},
+        "output": {
+          "content": "2026-10-27T09:00:00+08:00",
+          "additional_kwargs": {},
+          "response_metadata": {},
+          "type": "tool",
+          "name": "get_local_time",
+          "id": "tool_demo_1",
+          "tool_call_id": "call_time_1",
+          "artifact": null,
+          "status": "success"
+        }
+      }
+    },
+    {
+      "event": "on_chat_model_start",
+      "name": "RoomCrewModel",
+      "run_id": "00000000-0000-4000-8000-000000000012",
+      "parent_ids": [
+        "00000000-0000-4000-8000-000000000001",
+        "00000000-0000-4000-8000-000000000022"
+      ],
+      "tags": [],
+      "metadata": {},
+      "data": {
+        "input": {
+          "messages": [
+            [
+              {
+                "content": "先读取本机时间，再通过日程 MCP 查询今天的安排，最后给我一个简要汇总。",
+                "additional_kwargs": {},
+                "response_metadata": {},
+                "type": "human",
+                "name": null,
+                "id": "human_demo_1"
+              },
+              {
+                "content": "",
+                "additional_kwargs": {},
+                "response_metadata": {},
+                "type": "ai",
+                "name": null,
+                "id": "ai_demo_1",
+                "tool_calls": [
+                  {
+                    "name": "get_local_time",
+                    "args": {},
+                    "id": "call_time_1",
+                    "type": "tool_call"
+                  }
+                ],
+                "invalid_tool_calls": [],
+                "usage_metadata": null
+              },
+              {
+                "content": "2026-10-27T09:00:00+08:00",
+                "additional_kwargs": {},
+                "response_metadata": {},
+                "type": "tool",
+                "name": "get_local_time",
+                "id": "tool_demo_1",
+                "tool_call_id": "call_time_1",
+                "artifact": null,
+                "status": "success"
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "event": "on_chat_model_end",
+      "name": "RoomCrewModel",
+      "run_id": "00000000-0000-4000-8000-000000000012",
+      "parent_ids": [
+        "00000000-0000-4000-8000-000000000001",
+        "00000000-0000-4000-8000-000000000022"
+      ],
+      "tags": [],
+      "metadata": {},
+      "data": {
+        "input": {
+          "messages": [
+            [
+              {
+                "content": "先读取本机时间，再通过日程 MCP 查询今天的安排，最后给我一个简要汇总。",
+                "additional_kwargs": {},
+                "response_metadata": {},
+                "type": "human",
+                "name": null,
+                "id": "human_demo_1"
+              },
+              {
+                "content": "",
+                "additional_kwargs": {},
+                "response_metadata": {},
+                "type": "ai",
+                "name": null,
+                "id": "ai_demo_1",
+                "tool_calls": [
+                  {
+                    "name": "get_local_time",
+                    "args": {},
+                    "id": "call_time_1",
+                    "type": "tool_call"
+                  }
+                ],
+                "invalid_tool_calls": [],
+                "usage_metadata": null
+              },
+              {
+                "content": "2026-10-27T09:00:00+08:00",
+                "additional_kwargs": {},
+                "response_metadata": {},
+                "type": "tool",
+                "name": "get_local_time",
+                "id": "tool_demo_1",
+                "tool_call_id": "call_time_1",
+                "artifact": null,
+                "status": "success"
+              }
+            ]
+          ]
+        },
+        "output": {
+          "content": "",
+          "additional_kwargs": {},
+          "response_metadata": {},
+          "type": "ai",
+          "name": null,
+          "id": "ai_demo_2",
+          "tool_calls": [
+            {
+              "name": "calendar_list_events",
+              "args": {
+                "date": "2026-10-27"
+              },
+              "id": "call_calendar_1",
+              "type": "tool_call"
+            }
+          ],
+          "invalid_tool_calls": [],
+          "usage_metadata": null
+        }
+      }
+    },
+    {
+      "event": "on_tool_start",
+      "name": "calendar_list_events",
+      "run_id": "00000000-0000-4000-8000-000000000032",
+      "parent_ids": [
+        "00000000-0000-4000-8000-000000000001",
+        "00000000-0000-4000-8000-000000000042"
+      ],
+      "tags": [],
+      "metadata": {},
+      "data": {
+        "input": {
+          "date": "2026-10-27"
+        }
+      }
+    },
+    {
+      "event": "on_tool_end",
+      "name": "calendar_list_events",
+      "run_id": "00000000-0000-4000-8000-000000000032",
+      "parent_ids": [
+        "00000000-0000-4000-8000-000000000001",
+        "00000000-0000-4000-8000-000000000042"
+      ],
+      "tags": [],
+      "metadata": {},
+      "data": {
+        "input": {
+          "date": "2026-10-27"
+        },
+        "output": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"events\": [{\"start\": \"2026-10-27T10:00:00+08:00\", \"title\": \"RoomCrew 架构讨论\"}]}"
+            }
+          ],
+          "additional_kwargs": {},
+          "response_metadata": {},
+          "type": "tool",
+          "name": "calendar_list_events",
+          "id": "tool_demo_2",
+          "tool_call_id": "call_calendar_1",
+          "artifact": {
+            "structured_content": {
+              "events": [
+                {
+                  "start": "2026-10-27T10:00:00+08:00",
+                  "title": "RoomCrew 架构讨论"
+                }
+              ]
+            }
+          },
+          "status": "success"
+        }
+      }
+    },
+    {
+      "event": "on_chat_model_start",
+      "name": "RoomCrewModel",
+      "run_id": "00000000-0000-4000-8000-000000000013",
+      "parent_ids": [
+        "00000000-0000-4000-8000-000000000001",
+        "00000000-0000-4000-8000-000000000023"
+      ],
+      "tags": [],
+      "metadata": {},
+      "data": {
+        "input": {
+          "messages": [
+            [
+              {
+                "content": "先读取本机时间，再通过日程 MCP 查询今天的安排，最后给我一个简要汇总。",
+                "additional_kwargs": {},
+                "response_metadata": {},
+                "type": "human",
+                "name": null,
+                "id": "human_demo_1"
+              },
+              {
+                "content": "",
+                "additional_kwargs": {},
+                "response_metadata": {},
+                "type": "ai",
+                "name": null,
+                "id": "ai_demo_1",
+                "tool_calls": [
+                  {
+                    "name": "get_local_time",
+                    "args": {},
+                    "id": "call_time_1",
+                    "type": "tool_call"
+                  }
+                ],
+                "invalid_tool_calls": [],
+                "usage_metadata": null
+              },
+              {
+                "content": "2026-10-27T09:00:00+08:00",
+                "additional_kwargs": {},
+                "response_metadata": {},
+                "type": "tool",
+                "name": "get_local_time",
+                "id": "tool_demo_1",
+                "tool_call_id": "call_time_1",
+                "artifact": null,
+                "status": "success"
+              },
+              {
+                "content": "",
+                "additional_kwargs": {},
+                "response_metadata": {},
+                "type": "ai",
+                "name": null,
+                "id": "ai_demo_2",
+                "tool_calls": [
+                  {
+                    "name": "calendar_list_events",
+                    "args": {
+                      "date": "2026-10-27"
+                    },
+                    "id": "call_calendar_1",
+                    "type": "tool_call"
+                  }
+                ],
+                "invalid_tool_calls": [],
+                "usage_metadata": null
+              },
+              {
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "{\"events\": [{\"start\": \"2026-10-27T10:00:00+08:00\", \"title\": \"RoomCrew 架构讨论\"}]}"
+                  }
+                ],
+                "additional_kwargs": {},
+                "response_metadata": {},
+                "type": "tool",
+                "name": "calendar_list_events",
+                "id": "tool_demo_2",
+                "tool_call_id": "call_calendar_1",
+                "artifact": {
+                  "structured_content": {
+                    "events": [
+                      {
+                        "start": "2026-10-27T10:00:00+08:00",
+                        "title": "RoomCrew 架构讨论"
+                      }
+                    ]
+                  }
+                },
+                "status": "success"
+              }
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "event": "on_chat_model_end",
+      "name": "RoomCrewModel",
+      "run_id": "00000000-0000-4000-8000-000000000013",
+      "parent_ids": [
+        "00000000-0000-4000-8000-000000000001",
+        "00000000-0000-4000-8000-000000000023"
+      ],
+      "tags": [],
+      "metadata": {},
+      "data": {
+        "input": {
+          "messages": [
+            [
+              {
+                "content": "先读取本机时间，再通过日程 MCP 查询今天的安排，最后给我一个简要汇总。",
+                "additional_kwargs": {},
+                "response_metadata": {},
+                "type": "human",
+                "name": null,
+                "id": "human_demo_1"
+              },
+              {
+                "content": "",
+                "additional_kwargs": {},
+                "response_metadata": {},
+                "type": "ai",
+                "name": null,
+                "id": "ai_demo_1",
+                "tool_calls": [
+                  {
+                    "name": "get_local_time",
+                    "args": {},
+                    "id": "call_time_1",
+                    "type": "tool_call"
+                  }
+                ],
+                "invalid_tool_calls": [],
+                "usage_metadata": null
+              },
+              {
+                "content": "2026-10-27T09:00:00+08:00",
+                "additional_kwargs": {},
+                "response_metadata": {},
+                "type": "tool",
+                "name": "get_local_time",
+                "id": "tool_demo_1",
+                "tool_call_id": "call_time_1",
+                "artifact": null,
+                "status": "success"
+              },
+              {
+                "content": "",
+                "additional_kwargs": {},
+                "response_metadata": {},
+                "type": "ai",
+                "name": null,
+                "id": "ai_demo_2",
+                "tool_calls": [
+                  {
+                    "name": "calendar_list_events",
+                    "args": {
+                      "date": "2026-10-27"
+                    },
+                    "id": "call_calendar_1",
+                    "type": "tool_call"
+                  }
+                ],
+                "invalid_tool_calls": [],
+                "usage_metadata": null
+              },
+              {
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "{\"events\": [{\"start\": \"2026-10-27T10:00:00+08:00\", \"title\": \"RoomCrew 架构讨论\"}]}"
+                  }
+                ],
+                "additional_kwargs": {},
+                "response_metadata": {},
+                "type": "tool",
+                "name": "calendar_list_events",
+                "id": "tool_demo_2",
+                "tool_call_id": "call_calendar_1",
+                "artifact": {
+                  "structured_content": {
+                    "events": [
+                      {
+                        "start": "2026-10-27T10:00:00+08:00",
+                        "title": "RoomCrew 架构讨论"
+                      }
+                    ]
+                  }
+                },
+                "status": "success"
+              }
+            ]
+          ]
+        },
+        "output": {
+          "content": "现在是 2026 年 10 月 27 日 09:00。日程服务返回今天 10:00 有一场 RoomCrew 架构讨论。",
+          "additional_kwargs": {},
+          "response_metadata": {},
+          "type": "ai",
+          "name": null,
+          "id": "ai_demo_3",
+          "tool_calls": [],
+          "invalid_tool_calls": [],
+          "usage_metadata": null
+        }
+      }
+    },
+    {
+      "event": "on_chain_end",
+      "name": "roomcrew-assistant",
+      "run_id": "00000000-0000-4000-8000-000000000001",
+      "parent_ids": [],
+      "tags": [],
+      "metadata": {},
+      "data": {
+        "output": {
+          "messages": [
+            {
+              "content": "先读取本机时间，再通过日程 MCP 查询今天的安排，最后给我一个简要汇总。",
+              "additional_kwargs": {},
+              "response_metadata": {},
+              "type": "human",
+              "name": null,
+              "id": "human_demo_1"
+            },
+            {
+              "content": "",
+              "additional_kwargs": {},
+              "response_metadata": {},
+              "type": "ai",
+              "name": null,
+              "id": "ai_demo_1",
+              "tool_calls": [
+                {
+                  "name": "get_local_time",
+                  "args": {},
+                  "id": "call_time_1",
+                  "type": "tool_call"
+                }
+              ],
+              "invalid_tool_calls": [],
+              "usage_metadata": null
+            },
+            {
+              "content": "2026-10-27T09:00:00+08:00",
+              "additional_kwargs": {},
+              "response_metadata": {},
+              "type": "tool",
+              "name": "get_local_time",
+              "id": "tool_demo_1",
+              "tool_call_id": "call_time_1",
+              "artifact": null,
+              "status": "success"
+            },
+            {
+              "content": "",
+              "additional_kwargs": {},
+              "response_metadata": {},
+              "type": "ai",
+              "name": null,
+              "id": "ai_demo_2",
+              "tool_calls": [
+                {
+                  "name": "calendar_list_events",
+                  "args": {
+                    "date": "2026-10-27"
+                  },
+                  "id": "call_calendar_1",
+                  "type": "tool_call"
+                }
+              ],
+              "invalid_tool_calls": [],
+              "usage_metadata": null
+            },
+            {
+              "content": [
+                {
+                  "type": "text",
+                  "text": "{\"events\": [{\"start\": \"2026-10-27T10:00:00+08:00\", \"title\": \"RoomCrew 架构讨论\"}]}"
+                }
+              ],
+              "additional_kwargs": {},
+              "response_metadata": {},
+              "type": "tool",
+              "name": "calendar_list_events",
+              "id": "tool_demo_2",
+              "tool_call_id": "call_calendar_1",
+              "artifact": {
+                "structured_content": {
+                  "events": [
+                    {
+                      "start": "2026-10-27T10:00:00+08:00",
+                      "title": "RoomCrew 架构讨论"
+                    }
+                  ]
+                }
+              },
+              "status": "success"
+            },
+            {
+              "content": "现在是 2026 年 10 月 27 日 09:00。日程服务返回今天 10:00 有一场 RoomCrew 架构讨论。",
+              "additional_kwargs": {},
+              "response_metadata": {},
+              "type": "ai",
+              "name": null,
+              "id": "ai_demo_3",
+              "tool_calls": [],
+              "invalid_tool_calls": [],
+              "usage_metadata": null
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "mcp_exchange": {
+    "request": {
+      "jsonrpc": "2.0",
+      "id": 41,
+      "method": "tools/call",
+      "params": {
+        "name": "list_events",
+        "arguments": {
+          "date": "2026-10-27"
+        }
+      }
+    },
+    "response": {
+      "jsonrpc": "2.0",
+      "id": 41,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"events\": [{\"start\": \"2026-10-27T10:00:00+08:00\", \"title\": \"RoomCrew 架构讨论\"}]}"
+          }
+        ],
+        "structuredContent": {
+          "events": [
+            {
+              "start": "2026-10-27T10:00:00+08:00",
+              "title": "RoomCrew 架构讨论"
+            }
+          ]
+        },
+        "isError": false
+      }
+    }
+  },
+  "links": [
+    {
+      "tool_name": "get_local_time",
+      "model_tool_call_id": "call_time_1",
+      "sdk_tool_run_id": "00000000-0000-4000-8000-000000000031",
+      "source": "local"
+    },
+    {
+      "tool_name": "calendar_list_events",
+      "model_tool_call_id": "call_calendar_1",
+      "sdk_tool_run_id": "00000000-0000-4000-8000-000000000032",
+      "source": "mcp",
+      "registered_server_id": "calendar",
+      "server_tool_name": "list_events",
+      "mcp_jsonrpc_id": 41
+    }
+  ]
+}

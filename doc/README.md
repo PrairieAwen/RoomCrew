@@ -4,6 +4,10 @@
 
 ## 当前交付：Windows 独立工作空间原型
 
+最新人物属性和默认工具见 [ADR-0010](architecture/0010-member-materials-and-default-tools.md)：Agent 配置与员工素材页分开，支持触发类型→图集变体/帧序列，泡泡按人物头部跟随；所有 Agent 默认加载补充文件工具，Python 包含子任务及报错修正验收。
+
+最新执行底座以 [ADR-0009](architecture/0009-agent-foundation.md) 为准：后端不包含动作协议，Agent 定义单独持久化；Skills、HTTP MCP、成员发现和隔离 Python 已接入。桌面独立映射动作、短泡泡与右侧人工交互，验收见 [底座验证](development/agent-foundation-validation.md)。该决定覆盖旧文档中“Python/MCP 尚未开放”及后端包含表现模块的描述。
+
 模型配置入口已修复为「保存并测试连接」，支持当前表单先保存、失败短路和绑定稳定，见 [配置测试验收](development/model-settings-validation.md)。
 
 最新空间与目录规则以 [ADR-0007](architecture/0007-workspace-rooms.md) 为准：品牌只保留 RoomCrew；一工作空间对应一会议室，左侧选择后切换主画布，任务继续后台运行。用户桌面界面与原生壳统一位于根 desktop/，frontend/ 仅预留管理员 Web 界面。多空间验证见 [验收记录](development/workspace-validation.md)。
@@ -25,6 +29,8 @@
 完整基础素材库与受限双页 v3 协议见 ADR-0005 第 12 节及 `desktop/ui/studio/assets/library-v1/README.md`：四套可导入角色、496 个姿态、每套 20 种动作，另有家具/装饰/状态特效和可播放总览。常用环境美术已接入房间；其余展示素材按总览说明区分。
 
 ## 当前多 Agent 执行底座设计
+
+[ADR-0008：官方 Agent 执行记录](architecture/0008-native-agent-tracing.md) 采用官方消息、Runnable v2 事件和 Checkpointer，区分模型工具 ID、SDK 调用 ID、checkpoint 与 MCP 请求 ID。原生事件持久化与 HTTP MCP 已接入，附带模拟样例仍仅用于解释字段。
 
 [通用 Agent 与多 Agent 调度架构 v0.3](architecture/multi-agent-runtime.html)：本次方案包含 25 个章节与 9 张架构图，覆盖通用内核、模型私有配置与可信工厂、同配置多 Run、SQLite 轨迹、能力路由、Skills 加载、中间件压缩和恢复。User、助手与安全 VM 抽象按最新补充修正；具体实现待评审。
 
@@ -54,7 +60,7 @@
 
 ## 实现边界
 
-当前已进入事务所交互原型开发，保留会话基线。HTML 的完整产品流程、架构图和性能目标仍是长期指导；只有现行 ADR 和验证记录明确列出的能力已经接入，不代表安全 VM、浏览器、MCP、外部家具/骨骼文件导入或正式商业游戏美术已经完成。
+当前已进入事务所交互原型开发，保留会话基线。HTML 的完整产品流程、架构图和性能目标仍是长期指导；只有现行 ADR 和验证记录明确列出的能力已经接入，不代表安全 VM、浏览器、认证型 MCP、外部家具/骨骼文件导入或正式商业游戏美术已经完成。
 
 后续实现要先明确当前功能的行为、边界、合同与验收，再按授权任务开发；不能因为完整设计中存在某项能力就提前扩大实现范围。
 

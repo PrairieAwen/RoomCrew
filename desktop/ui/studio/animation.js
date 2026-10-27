@@ -68,7 +68,7 @@ class CrewAnimator {
             fact?.question_count > 0 ||
             fact?.warning_count > 0 ||
             ["question", "warning"].includes(fact?.activity);
-        const moving = actor.phase === "moving",
+        const moving = actor.phase === "moving" && !actor.interactionHold,
             transition = ["stand_up", "sit_down"].includes(actor.phase);
         if (player.sourceSeq !== fact?.source_seq) {
             const age = (Date.now() - Date.parse(fact?.created_at)) / 1000;
@@ -150,7 +150,7 @@ class CrewAnimator {
         // 4、会议和生活均只覆盖表现；真实人工/错误优先，外援内部工作不生成新人物动作。
         let caption = "",
             externalCall = false;
-        const canDecorate = !urgent && !reduced;
+        const canDecorate = !urgent && !reduced && !actor.interactionHold;
         if (canDecorate && layer) {
             if (!moving && !transition) action = layer.action;
             expression = layer.kind === "idle" ? "smile" : "focused";
@@ -186,7 +186,14 @@ class CrewAnimator {
             posture: actor.posture,
             phase: actor.phase,
             seatMix: actor.seatMix ?? (actor.posture === "seated" ? 1 : 0),
-            direction: actor.direction || "se",
+            direction:
+                !moving &&
+                !transition &&
+                (fact?.requires_input ||
+                    (fact?.activity === "reporting" &&
+                        !fact?.report_acknowledged))
+                    ? "s"
+                    : actor.direction || "se",
             cue: Boolean(player.cue),
             reduced,
             leisure: relaxing,

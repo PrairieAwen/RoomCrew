@@ -3,10 +3,8 @@
 import asyncio
 import json
 import time
+from collections.abc import Awaitable, Callable
 from typing import Any
-
-from roomcrew.config.store import ConfigStore
-from roomcrew.models.factory import create_model
 
 ALLOWED = {
     "idle": {"idle"},
@@ -43,10 +41,10 @@ def validate_decoration(value: Any, state: dict[str, Any]) -> dict[str, str]:
 
 
 class NarrationService:
-    def __init__(self, config: ConfigStore) -> None:
+    def __init__(self, generate: Callable[[str], Awaitable[str]]) -> None:
         """因为旁白不能占据主执行链，需要使用独立配置、独立队列和独立故障预算。"""
         # 1、默认不调用任何模型，只有人工开启后才接收安全事实摘要。
-        self.config = config
+        self._generate = generate
         self._tasks: dict[str, asyncio.Task[None]] = {}
         self._latest: dict[str, int] = {}
         self._started: dict[str, float] = {}
@@ -91,7 +89,6 @@ class NarrationService:
     async def _run(self, state: dict[str, Any]) -> None:
         """因为辅助模型可能慢或幻觉，需要有界调用并在当前事实版本仍一致时才采用结果。"""
         # 1、所有网络请求使用旁白域的受保护模型配置，不借用执行模型 Key。
-        model = None
         member = state["member_id"]
         try:
             async with self._slot, asyncio.timeout(2):
@@ -100,20 +97,17 @@ class NarrationService:
                     or time.monotonic() - self._started[member] >= 2
                 ):
                     return
-                model = create_model(self.config.require_profile())
                 facts = {
                     key: state[key]
                     for key in ("activity", "active_contexts", "question_count", "warning_count")
                 }
-                reply = await model.ainvoke(
+                content = await self._generate(
                     "只输出 JSON，字段 action_id 与 summary。只描述这些事实，不宣称完成或授权。"
                     + "允许动作："
                     + json.dumps(sorted(ALLOWED[state["activity"]]))
                     + "。事实："
                     + json.dumps(facts),
-                    max_tokens=160,
                 )
-                content = reply.content
                 if not isinstance(content, str) or len(content) > 1000:
                     raise ValueError("旁白响应过长")
                 value = validate_decoration(json.loads(content), state)
@@ -126,13 +120,7 @@ class NarrationService:
             if self._failures >= 3:
                 self._retry_at = time.monotonic() + 60
         finally:
-            try:
-                if model is not None:
-                    await model.close()
-            except Exception:
-                pass
-            finally:
-                self._tasks.pop(member, None)
+            self._tasks.pop(member, None)
 
     async def close(self) -> None:
         """因为关闭或禁用时不能遗留额外请求，需要取消辅助任务而不触碰主执行器。"""

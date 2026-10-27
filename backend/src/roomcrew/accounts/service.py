@@ -1,40 +1,42 @@
 """人物配置校验、默认身份和通用 Agent 定义装配。"""
 
+import hashlib
 import re
-from collections.abc import Callable
 from typing import Any
 from uuid import uuid4
 
+from roomcrew.accounts.configuration import agent_configuration
 from roomcrew.accounts.repository import AccountRepository
 from roomcrew.contracts.agents import ActorRef, AgentSpec
-from roomcrew.contracts.animation import leisure_profile
 
 DEFAULTS = [
-    ("assistant", "小禾", "assistant", "#6d9785"),
-    ("guardian", "监管员", "guardian", "#718ea7"),
+    ("assistant", "小禾", "assistant"),
+    ("guardian", "监管员", "guardian"),
 ]
 
 
 class AccountService:
-    def __init__(
-        self, repository: AccountRepository, avatar_validator: Callable[[str], None] | None = None
-    ) -> None:
+    attribute_fields: frozenset[str] = frozenset()
+
+    def __init__(self, repository: AccountRepository) -> None:
         """因为用户本人无需场景替身，需要只用稳定身份初始化助手和监管员。"""
         # 1、监管员是基础设施展示；只为助手和员工建立 Agent 绑定。
         self.repository = repository
-        self._avatar_validator = avatar_validator
         existing = {member["id"] for member in repository.members()}
-        for identifier, name, role, color in DEFAULTS:
+        for identifier, name, role in DEFAULTS:
             if identifier not in existing:
-                self.save({"id": identifier, "name": name, "role": role, "color": color}, 0)
+                self.save({"id": identifier, "name": name, "role": role}, 0)
 
     def members(self, include_archived: bool = False) -> list[dict[str, Any]]:
         """因为场景不应该广播完整提示配置，需要只提供显示属性及稳定身份。"""
         # 1、人物属性和 Agent 定义仍在仓库中完整保存，公开列表移除执行提示。
         return [
             {
-                **{key: value for key, value in member.items() if key != "prompt"},
-                **leisure_profile(member),
+                **{
+                    key: value
+                    for key, value in member.items()
+                    if key not in {"prompt", "skills", "mcp_servers"}
+                },
             }
             for member in self.repository.members()
             if member["role"] != "user" and (include_archived or not member["archived"])
@@ -45,7 +47,7 @@ class AccountService:
         # 1、完整定义仅通过人工配置或可信执行装配路径使用。
         for member in self.repository.members():
             if member["id"] == member_id and member["role"] != "user":
-                return {**member, **leisure_profile(member)}
+                return dict(member)
         raise ValueError("成员不存在")
 
     def save(self, values: dict[str, Any], expected_revision: int = 0) -> dict[str, Any]:
@@ -55,34 +57,26 @@ class AccountService:
             "id",
             "name",
             "role",
-            "color",
-            "skin",
-            "hair",
-            "glasses",
             "prompt",
             "description",
             "enabled",
             "archived",
             "agent_id",
             "revision",
-            "avatar_id",
             "agent_revision",
             "model_binding",
-            "leisure_action",
-            "leisure_actions",
-            "leisure_delay",
+            "skills",
+            "mcp_servers",
+            "python_enabled",
         }
         if type(expected_revision) is not int or expected_revision < 0:
             raise ValueError("成员版本必须是非负整数")
+        allowed |= self.attribute_fields
         if set(values) - allowed:
             raise ValueError("成员配置包含不支持的字段")
         if values.get("model_binding", "execution:default") != "execution:default":
             raise ValueError("当前版本只支持默认执行模型引用")
-        if "avatar_id" in values and values["avatar_id"] != "builtin:crew-v1":
-            if not isinstance(values["avatar_id"], str) or self._avatar_validator is None:
-                raise ValueError("请先导入并注册人物素材")
-            self._avatar_validator(values["avatar_id"])
-        for key in ("glasses", "enabled", "archived"):
+        for key in ("enabled", "archived"):
             if key in values and not isinstance(values[key], bool):
                 raise ValueError("人物开关必须是布尔值")
         identifier = str(values.get("id") or uuid4().hex)
@@ -122,9 +116,6 @@ class AccountService:
         description = str(merged.get("description", "通用文件与资料处理"))
         if not 1 <= len(name) <= 30 or len(prompt) > 8000 or len(description) > 300:
             raise ValueError("名称、职责或提示长度不符合要求")
-        for key, default in (("color", "#6d9785"), ("skin", "#edc39b"), ("hair", "#51443e")):
-            if not re.fullmatch(r"#[0-9a-fA-F]{6}", str(merged.get(key, default))):
-                raise ValueError("外观颜色必须是六位十六进制颜色")
         enabled, archived = bool(merged.get("enabled", True)), bool(merged.get("archived", False))
         if role != "employee" and (not enabled or archived):
             raise ValueError("助手和监管员必须保留")
@@ -141,18 +132,14 @@ class AccountService:
             "name": name,
             "role": role,
             "agent_id": agent_id,
-            "color": merged.get("color", "#6d9785"),
-            "skin": merged.get("skin", "#edc39b"),
-            "hair": merged.get("hair", "#51443e"),
-            "glasses": bool(merged.get("glasses", False)),
-            "avatar_id": merged.get("avatar_id", "builtin:crew-v1"),
             "prompt": prompt,
             "description": description,
             "enabled": enabled,
             "archived": archived,
             "agent_revision": merged.get("agent_revision", 0),
             "model_binding": "execution:default",
-            **leisure_profile({**(previous or {}), **values, "role": role}),
+            **agent_configuration(merged),
+            **self._attributes({**merged, "role": role}),
         }
         return self.repository.save(member, expected_revision)
 
@@ -173,9 +160,30 @@ class AccountService:
         main = self._spec(root, "main")
         # 2、默认通用子任务归属于当前人物的独立上下文，不伪造一个已招募员工。
         general = AgentSpec(
-            main.actor, "general-purpose", "通用子任务执行", main.prompt, main.revision
+            main.actor,
+            "general-purpose",
+            "通用子任务执行",
+            main.prompt,
+            main.revision,
+            main.configuration,
         )
         workers = [general, *[self._spec(item, "member_" + item["id"]) for item in members]]
+        attached = {item.get("agent_id") for item in self.repository.members()}
+        for definition in self.repository.agent_definitions():
+            if definition["id"] not in attached:
+                reference = (
+                    "definition_" + hashlib.sha256(definition["id"].encode()).hexdigest()[:16]
+                )
+                workers.append(
+                    AgentSpec(
+                        ActorRef(reference, definition["id"], definition["description"][:30]),
+                        reference,
+                        definition["description"],
+                        definition["prompt"],
+                        definition["revision"],
+                        agent_configuration(definition),
+                    )
+                )
         return {"main": main.snapshot(), "workers": [item.snapshot() for item in workers]}
 
     def _spec(self, member: dict[str, Any], tool_name: str) -> AgentSpec:
@@ -187,4 +195,50 @@ class AccountService:
             member["name"] + "：" + member.get("description", "通用任务"),
             member.get("prompt", ""),
             member.get("agent_revision", 1),
+            agent_configuration(member),
         )
+
+    def _attributes(self, values: dict[str, Any]) -> dict[str, Any]:
+        """因为执行底座不解释客户端显示属性，需要默认不添加任何界面扩展字段。"""
+        # 1、具体客户端可以在所属包中覆盖其属性校验，不影响 Agent 定义。
+        return {}
+
+    def save_agent(self, values: dict[str, Any], expected_revision: int) -> dict[str, Any]:
+        """因为 Agent 定义应独立于任何客户端人物，需要验证通用配置并只更新执行定义。"""
+        # 1、只接受定义字段，人物和动作参数不得进入执行配置表。
+        allowed = {
+            "id",
+            "prompt",
+            "description",
+            "model_binding",
+            "skills",
+            "mcp_servers",
+            "python_enabled",
+        }
+        if set(values) - allowed or type(expected_revision) is not int or expected_revision < 0:
+            raise ValueError("Agent 配置字段或版本无效")
+        identifier = str(values.get("id") or "agent_" + uuid4().hex)
+        if not re.fullmatch(r"[a-zA-Z0-9_-]{1,80}", identifier):
+            raise ValueError("Agent 标识无效")
+        definitions = self.repository.agent_definitions()
+        previous = next((item for item in definitions if item["id"] == identifier), {})
+        if not previous and len(definitions) >= 32:
+            raise ValueError("当前工作空间最多保存 32 个 Agent 定义")
+        merged = {**previous, **values}
+        prompt, description = merged.get("prompt", ""), merged.get("description", "通用任务")
+        if (
+            not isinstance(prompt, str)
+            or len(prompt) > 8000
+            or not isinstance(description, str)
+            or not 1 <= len(description) <= 300
+            or merged.get("model_binding", "execution:default") != "execution:default"
+        ):
+            raise ValueError("系统提示词、描述或模型绑定无效")
+        # 2、所有引用者在下一轮读取新版本，在途快照保持不变。
+        body = {
+            "prompt": prompt,
+            "description": description,
+            "model_binding": "execution:default",
+            **agent_configuration(merged),
+        }
+        return self.repository.save_agent(identifier, body, expected_revision)

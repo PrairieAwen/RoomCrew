@@ -102,7 +102,7 @@ select {
 .chat-panel {
     min-width: 0;
 }
-.studio-mode #timeline,
+.studio-mode:not(.conversation-open) #timeline,
 .studio-mode #details-panel {
     display: none !important;
 }

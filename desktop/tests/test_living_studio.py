@@ -6,13 +6,13 @@ from pathlib import Path
 import pytest
 from test_studio import event
 
-from roomcrew.accounts.service import AccountService
 from roomcrew.agent_loop.event_adapter import EventAdapter
 from roomcrew.contracts.agents import ActorRef
-from roomcrew.presentation.collaboration import meeting_groups
-from roomcrew.presentation.reducer import actor_view, reduce_event
-from roomcrew.presentation.scene import anchors, default_room, navigation_map, path_to
 from roomcrew.storage.accounts import SqliteAccountRepository
+from roomcrew_desktop.accounts import DesktopAccountService as AccountService
+from roomcrew_desktop.presentation.collaboration import meeting_groups
+from roomcrew_desktop.presentation.reducer import actor_view, reduce_event
+from roomcrew_desktop.presentation.scene import anchors, default_room, navigation_map, path_to
 
 
 def identity_redactor(value):
@@ -111,7 +111,7 @@ def test_event_adapter_distinguishes_configured_worker_and_external_scope() -> N
         }
     )
     assert child[0].member_id == "assistant"
-    assert child[0].payload["presentation_external"] is True and "外援" in child[0].actor
+    assert child[0].payload["external_worker"] is True and "子任务" in child[0].actor
 
 
 def test_groups_merge_by_run_and_external_details_do_not_animate_people() -> None:

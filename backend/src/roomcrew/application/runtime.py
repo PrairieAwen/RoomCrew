@@ -7,8 +7,6 @@ from roomcrew.accounts.service import AccountService
 from roomcrew.application.artifacts import ArtifactService
 from roomcrew.application.execution import ExecutionService
 from roomcrew.application.options import RunOptions
-from roomcrew.application.studio import StudioService
-from roomcrew.assets.library import AvatarLibrary
 from roomcrew.config.store import ConfigStore
 from roomcrew.models.connection import test_model_connection, test_presentation_connection
 from roomcrew.platform.paths import AppPaths
@@ -25,9 +23,8 @@ class Runtime:
         self.config = ConfigStore(paths.private)
         self.store = SessionStore(paths.data / "sessions.sqlite")
         self._account_repository = SqliteAccountRepository(paths.data / "account.sqlite")
-        self._avatars = AvatarLibrary(paths.data / "avatars")
-        self.accounts = AccountService(self._account_repository, self._avatars.require_id)
-        self._studio = StudioService(paths, self.accounts)
+        self.accounts = self._create_accounts()
+        self._aux_config = ConfigStore(paths.private, "presentation-model.dpapi")
         self._checkpoints = CheckpointStore(paths.data / "runtime.sqlite")
         self._artifacts = ArtifactService(paths, self.store)
         self._execution = ExecutionService(
@@ -67,8 +64,6 @@ class Runtime:
         # 1、这是跨模块的用例约束，不让配置仓库反向依赖调度器。
         if target == "execution" and (self.active or self._execution.state.questions()):
             raise ValueError("请先停止当前任务，再修改模型配置")
-        if target == "presentation":
-            await self._studio.narrator.close()
         return self._model_config(target).save(values).public()
 
     async def test_connection(self, target: str = "execution") -> dict[str, Any]:
@@ -85,13 +80,27 @@ class Runtime:
         if target == "execution":
             return self.config
         if target == "presentation":
-            return self._studio.config
+            return self._aux_config
         raise ValueError("未知模型配置用途")
 
     async def new_conversation(self) -> dict[str, Any]:
         """因为新会话需要固定配置引用，需要组合配置读取和产品会话创建。"""
         # 1、只把引用写进产品状态，不写入真实模型参数。
         return self.store.create_conversation(self.config.require_profile().reference)
+
+    async def agent_configurations(self) -> list[dict[str, Any]]:
+        """因为通用执行框架需要不依赖人物编辑器的入口，需要返回本空间 Agent 定义。"""
+        # 1、可信配置入口与模型的 list_agents 工具分离，后者不读取完整底层配置。
+        return self.accounts.repository.agent_definitions()
+
+    async def save_agent_configuration(
+        self, values: dict[str, Any], expected_revision: int
+    ) -> dict[str, Any]:
+        """因为共享定义可能被多个执行者引用，需要在空闲时按版本保存配置。"""
+        # 1、保护当前和待恢复的执行快照。
+        if self.active or self._execution.state.questions():
+            raise ValueError("请先完成或取消当前任务，再修改 Agent 定义")
+        return self.accounts.save_agent(values, expected_revision)
 
     async def submit(
         self, conversation_id: str, text: str, request_id: str, member_id: str = "assistant"
@@ -124,8 +133,16 @@ class Runtime:
             "conversations": self.store.conversations(),
             "active_run": next(iter(self.active), None),
             "pending_count": len(self._execution.state.questions()),
-            "capabilities": ["文件读写与检索", "任务规划", "子 Agent 委派", "本机日期时间"],
-            "unavailable": ["Shell / 任意代码", "MCP", "浏览器 / Computer Use", "安全 VM"],
+            "capabilities": [
+                "文件读写与检索",
+                "任务规划",
+                "子 Agent 委派",
+                "Agent 目录",
+                "Skills",
+                "HTTP MCP",
+                "隔离 Python",
+            ],
+            "unavailable": ["Shell", "浏览器 / Computer Use", "安全 VM"],
         }
 
     async def events(self, conversation_id: str, after: int = 0) -> list[dict[str, Any]]:
@@ -139,6 +156,12 @@ class Runtime:
         # 1、路径、大小和目录过滤规则统一在产物服务中维护。
         return self._artifacts.list_files(conversation_id)
 
+    async def native_events(self, conversation_id: str, after: int = 0) -> list[dict[str, Any]]:
+        """因为客户端可独立适配官方轨迹，需要提供保留原生字段的分页查询。"""
+        # 1、验证会话再查询；后端不将官方事件转换成素材动作。
+        self.store.conversation(conversation_id)
+        return self.store.native_events(conversation_id, after)
+
     async def read_artifact(self, conversation_id: str, virtual_path: str) -> dict[str, Any]:
         """因为文件预览需要统一访问约束，需要把读取交给受限产物查询。"""
         # 1、门面不直接拼接或读取文件路径。
@@ -148,93 +171,9 @@ class Runtime:
         """因为退出顺序会影响状态可靠性，需要先停任务，再关闭框架和产品数据库。"""
         # 1、执行服务只负责运行，存储生命周期保持由应用统一拥有。
         await self._execution.close()
-        await self._studio.close()
         await self._checkpoints.close()
         self.store.close()
         self._account_repository.close()
-
-    async def studio_feed(self, after: int = 0) -> dict[str, Any]:
-        """因为空间订阅必须与执行解耦，需要只消费独立表现服务的快照。"""
-        # 1、返回版本化的普通字典，不提供 SDK 状态或原始消息。
-        return await self._studio.feed(after)
-
-    async def scene_move(
-        self, member_id: str, anchor_id: str, revision: int, start: list[int] | None = None
-    ) -> dict[str, Any]:
-        """因为空间操作有单独版本规则，需要转交表现服务验证。"""
-        # 1、动画完成回调不属于任务执行合同。
-        return await self._studio.move(member_id, anchor_id, revision, start)
-
-    async def scene_edit(self, values: dict[str, Any], revision: int) -> dict[str, Any]:
-        """因为家具布置不能绕过边界约束，需要统一应用布局校验。"""
-        # 1、应用门面不接受像素或模型生成的任意脚本。
-        return await self._studio.edit(values, revision)
-
-    async def preferences(self, values: dict[str, Any]) -> dict[str, Any]:
-        """因为额外模型调用由用户决定，需要单独保存表现偏好。"""
-        # 1、此入口不注册为 Agent 工具。
-        return await self._studio.preferences(values)
-
-    async def save_member(self, values: dict[str, Any], expected_revision: int) -> dict[str, Any]:
-        """因为用户需要管理可复用员工属性，需要在可信入口校验并持久化账号元数据。"""
-        # 1、首版在忙碌时不修改人员定义，历史运行仍保留已经固定的快照。
-        if self.active or self._execution.state.questions():
-            raise ValueError("请先完成或取消当前任务，再修改成员")
-        distinct = {
-            member["avatar_id"]
-            for member in self.accounts.members()
-            if member["id"] != values.get("id") and member["avatar_id"] != "builtin:crew-v1"
-        }
-        candidate = values.get("avatar_id", "builtin:crew-v1")
-        if candidate != "builtin:crew-v1" and candidate not in distinct and len(distinct) >= 8:
-            raise ValueError("同一空间最多同时使用 8 套自定义图集，请复用已有素材")
-        return self.accounts.save(values, expected_revision)
-
-    async def avatar_catalog(self) -> list[dict[str, Any]]:
-        """因为成员表单只需要素材概况，需要按需读取本地库而不每轮广播图片。"""
-        # 1、文件 IO 放在独立工作线程，不阻塞 Agent 调度循环。
-        return await asyncio.to_thread(self._avatars.catalog)
-
-    async def avatar_asset(self, identifier: str) -> dict[str, Any]:
-        """因为渲染器不能读取任意本机文件，需要按注册 ID 请求有限 PNG 数据。"""
-        # 1、此入口不作为 Agent 工具，不返回本地路径。
-        return await asyncio.to_thread(self._avatars.asset, identifier)
-
-    async def import_avatar(self, path: str) -> dict[str, Any]:
-        """因为用户手工选择素材后需要安全注册，需要在线程中完成图片校验和原子导入。"""
-        # 1、路径仅由原生选择器传入，不通过前端自由拼接路径。
-        from pathlib import Path
-
-        return await asyncio.to_thread(self._avatars.import_manifest, Path(path))
-
-    async def import_avatar_example(self) -> dict[str, Any]:
-        """因为用户需要可直接试用和修改的动作模板，需要从随程序分发的固定样例导入。"""
-        # 1、开发源码与冻结包使用各自固定资源路径，不接受外部路径或 URL。
-        resources = self.paths.desktop_ui.parents[1]
-        packaged = resources / "materials/crew-avatar-example/avatar.json"
-        source = resources / "doc/assets/crew-avatar-example/avatar.json"
-        selected = packaged if packaged.is_file() else source
-        if not selected.is_file():
-            raise ValueError("随附素材样例缺失，请保留完整程序目录")
-        return await asyncio.to_thread(self._avatars.import_manifest, selected)
-
-    async def import_avatar_portrait(self) -> dict[str, Any]:
-        """因为用户需要比较新的手绘人物效果，需要导入固定随附图集而不接收任意宿主路径。"""
-        # 1、源码和冻结包的图集都跟随前端资源；仍通过同一个正式校验器注册。
-        selected = self.paths.desktop_ui / "studio/assets/atelier-v1/avatar.json"
-        if not selected.is_file():
-            raise ValueError("手绘角色样板缺失，请保留完整程序目录")
-        return await asyncio.to_thread(self._avatars.import_manifest, selected)
-
-    async def import_avatar_bundle(self, role: str) -> dict[str, Any]:
-        """因为用户需要完整角色套装，需要从有限的随附人物库导入双页清单而不接收任意文件路径。"""
-        # 1、这里只选择美术形象，不创建 Agent、修改身份或授予监管权限。
-        if role not in ("owner", "assistant", "employee", "guardian"):
-            raise ValueError("未知的内置人物素材")
-        selected = (
-            self.paths.desktop_ui / "studio/assets/library-v1/characters" / role / "avatar.json"
-        )
-        return await asyncio.to_thread(self._avatars.import_manifest, selected)
 
     async def member(self, member_id: str) -> dict[str, Any]:
         """因为人工编辑需要查看完整属性，需要通过单独入口返回人物定义而不广播到场景。"""
@@ -259,3 +198,29 @@ class Runtime:
         self.accounts.get(member_id)
         self.store.conversation(conversation_id)
         return self.store.member_events(member_id, conversation_id, after)
+
+    def _create_accounts(self) -> AccountService:
+        """因为执行框架只需要人员身份和能力定义，需要提供与桌面扩展无关的默认账号服务。"""
+        # 1、桌面组合层可以覆盖属性校验，后端不导入素材或动作模块。
+        return AccountService(self._account_repository)
+
+    async def save_member(self, values: dict[str, Any], expected_revision: int) -> dict[str, Any]:
+        """因为 Agent 配置需要固定运行快照，需要在空闲时接受可信用户的配置修改。"""
+        # 1、在途或待答复任务不切换底层定义。
+        if self.active or self._execution.state.questions():
+            raise ValueError("请先完成或取消当前任务，再修改成员")
+        return self.accounts.save(values, expected_revision)
+
+    async def generate_auxiliary(self, text: str) -> str:
+        """因为客户端可能需要独立辅助文本，需要通过可信工厂调用单独模型并只返回字符串。"""
+        # 1、只接受有界文本，模型配置不进入客户端对象或任务上下文。
+        from roomcrew.models.factory import create_model
+
+        if not isinstance(text, str) or len(text) > 6000:
+            raise ValueError("辅助文本请求超出限制")
+        model = create_model(self._aux_config.require_profile())
+        try:
+            reply = await model.ainvoke(text, max_tokens=160)
+            return reply.content if isinstance(reply.content, str) else ""
+        finally:
+            await model.close()

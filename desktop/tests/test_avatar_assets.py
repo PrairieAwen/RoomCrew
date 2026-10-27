@@ -7,12 +7,12 @@ from pathlib import Path
 import pytest
 from PIL import Image, PngImagePlugin
 
-from roomcrew.application.runtime import Runtime
-from roomcrew.assets.library import AvatarLibrary, normalize_png
-from roomcrew.assets.schema import validate_manifest
 from roomcrew.platform.paths import AppPaths
-from roomcrew.presentation.animation import animation_hint, visual_cue
-from roomcrew.presentation.scene import SceneStore
+from roomcrew_desktop.assets.library import AvatarLibrary, normalize_png
+from roomcrew_desktop.assets.schema import validate_manifest
+from roomcrew_desktop.presentation.animation import animation_hint, visual_cue
+from roomcrew_desktop.presentation.scene import SceneStore
+from roomcrew_desktop.runtime import DesktopRuntime as Runtime
 
 
 def avatar_fixture(folder: Path) -> Path:

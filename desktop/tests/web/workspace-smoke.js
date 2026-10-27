@@ -82,6 +82,7 @@
     try {
         window.__workspaceStage = "ready";
         await until(ready);
+        studio.roomMode();
         if (document.title !== "RoomCrew") throw new Error("wrong brand");
         await newConversation();
         const firstConversation = state.conversation.id;

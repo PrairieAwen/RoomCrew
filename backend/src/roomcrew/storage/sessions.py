@@ -41,6 +41,15 @@ class SessionStore:
             );
             CREATE INDEX IF NOT EXISTS events_conversation ON events(conversation_id, seq);
             CREATE INDEX IF NOT EXISTS runs_conversation ON runs(conversation_id);
+            CREATE TABLE IF NOT EXISTS native_events (
+                seq INTEGER PRIMARY KEY AUTOINCREMENT,
+                conversation_id TEXT NOT NULL REFERENCES conversations(id),
+                product_run_id TEXT NOT NULL REFERENCES runs(id),
+                sdk_run_id TEXT NOT NULL, parent_run_id TEXT, event TEXT NOT NULL,
+                body TEXT NOT NULL, received_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS native_conversation ON native_events(conversation_id,seq);
+            CREATE INDEX IF NOT EXISTS native_call ON native_events(product_run_id,sdk_run_id);
         """)
         # 2、旧版事件保留原序号，新增身份列不重写历史正文。
         columns = {row[1] for row in self.connection.execute("PRAGMA table_info(events)")}
@@ -177,6 +186,24 @@ class SessionStore:
     ) -> int:
         """因为实时显示不能先于可靠记录，需要先提交结构化事件再让界面轮询读取。"""
         # 1、每次追加是短事务，不把模型输入或 SDK 原始回调整体落库。
+        if kind == "sdk.event":
+            native = payload["native"]
+            parents = native.get("parent_ids", [])
+            with self.connection:
+                cursor = self.connection.execute(
+                    "INSERT INTO native_events(conversation_id,product_run_id,sdk_run_id,"
+                    "parent_run_id,event,body,received_at) VALUES(?,?,?,?,?,?,?)",
+                    (
+                        conversation_id,
+                        run_id,
+                        native["run_id"],
+                        parents[-1] if parents else None,
+                        native["event"],
+                        json.dumps(native, ensure_ascii=False),
+                        now_iso(),
+                    ),
+                )
+            return int(cursor.lastrowid or 0)
         with self.connection:
             return self._insert(
                 conversation_id, run_id, kind, actor, scope, payload, agent_id, member_id
@@ -214,6 +241,21 @@ class SessionStore:
             (conversation_id, after),
         ).fetchall()
         return [{**dict(row), "payload": json.loads(row["payload"])} for row in rows]
+
+    def native_events(self, conversation_id: str, after: int = 0) -> list[dict[str, Any]]:
+        """因为官方调用树需要独立分页查看，需要返回原生字段与产品关联信封。"""
+        # 1、SDK run_id 与产品 Run 分列，接收序号只表示本地持久化顺序。
+        rows = self.connection.execute(
+            "SELECT * FROM native_events WHERE conversation_id=? AND seq>? ORDER BY seq LIMIT 100",
+            (conversation_id, max(0, int(after))),
+        )
+        return [
+            {
+                **{key: row[key] for key in dict(row) if key != "body"},
+                "native": json.loads(row["body"]),
+            }
+            for row in rows
+        ]
 
     def close(self) -> None:
         """因为窗口关闭后不能遗留数据库句柄，需要显式关闭产品连接。"""

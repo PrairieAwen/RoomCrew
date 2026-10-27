@@ -14,8 +14,8 @@ sys.path[:0] = [
     str(Path(__file__).resolve().parents[3] / "desktop/src"),
 ]
 
-from roomcrew.assets.library import AvatarLibrary
-from roomcrew.assets.schema import validate_manifest
+from roomcrew_desktop.assets.library import AvatarLibrary
+from roomcrew_desktop.assets.schema import validate_manifest
 
 
 def inspect_frames(source: Path) -> list[dict[str, list[int]]]:

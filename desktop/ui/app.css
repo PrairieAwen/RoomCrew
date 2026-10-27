@@ -1,644 +1,790 @@
-:root{
-  color-scheme:dark;
-  --bg:#191a1d;
-  --panel:#141517;
-  --line:#2b2d32;
-  --text:#ebebef;
-  --muted:#92959e;
-  --accent:#c5d8b5;
-  font-family:"Segoe UI","Microsoft YaHei UI",sans-serif;
-  font-size:14px}
-  *{
-    box-sizing:border-box}
-    body{
-      margin:0;
-      background:var(--bg);
-      color:var(--text);
-      display:flex;
-      height:100vh;
-      overflow:hidden}
-      button,input,textarea{
-        font:inherit}
-        button{
-          cursor:pointer;
-          color:inherit;
-          border:0;
-          background:none;
-          border-radius:8px}
-          button:disabled{
-            opacity:.45;
-            cursor:wait}
-            button:focus-visible,input:focus-visible,textarea:focus-visible{
-              outline:2px solid var(--accent);
-              outline-offset:2px}
-              button:hover{
-                filter:brightness(1.13)}
-                .sidebar{
-                  width:246px;
-                  flex-shrink:0;
-                  background:var(--panel);
-                  border-right:1px solid var(--line);
-                  padding:28px 16px 16px;
-                  display:flex;
-                  flex-direction:column}
-                  .brand{
-                    display:flex;
-                    align-items:center;
-                    gap:11px;
-                    font-size:19px;
-                    font-weight:650;
-                    padding:0 8px 29px;
-                    letter-spacing:.2px}
-                    .brand-icon{
-                      display:grid;
-                      place-items:center;
-                      background:var(--accent);
-                      color:#253527;
-                      border-radius:11px;
-                      width:38px;
-                      height:40px;
-                      font-weight:800;
-                      font-family:Georgia,serif;
-                      font-size:29px}
-                      .brand small{
-                        display:block;
-                        color:var(--muted);
-                        font-size:10px;
-                        font-weight:400;
-                        margin-top:4px;
-                        letter-spacing:2px}
-                        .version{
-                          margin-left:auto;
-                          border:1px solid #3b3e3c;
-                          color:#a7b79b;
-                          font-size:10px;
-                          padding:3px 5px;
-                          border-radius:4px}
-                          .new-chat{
-                            display:flex;
-                            align-items:center;
-                            background:#25272b;
-                            width:100%;
-                            padding:12px 10px;
-                            font-size:13px;
-                            gap:7px}
-                            .new-chat>span{
-                              font-size:20px;
-                              line-height:16px}
-                              kbd{
-                                margin-left:auto;
-                                font-size:10px;
-                                color:#979aa4;
-                                font-family:inherit}
-                                .section-label{
-                                  display:flex;
-                                  justify-content:space-between;
-                                  color:#858892;
-                                  font-size:11px;
-                                  letter-spacing:1px;
-                                  margin:31px 10px 12px}
-                                  .section-label span{
-                                    color:#646873}
-                                    nav{
-                                      flex:1;
-                                      overflow-y:auto}
-                                      .conversation-item{
-                                        padding:12px 11px;
-                                        width:100%;
-                                        text-align:left;
-                                        font-size:12px;
-                                        display:flex;
-                                        gap:9px;
-                                        align-items:center;
-                                        margin-bottom:4px}
-                                        .conversation-item .conversation-name{
-                                          overflow:hidden;
-                                          text-overflow:ellipsis;
-                                          white-space:nowrap;
-                                          flex:1}
-                                          .conversation-item.selected{
-                                            background:#292c2d}
-                                            .conversation-item:hover{
-                                              background:#222427}
-                                              .conversation-symbol{
-                                                color:#a6b69d}
-                                                .sidebar-bottom{
-                                                  border-top:1px solid var(--line);
-                                                  padding-top:17px}
-                                                  .local-badge{
-                                                    display:flex;
-                                                    align-items:center;
-                                                    gap:7px;
-                                                    font-size:10px;
-                                                    color:#b5b9af;
-                                                    padding:0 8px 12px}
-                                                    .local-badge>span:last-child{
-                                                      color:#686d74;
-                                                      font-size:9px;
-                                                      margin-left:auto}
-                                                      .dot{
-                                                        display:inline-block;
-                                                        width:6px;
-                                                        height:6px;
-                                                        border-radius:50%;
-                                                        background:#a4c88e;
-                                                        flex-shrink:0}
-                                                        .settings-button{
-                                                          width:100%;
-                                                          padding:12px 9px;
-                                                          display:flex;
-                                                          align-items:center;
-                                                          gap:11px;
-                                                          font-size:16px}
-                                                          .settings-button>span{
-                                                            font-size:12px}
-                                                            .settings-button>span:last-child{
-                                                              margin-left:auto;
-                                                              font-size:10px;
-                                                              color:var(--muted)}
-                                                              main{
-                                                                flex:1;
-                                                                min-width:0;
-                                                                display:flex;
-                                                                flex-direction:column}
-                                                                .topbar{
-                                                                  height:70px;
-                                                                  flex-shrink:0;
-                                                                  border-bottom:1px solid var(--line);
-                                                                  display:flex;
-                                                                  justify-content:space-between;
-                                                                  align-items:center;
-                                                                  padding:0 30px;
-                                                                  font-size:12px}
-                                                                  .breadcrumb{
-                                                                    color:#81858e}
-                                                                    .slash{
-                                                                      margin:0 12px;
-                                                                      color:#565a61}
-                                                                      .topbar strong{
-                                                                        font-size:12px;
-                                                                        font-weight:500}
-                                                                        .topbar-right{
-                                                                          display:flex;
-                                                                          align-items:center;
-                                                                          gap:20px}
-                                                                          .pill{
-                                                                            display:flex;
-                                                                            align-items:center;
-                                                                            gap:8px;
-                                                                            border:1px solid #343936;
-                                                                            padding:6px 10px;
-                                                                            border-radius:20px;
-                                                                            font-size:10px;
-                                                                            color:#c0ccba}
-                                                                            .quiet-button{
-                                                                              color:#9dA0a8;
-                                                                              font-size:11px}
-                                                                              .conversation-body{
-                                                                                display:flex;
-                                                                                flex:1;
-                                                                                min-height:0}
-                                                                                .chat-panel{
-                                                                                  flex:1;
-                                                                                  min-width:0;
-                                                                                  display:flex;
-                                                                                  flex-direction:column}
-                                                                                  #timeline{
-                                                                                    flex:1;
-                                                                                    overflow-y:auto;
-                                                                                    padding:30px max(28px,calc((100% - 840px)/2));
-                                                                                    scroll-behavior:smooth}
-                                                                                    .welcome{
-                                                                                      padding-top:min(9vh,85px);
-                                                                                      text-align:center;
-                                                                                      max-width:720px;
-                                                                                      margin:0 auto}
-                                                                                      .welcome-icon{
-                                                                                        display:inline-block;
-                                                                                        position:relative;
-                                                                                        font:56px Georgia,serif;
-                                                                                        color:var(--accent);
-                                                                                        margin-bottom:24px}
-                                                                                        .welcome-icon span{
-                                                                                          position:absolute;
-                                                                                          right:-15px;
-                                                                                          top:-2px;
-                                                                                          font:23px sans-serif;
-                                                                                          color:#dbe9ca}
-                                                                                          .eyebrow{
-                                                                                            font-size:9px;
-                                                                                            letter-spacing:2.4px;
-                                                                                            color:#a7b79c;
-                                                                                            margin-bottom:14px}
-                                                                                            h1{
-                                                                                              font-weight:500;
-                                                                                              font-size:29px;
-                                                                                              letter-spacing:1px;
-                                                                                              margin:0 0 18px}
-                                                                                              .welcome>p{
-                                                                                                color:#8e929b;
-                                                                                                line-height:1.9;
-                                                                                                font-size:13px}
-                                                                                                .welcome-cards{
-                                                                                                  display:flex;
-                                                                                                  text-align:left;
-                                                                                                  gap:12px;
-                                                                                                  margin:35px auto 26px}
-                                                                                                  .welcome-cards>div{
-                                                                                                    flex:1;
-                                                                                                    border:1px solid #323539;
-                                                                                                    border-radius:10px;
-                                                                                                    padding:17px 14px;
-                                                                                                    background:#1d1f22}
-                                                                                                    .welcome-cards span{
-                                                                                                      font:10px Consolas,monospace;
-                                                                                                      color:#929e88;
-                                                                                                      display:block;
-                                                                                                      margin-bottom:17px}
-                                                                                                      .welcome-cards strong{
-                                                                                                        font-size:12px;
-                                                                                                        font-weight:500}
-                                                                                                        .welcome-cards p{
-                                                                                                          font-size:10px;
-                                                                                                          color:#7e838c;
-                                                                                                          line-height:1.7;
-                                                                                                          margin-bottom:0}
-                                                                                                          .primary-button{
-                                                                                                            background:var(--accent);
-                                                                                                            color:#253025;
-                                                                                                            font-size:12px;
-                                                                                                            font-weight:600;
-                                                                                                            padding:11px 19px}
-                                                                                                            .composer-area{
-                                                                                                              padding:0 max(28px,calc((100% - 840px)/2)) 18px}
-                                                                                                              .run-status{
-                                                                                                                font-size:11px;
-                                                                                                                color:#9ca69a;
-                                                                                                                display:flex;
-                                                                                                                align-items:center;
-                                                                                                                gap:7px;
-                                                                                                                height:32px}
-                                                                                                                .run-status.busy .dot{
-                                                                                                                  animation:pulse 1.3s infinite}
-                                                                                                                  #composer{
-                                                                                                                    border:1px solid #3a3e42;
-                                                                                                                    border-radius:14px;
-                                                                                                                    background:#24262a;
-                                                                                                                    padding:16px 16px 10px}
-                                                                                                                    textarea{
-                                                                                                                      width:100%;
-                                                                                                                      background:none;
-                                                                                                                      color:var(--text);
-                                                                                                                      border:0;
-                                                                                                                      resize:none;
-                                                                                                                      line-height:1.7;
-                                                                                                                      font-size:13px;
-                                                                                                                      min-height:55px;
-                                                                                                                      max-height:180px;
-                                                                                                                      outline:none!important}
-                                                                                                                      textarea::placeholder{
-                                                                                                                        color:#787e87}
-                                                                                                                        .composer-footer{
-                                                                                                                          display:flex;
-                                                                                                                          align-items:center;
-                                                                                                                          justify-content:space-between}
-                                                                                                                          .composer-footer>span{
-                                                                                                                            font-size:9px;
-                                                                                                                            color:#797f88;
-                                                                                                                            letter-spacing:.4px}
-                                                                                                                            .send-button{
-                                                                                                                              background:var(--accent);
-                                                                                                                              color:#263127;
-                                                                                                                              width:31px;
-                                                                                                                              height:31px;
-                                                                                                                              font-size:21px}
-                                                                                                                              .stop-button{
-                                                                                                                                font-size:11px;
-                                                                                                                                color:#e0bbac;
-                                                                                                                                padding:8px}
-                                                                                                                                .composer-hint{
-                                                                                                                                  display:flex;
-                                                                                                                                  justify-content:space-between;
-                                                                                                                                  font-size:9px;
-                                                                                                                                  color:#70757e;
-                                                                                                                                  margin:10px 3px 0}
-                                                                                                                                  .details-panel{
-                                                                                                                                    width:258px;
-                                                                                                                                    flex-shrink:0;
-                                                                                                                                    border-left:1px solid var(--line);
-                                                                                                                                    padding:26px 22px;
-                                                                                                                                    overflow-y:auto;
-                                                                                                                                    background:#18191c}
-                                                                                                                                    .details-heading{
-                                                                                                                                      font-size:12px;
-                                                                                                                                      display:flex;
-                                                                                                                                      align-items:center;
-                                                                                                                                      justify-content:space-between}
-                                                                                                                                      .details-heading>span{
-                                                                                                                                        font-size:8px;
-                                                                                                                                        letter-spacing:1px;
-                                                                                                                                        color:#9cac8e;
-                                                                                                                                        border:1px solid #3b4538;
-                                                                                                                                        padding:3px 4px;
-                                                                                                                                        border-radius:3px}
-                                                                                                                                        .detail-section{
-                                                                                                                                          border-top:1px solid var(--line);
-                                                                                                                                          margin-top:25px;
-                                                                                                                                          padding-top:22px}
-                                                                                                                                          h3{
-                                                                                                                                            font-size:11px;
-                                                                                                                                            font-weight:500;
-                                                                                                                                            margin:0 0 18px;
-                                                                                                                                            display:flex;
-                                                                                                                                            align-items:center;
-                                                                                                                                            justify-content:space-between}
-                                                                                                                                            h3>span{
-                                                                                                                                              font-size:9px;
-                                                                                                                                              color:#6e747d}
-                                                                                                                                              .stats{
-                                                                                                                                                display:flex;
-                                                                                                                                                gap:21px}
-                                                                                                                                                .stats strong{
-                                                                                                                                                  display:block;
-                                                                                                                                                  font-size:25px;
-                                                                                                                                                  font-weight:400;
-                                                                                                                                                  color:#dce1d7;
-                                                                                                                                                  margin-bottom:8px}
-                                                                                                                                                  .stats span{
-                                                                                                                                                    font-size:9px;
-                                                                                                                                                    color:#828892}
-                                                                                                                                                    .participant{
-                                                                                                                                                      display:flex;
-                                                                                                                                                      align-items:center;
-                                                                                                                                                      gap:10px;
-                                                                                                                                                      margin-bottom:16px;
-                                                                                                                                                      font-size:11px}
-                                                                                                                                                      .avatar{
-                                                                                                                                                        display:grid;
-                                                                                                                                                        place-items:center;
-                                                                                                                                                        width:30px;
-                                                                                                                                                        height:30px;
-                                                                                                                                                        background:#313b2d;
-                                                                                                                                                        color:#c4d5b9;
-                                                                                                                                                        border-radius:8px;
-                                                                                                                                                        font-size:14px;
-                                                                                                                                                        font-family:Georgia,serif}
-                                                                                                                                                        .participant small{
-                                                                                                                                                          display:block;
-                                                                                                                                                          color:#727b83;
-                                                                                                                                                          font-size:9px;
-                                                                                                                                                          margin-top:4px}
-                                                                                                                                                          .participant-dot{
-                                                                                                                                                            margin-left:auto;
-                                                                                                                                                            background:#a4bd91;
-                                                                                                                                                            width:5px;
-                                                                                                                                                            height:5px;
-                                                                                                                                                            border-radius:50%}
-                                                                                                                                                            .muted{
-                                                                                                                                                              color:#777f88;
-                                                                                                                                                              font-size:10px;
-                                                                                                                                                              line-height:1.8}
-                                                                                                                                                              .text-button{
-                                                                                                                                                                font-size:10px;
-                                                                                                                                                                color:#a8b69d}
-                                                                                                                                                                .artifacts button{
-                                                                                                                                                                  display:block;
-                                                                                                                                                                  text-align:left;
-                                                                                                                                                                  width:100%;
-                                                                                                                                                                  font-size:11px;
-                                                                                                                                                                  color:#c2cbb8;
-                                                                                                                                                                  padding:9px 7px;
-                                                                                                                                                                  overflow-wrap:anywhere}
-                                                                                                                                                                  .artifacts small{
-                                                                                                                                                                    display:block;
-                                                                                                                                                                    color:#747d85;
-                                                                                                                                                                    font-size:9px;
-                                                                                                                                                                    margin-top:5px}
-                                                                                                                                                                    .capability-box p{
-                                                                                                                                                                      font-size:10px;
-                                                                                                                                                                      color:#9bA2aa;
-                                                                                                                                                                      line-height:2.2}
-                                                                                                                                                                      .scope-note{
-                                                                                                                                                                        font-size:9px;
-                                                                                                                                                                        color:#707984;
-                                                                                                                                                                        line-height:1.8}
-                                                                                                                                                                        .message{
-                                                                                                                                                                          margin:4px 0 25px;
-                                                                                                                                                                          animation:appear .16s ease-out}
-                                                                                                                                                                          .message-label{
-                                                                                                                                                                            display:flex;
-                                                                                                                                                                            align-items:center;
-                                                                                                                                                                            gap:9px;
-                                                                                                                                                                            font-size:10px;
-                                                                                                                                                                            color:#9da995;
-                                                                                                                                                                            margin-bottom:11px}
-                                                                                                                                                                            .message-label .mini-avatar{
-                                                                                                                                                                              display:grid;
-                                                                                                                                                                              place-items:center;
-                                                                                                                                                                              width:23px;
-                                                                                                                                                                              height:23px;
-                                                                                                                                                                              border-radius:7px;
-                                                                                                                                                                              background:#30372e;
-                                                                                                                                                                              color:#c5d7b9}
-                                                                                                                                                                              .message.user .message-label{
-                                                                                                                                                                                color:#a5a9b4}
-                                                                                                                                                                                .message.user .mini-avatar{
-                                                                                                                                                                                  background:#34363d;
-                                                                                                                                                                                  color:#c4c7d0}
-                                                                                                                                                                                  .message-text{
-                                                                                                                                                                                    font-size:13px;
-                                                                                                                                                                                    line-height:1.95;
-                                                                                                                                                                                    white-space:pre-wrap;
-                                                                                                                                                                                    overflow-wrap:anywhere;
-                                                                                                                                                                                    padding-left:32px}
-                                                                                                                                                                                    .message.user .message-text{
-                                                                                                                                                                                      background:#24262a;
-                                                                                                                                                                                      border:1px solid #303339;
-                                                                                                                                                                                      border-radius:10px;
-                                                                                                                                                                                      padding:14px 18px;
-                                                                                                                                                                                      margin-left:32px}
-                                                                                                                                                                                      .tool-event{
-                                                                                                                                                                                        margin:10px 0 13px 32px;
-                                                                                                                                                                                        color:#8d959d;
-                                                                                                                                                                                        font-size:11px}
-                                                                                                                                                                                        .tool-event summary{
-                                                                                                                                                                                          cursor:pointer;
-                                                                                                                                                                                          line-height:1.8}
-                                                                                                                                                                                          .tool-event .tool-name{
-                                                                                                                                                                                            color:#b8c4ae;
-                                                                                                                                                                                            margin:0 7px}
-                                                                                                                                                                                            .tool-event pre{
-                                                                                                                                                                                              font:11px/1.8 Consolas,"Microsoft YaHei UI",monospace;
-                                                                                                                                                                                              white-space:pre-wrap;
-                                                                                                                                                                                              overflow-wrap:anywhere;
-                                                                                                                                                                                              background:#141618;
-                                                                                                                                                                                              padding:13px;
-                                                                                                                                                                                              border-radius:8px;
-                                                                                                                                                                                              border:1px solid #30343a;
-                                                                                                                                                                                              max-height:350px;
-                                                                                                                                                                                              overflow:auto}
-                                                                                                                                                                                              .tool-event .tool-label{
-                                                                                                                                                                                                font-size:9px;
-                                                                                                                                                                                                letter-spacing:1px;
-                                                                                                                                                                                                color:#747e88}
-                                                                                                                                                                                                .model-event{
-                                                                                                                                                                                                  margin:9px 0 11px 34px;
-                                                                                                                                                                                                  font-size:10px;
-                                                                                                                                                                                                  color:#79838d}
-                                                                                                                                                                                                  .run-event{
-                                                                                                                                                                                                    margin:18px 0 23px 32px;
-                                                                                                                                                                                                    font-size:10px;
-                                                                                                                                                                                                    color:#8a9a80;
-                                                                                                                                                                                                    border-top:1px solid var(--line);
-                                                                                                                                                                                                    padding-top:11px}
-                                                                                                                                                                                                    .run-event.error{
-                                                                                                                                                                                                      color:#d5a18c}
-                                                                                                                                                                                                      .subagent-label{
-                                                                                                                                                                                                        color:#9caec2}
-                                                                                                                                                                                                        .toast{
-                                                                                                                                                                                                          position:fixed;
-                                                                                                                                                                                                          bottom:28px;
-                                                                                                                                                                                                          left:50%;
-                                                                                                                                                                                                          transform:translateX(-50%);
-                                                                                                                                                                                                          background:#323936;
-                                                                                                                                                                                                          color:#edf1e8;
-                                                                                                                                                                                                          border:1px solid #566151;
-                                                                                                                                                                                                          padding:13px 20px;
-                                                                                                                                                                                                          border-radius:9px;
-                                                                                                                                                                                                          z-index:100;
-                                                                                                                                                                                                          box-shadow:0 10px 40px #0007;
-                                                                                                                                                                                                          font-size:12px;
-                                                                                                                                                                                                          max-width:650px}
-                                                                                                                                                                                                          dialog{
-                                                                                                                                                                                                            color:var(--text);
-                                                                                                                                                                                                            background:#202226;
-                                                                                                                                                                                                            border:1px solid #42464c;
-                                                                                                                                                                                                            border-radius:16px;
-                                                                                                                                                                                                            padding:30px;
-                                                                                                                                                                                                            width:610px;
-                                                                                                                                                                                                            max-height:92vh;
-                                                                                                                                                                                                            overflow-y:auto;
-                                                                                                                                                                                                            box-shadow:0 30px 100px #0008}
-                                                                                                                                                                                                            dialog::backdrop{
-                                                                                                                                                                                                              background:#07090bd1;
-                                                                                                                                                                                                              backdrop-filter:blur(5px)}
-                                                                                                                                                                                                              .modal-heading{
-                                                                                                                                                                                                                display:flex;
-                                                                                                                                                                                                                align-items:center;
-                                                                                                                                                                                                                justify-content:space-between;
-                                                                                                                                                                                                                gap:20px}
-                                                                                                                                                                                                                .modal-heading h2{
-                                                                                                                                                                                                                  font-size:22px;
-                                                                                                                                                                                                                  font-weight:500;
-                                                                                                                                                                                                                  margin:0}
-                                                                                                                                                                                                                  .modal-heading .eyebrow{
-                                                                                                                                                                                                                    margin:0 0 10px}
-                                                                                                                                                                                                                    .close-button{
-                                                                                                                                                                                                                      color:#929ba5;
-                                                                                                                                                                                                                      font-size:26px;
-                                                                                                                                                                                                                      width:32px;
-                                                                                                                                                                                                                      height:32px}
-                                                                                                                                                                                                                      .modal-intro{
-                                                                                                                                                                                                                        font-size:11px;
-                                                                                                                                                                                                                        color:#969fa8;
-                                                                                                                                                                                                                        line-height:1.9;
-                                                                                                                                                                                                                        margin:19px 0 23px}
-                                                                                                                                                                                                                        .settings-form label{
-                                                                                                                                                                                                                          display:block;
-                                                                                                                                                                                                                          font-size:11px;
-                                                                                                                                                                                                                          color:#c2c8cf;
-                                                                                                                                                                                                                          margin-bottom:17px}
-                                                                                                                                                                                                                          .settings-form input{
-                                                                                                                                                                                                                            display:block;
-                                                                                                                                                                                                                            width:100%;
-                                                                                                                                                                                                                            margin-top:8px;
-                                                                                                                                                                                                                            padding:10px 12px;
-                                                                                                                                                                                                                            border:1px solid #41464f;
-                                                                                                                                                                                                                            background:#191b1e;
-                                                                                                                                                                                                                            color:#e3e7ed;
-                                                                                                                                                                                                                            border-radius:7px;
-                                                                                                                                                                                                                            font-size:12px}
-                                                                                                                                                                                                                            .settings-form input:disabled{
-                                                                                                                                                                                                                              color:#8c9a88;
-                                                                                                                                                                                                                              background:#252a25}
-                                                                                                                                                                                                                              .settings-form small{
-                                                                                                                                                                                                                                display:block;
-                                                                                                                                                                                                                                color:#7f8994;
-                                                                                                                                                                                                                                font-size:10px;
-                                                                                                                                                                                                                                line-height:1.7;
-                                                                                                                                                                                                                                margin-top:7px}
-                                                                                                                                                                                                                                .form-grid{
-                                                                                                                                                                                                                                  display:grid;
-                                                                                                                                                                                                                                  grid-template-columns:1fr 1fr;
-                                                                                                                                                                                                                                  gap:17px}
-                                                                                                                                                                                                                                  .config-note{
-                                                                                                                                                                                                                                    font-size:10px;
-                                                                                                                                                                                                                                    color:#a0ac97;
-                                                                                                                                                                                                                                    background:#282e25;
-                                                                                                                                                                                                                                    border:1px solid #3b4835;
-                                                                                                                                                                                                                                    border-radius:8px;
-                                                                                                                                                                                                                                    padding:12px;
-                                                                                                                                                                                                                                    line-height:1.8}
-                                                                                                                                                                                                                                    .settings-result{
-                                                                                                                                                                                                                                      font-size:11px;
-                                                                                                                                                                                                                                      line-height:1.8;
-                                                                                                                                                                                                                                      min-height:36px;
-                                                                                                                                                                                                                                      margin-top:11px;
-                                                                                                                                                                                                                                      white-space:pre-wrap}
-                                                                                                                                                                                                                                      .settings-result.error{
-                                                                                                                                                                                                                                        color:#e1a58f}
-                                                                                                                                                                                                                                        .settings-result.success{
-                                                                                                                                                                                                                                          color:#bbd5a9}
-                                                                                                                                                                                                                                          .modal-footer{
-                                                                                                                                                                                                                                            display:flex;
-                                                                                                                                                                                                                                            justify-content:space-between;
-                                                                                                                                                                                                                                            align-items:center;
-                                                                                                                                                                                                                                            margin-top:8px}
-                                                                                                                                                                                                                                            .secondary-button{
-                                                                                                                                                                                                                                              border:1px solid #4b535d;
-                                                                                                                                                                                                                                              padding:10px 15px;
-                                                                                                                                                                                                                                              font-size:12px;
-                                                                                                                                                                                                                                              color:#c0c8d1}
-                                                                                                                                                                                                                                              #file-dialog{
-                                                                                                                                                                                                                                                width:850px}
-                                                                                                                                                                                                                                                #file-dialog pre{
-                                                                                                                                                                                                                                                  white-space:pre-wrap;
-                                                                                                                                                                                                                                                  overflow-wrap:anywhere;
-                                                                                                                                                                                                                                                  font:13px/1.95 Consolas,"Microsoft YaHei UI",monospace;
-                                                                                                                                                                                                                                                  border-top:1px solid #3d434a;
-                                                                                                                                                                                                                                                  padding-top:24px;
-                                                                                                                                                                                                                                                  margin-top:24px}
-                                                                                                                                                                                                                                                  .hidden{
-                                                                                                                                                                                                                                                    display:none!important}
-                                                                                                                                                                                                                                                    @keyframes pulse{
-                                                                                                                                                                                                                                                      50%{
-                                                                                                                                                                                                                                                        opacity:.2}
-                                                                                                                                                                                                                                                      }
-                                                                                                                                                                                                                                                      @keyframes appear{
-                                                                                                                                                                                                                                                        from{
-                                                                                                                                                                                                                                                          opacity:0;
-                                                                                                                                                                                                                                                          transform:translateY(3px)}
-                                                                                                                                                                                                                                                          to{
-                                                                                                                                                                                                                                                            opacity:1;
-                                                                                                                                                                                                                                                            transform:translateY(0)}
-                                                                                                                                                                                                                                                          }
-                                                                                                                                                                                                                                                          @media(max-width:1170px){
-                                                                                                                                                                                                                                                            .details-panel{
-                                                                                                                                                                                                                                                              width:225px;
-                                                                                                                                                                                                                                                              padding:25px 16px}
-                                                                                                                                                                                                                                                              .sidebar{
-                                                                                                                                                                                                                                                                width:220px}
-                                                                                                                                                                                                                                                                .welcome-cards{
-                                                                                                                                                                                                                                                                  gap:7px}
-                                                                                                                                                                                                                                                                  .welcome-cards>div{
-                                                                                                                                                                                                                                                                    padding:14px 10px}
-                                                                                                                                                                                                                                                                    .topbar{
-                                                                                                                                                                                                                                                                      padding:0 23px}
-                                                                                                                                                                                                                                                                      .topbar-right{
-                                                                                                                                                                                                                                                                        gap:11px}
-                                                                                                                                                                                                                                                                      }
-                                                                                                                                                                                                                                                                      @media(prefers-reduced-motion:reduce){
-                                                                                                                                                                                                                                                                        *{
-                                                                                                                                                                                                                                                                          animation:none!important;
-                                                                                                                                                                                                                                                                          scroll-behavior:auto!important}
-                                                                                                                                                                                                                                                                        }
+:root {
+    color-scheme: dark;
+    --bg: #191a1d;
+    --panel: #141517;
+    --line: #2b2d32;
+    --text: #ebebef;
+    --muted: #92959e;
+    --accent: #c5d8b5;
+    font-family: "Segoe UI", "Microsoft YaHei UI", sans-serif;
+    font-size: 14px;
+}
+* {
+    box-sizing: border-box;
+}
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+}
+button,
+input,
+textarea {
+    font: inherit;
+}
+button {
+    cursor: pointer;
+    color: inherit;
+    border: 0;
+    background: none;
+    border-radius: 8px;
+}
+button:disabled {
+    opacity: 0.45;
+    cursor: wait;
+}
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+button:hover {
+    filter: brightness(1.13);
+}
+.sidebar {
+    width: 246px;
+    flex-shrink: 0;
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+    padding: 28px 16px 16px;
+    display: flex;
+    flex-direction: column;
+}
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    font-size: 19px;
+    font-weight: 650;
+    padding: 0 8px 29px;
+    letter-spacing: 0.2px;
+}
+.brand-icon {
+    display: grid;
+    place-items: center;
+    background: var(--accent);
+    color: #253527;
+    border-radius: 11px;
+    width: 38px;
+    height: 40px;
+    font-weight: 800;
+    font-family: Georgia, serif;
+    font-size: 29px;
+}
+.brand small {
+    display: block;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 400;
+    margin-top: 4px;
+    letter-spacing: 2px;
+}
+.version {
+    margin-left: auto;
+    border: 1px solid #3b3e3c;
+    color: #a7b79b;
+    font-size: 10px;
+    padding: 3px 5px;
+    border-radius: 4px;
+}
+.new-chat {
+    display: flex;
+    align-items: center;
+    background: #25272b;
+    width: 100%;
+    padding: 12px 10px;
+    font-size: 13px;
+    gap: 7px;
+}
+.new-chat > span {
+    font-size: 20px;
+    line-height: 16px;
+}
+kbd {
+    margin-left: auto;
+    font-size: 10px;
+    color: #979aa4;
+    font-family: inherit;
+}
+.section-label {
+    display: flex;
+    justify-content: space-between;
+    color: #858892;
+    font-size: 11px;
+    letter-spacing: 1px;
+    margin: 31px 10px 12px;
+}
+.section-label span {
+    color: #646873;
+}
+nav {
+    flex: 1;
+    overflow-y: auto;
+}
+.conversation-item {
+    padding: 12px 11px;
+    width: 100%;
+    text-align: left;
+    font-size: 12px;
+    display: flex;
+    gap: 9px;
+    align-items: center;
+    margin-bottom: 4px;
+}
+.conversation-item .conversation-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+}
+.conversation-item.selected {
+    background: #292c2d;
+}
+.conversation-item:hover {
+    background: #222427;
+}
+.conversation-symbol {
+    color: #a6b69d;
+}
+.sidebar-bottom {
+    border-top: 1px solid var(--line);
+    padding-top: 17px;
+}
+.local-badge {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 10px;
+    color: #b5b9af;
+    padding: 0 8px 12px;
+}
+.local-badge > span:last-child {
+    color: #686d74;
+    font-size: 9px;
+    margin-left: auto;
+}
+.dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #a4c88e;
+    flex-shrink: 0;
+}
+.settings-button {
+    width: 100%;
+    padding: 12px 9px;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    font-size: 16px;
+}
+.settings-button > span {
+    font-size: 12px;
+}
+.settings-button > span:last-child {
+    margin-left: auto;
+    font-size: 10px;
+    color: var(--muted);
+}
+main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+.topbar {
+    height: 70px;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 30px;
+    font-size: 12px;
+}
+.breadcrumb {
+    color: #81858e;
+}
+.slash {
+    margin: 0 12px;
+    color: #565a61;
+}
+.topbar strong {
+    font-size: 12px;
+    font-weight: 500;
+}
+.topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+.pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid #343936;
+    padding: 6px 10px;
+    border-radius: 20px;
+    font-size: 10px;
+    color: #c0ccba;
+}
+.quiet-button {
+    color: #9da0a8;
+    font-size: 11px;
+}
+.conversation-body {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+}
+.chat-panel {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+#timeline {
+    flex: 1;
+    overflow-y: auto;
+    padding: 30px max(28px, calc((100% - 840px) / 2));
+    scroll-behavior: smooth;
+}
+.welcome {
+    padding-top: min(9vh, 85px);
+    text-align: center;
+    max-width: 720px;
+    margin: 0 auto;
+}
+.welcome-icon {
+    display: inline-block;
+    position: relative;
+    font:
+        56px Georgia,
+        serif;
+    color: var(--accent);
+    margin-bottom: 24px;
+}
+.welcome-icon span {
+    position: absolute;
+    right: -15px;
+    top: -2px;
+    font: 23px sans-serif;
+    color: #dbe9ca;
+}
+.eyebrow {
+    font-size: 9px;
+    letter-spacing: 2.4px;
+    color: #a7b79c;
+    margin-bottom: 14px;
+}
+h1 {
+    font-weight: 500;
+    font-size: 29px;
+    letter-spacing: 1px;
+    margin: 0 0 18px;
+}
+.welcome > p {
+    color: #8e929b;
+    line-height: 1.9;
+    font-size: 13px;
+}
+.welcome-cards {
+    display: flex;
+    text-align: left;
+    gap: 12px;
+    margin: 35px auto 26px;
+}
+.welcome-cards > div {
+    flex: 1;
+    border: 1px solid #323539;
+    border-radius: 10px;
+    padding: 17px 14px;
+    background: #1d1f22;
+}
+.welcome-cards span {
+    font:
+        10px Consolas,
+        monospace;
+    color: #929e88;
+    display: block;
+    margin-bottom: 17px;
+}
+.welcome-cards strong {
+    font-size: 12px;
+    font-weight: 500;
+}
+.welcome-cards p {
+    font-size: 10px;
+    color: #7e838c;
+    line-height: 1.7;
+    margin-bottom: 0;
+}
+.primary-button {
+    background: var(--accent);
+    color: #253025;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 11px 19px;
+}
+.composer-area {
+    padding: 0 max(28px, calc((100% - 840px) / 2)) 18px;
+}
+.run-status {
+    font-size: 11px;
+    color: #9ca69a;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    height: 32px;
+}
+.run-status.busy .dot {
+    animation: pulse 1.3s infinite;
+}
+#composer {
+    border: 1px solid #3a3e42;
+    border-radius: 14px;
+    background: #24262a;
+    padding: 16px 16px 10px;
+}
+textarea {
+    width: 100%;
+    background: none;
+    color: var(--text);
+    border: 0;
+    resize: none;
+    line-height: 1.7;
+    font-size: 13px;
+    min-height: 55px;
+    max-height: 180px;
+    outline: none !important;
+}
+textarea::placeholder {
+    color: #787e87;
+}
+.composer-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.composer-footer > span {
+    font-size: 9px;
+    color: #797f88;
+    letter-spacing: 0.4px;
+}
+.send-button {
+    background: var(--accent);
+    color: #263127;
+    width: 31px;
+    height: 31px;
+    font-size: 21px;
+}
+.stop-button {
+    font-size: 11px;
+    color: #e0bbac;
+    padding: 8px;
+}
+.composer-hint {
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    color: #70757e;
+    margin: 10px 3px 0;
+}
+.details-panel {
+    width: 258px;
+    flex-shrink: 0;
+    border-left: 1px solid var(--line);
+    padding: 26px 22px;
+    overflow-y: auto;
+    background: #18191c;
+}
+.details-heading {
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.details-heading > span {
+    font-size: 8px;
+    letter-spacing: 1px;
+    color: #9cac8e;
+    border: 1px solid #3b4538;
+    padding: 3px 4px;
+    border-radius: 3px;
+}
+.detail-section {
+    border-top: 1px solid var(--line);
+    margin-top: 25px;
+    padding-top: 22px;
+}
+h3 {
+    font-size: 11px;
+    font-weight: 500;
+    margin: 0 0 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+h3 > span {
+    font-size: 9px;
+    color: #6e747d;
+}
+.stats {
+    display: flex;
+    gap: 21px;
+}
+.stats strong {
+    display: block;
+    font-size: 25px;
+    font-weight: 400;
+    color: #dce1d7;
+    margin-bottom: 8px;
+}
+.stats span {
+    font-size: 9px;
+    color: #828892;
+}
+.participant {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    font-size: 11px;
+}
+.avatar {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    background: #313b2d;
+    color: #c4d5b9;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: Georgia, serif;
+}
+.participant small {
+    display: block;
+    color: #727b83;
+    font-size: 9px;
+    margin-top: 4px;
+}
+.participant-dot {
+    margin-left: auto;
+    background: #a4bd91;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+}
+.muted {
+    color: #777f88;
+    font-size: 10px;
+    line-height: 1.8;
+}
+.text-button {
+    font-size: 10px;
+    color: #a8b69d;
+}
+.artifacts button {
+    display: block;
+    text-align: left;
+    width: 100%;
+    font-size: 11px;
+    color: #c2cbb8;
+    padding: 9px 7px;
+    overflow-wrap: anywhere;
+}
+.artifacts small {
+    display: block;
+    color: #747d85;
+    font-size: 9px;
+    margin-top: 5px;
+}
+.capability-box p {
+    font-size: 10px;
+    color: #9ba2aa;
+    line-height: 2.2;
+}
+.scope-note {
+    font-size: 9px;
+    color: #707984;
+    line-height: 1.8;
+}
+.message {
+    margin: 4px 0 25px;
+    animation: appear 0.16s ease-out;
+}
+.message-label {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 10px;
+    color: #9da995;
+    margin-bottom: 11px;
+}
+.message-label .mini-avatar {
+    display: grid;
+    place-items: center;
+    width: 23px;
+    height: 23px;
+    border-radius: 7px;
+    background: #30372e;
+    color: #c5d7b9;
+}
+.message.user .message-label {
+    color: #a5a9b4;
+}
+.message.user .mini-avatar {
+    background: #34363d;
+    color: #c4c7d0;
+}
+.message-text {
+    font-size: 13px;
+    line-height: 1.95;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    padding-left: 32px;
+}
+.message.user .message-text {
+    background: #24262a;
+    border: 1px solid #303339;
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-left: 32px;
+}
+.tool-event {
+    margin: 10px 0 13px 32px;
+    color: #8d959d;
+    font-size: 11px;
+}
+.tool-event summary {
+    cursor: pointer;
+    line-height: 1.8;
+}
+.tool-event .tool-name {
+    color: #b8c4ae;
+    margin: 0 7px;
+}
+.tool-event pre {
+    font:
+        11px/1.8 Consolas,
+        "Microsoft YaHei UI",
+        monospace;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    background: #141618;
+    padding: 13px;
+    border-radius: 8px;
+    border: 1px solid #30343a;
+    max-height: 350px;
+    overflow: auto;
+}
+.tool-event .tool-label {
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: #747e88;
+}
+.model-event {
+    margin: 9px 0 11px 34px;
+    font-size: 10px;
+    color: #79838d;
+}
+.run-event {
+    margin: 18px 0 23px 32px;
+    font-size: 10px;
+    color: #8a9a80;
+    border-top: 1px solid var(--line);
+    padding-top: 11px;
+}
+.run-event.error {
+    color: #d5a18c;
+}
+.subagent-label {
+    color: #9caec2;
+}
+.toast {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #323936;
+    color: #edf1e8;
+    border: 1px solid #566151;
+    padding: 13px 20px;
+    border-radius: 9px;
+    z-index: 100;
+    box-shadow: 0 10px 40px #0007;
+    font-size: 12px;
+    max-width: 650px;
+}
+dialog {
+    color: var(--text);
+    background: #202226;
+    border: 1px solid #42464c;
+    border-radius: 16px;
+    padding: 30px;
+    width: 610px;
+    max-height: 92vh;
+    overflow-y: auto;
+    box-shadow: 0 30px 100px #0008;
+}
+dialog::backdrop {
+    background: #07090bd1;
+    backdrop-filter: blur(5px);
+}
+.modal-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+.modal-heading h2 {
+    font-size: 22px;
+    font-weight: 500;
+    margin: 0;
+}
+.modal-heading .eyebrow {
+    margin: 0 0 10px;
+}
+.close-button {
+    color: #929ba5;
+    font-size: 26px;
+    width: 32px;
+    height: 32px;
+}
+.modal-intro {
+    font-size: 11px;
+    color: #969fa8;
+    line-height: 1.9;
+    margin: 19px 0 23px;
+}
+.settings-form label {
+    display: block;
+    font-size: 11px;
+    color: #c2c8cf;
+    margin-bottom: 17px;
+}
+.settings-form input {
+    display: block;
+    width: 100%;
+    margin-top: 8px;
+    padding: 10px 12px;
+    border: 1px solid #41464f;
+    background: #191b1e;
+    color: #e3e7ed;
+    border-radius: 7px;
+    font-size: 12px;
+}
+.settings-form input:disabled {
+    color: #8c9a88;
+    background: #252a25;
+}
+.settings-form small {
+    display: block;
+    color: #7f8994;
+    font-size: 10px;
+    line-height: 1.7;
+    margin-top: 7px;
+}
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 17px;
+}
+.config-note {
+    font-size: 10px;
+    color: #a0ac97;
+    background: #282e25;
+    border: 1px solid #3b4835;
+    border-radius: 8px;
+    padding: 12px;
+    line-height: 1.8;
+}
+.settings-result {
+    font-size: 11px;
+    line-height: 1.8;
+    min-height: 36px;
+    margin-top: 11px;
+    white-space: pre-wrap;
+}
+.settings-result.error {
+    color: #e1a58f;
+}
+.settings-result.success {
+    color: #bbd5a9;
+}
+.modal-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+}
+.secondary-button {
+    border: 1px solid #4b535d;
+    padding: 10px 15px;
+    font-size: 12px;
+    color: #c0c8d1;
+}
+#file-dialog {
+    width: 850px;
+}
+#file-dialog pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font:
+        13px/1.95 Consolas,
+        "Microsoft YaHei UI",
+        monospace;
+    border-top: 1px solid #3d434a;
+    padding-top: 24px;
+    margin-top: 24px;
+}
+.hidden {
+    display: none !important;
+}
+@keyframes pulse {
+    50% {
+        opacity: 0.2;
+    }
+}
+@keyframes appear {
+    from {
+        opacity: 0;
+        transform: translateY(3px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+@media (max-width: 1170px) {
+    .details-panel {
+        width: 225px;
+        padding: 25px 16px;
+    }
+    .sidebar {
+        width: 220px;
+    }
+    .welcome-cards {
+        gap: 7px;
+    }
+    .welcome-cards > div {
+        padding: 14px 10px;
+    }
+    .topbar {
+        padding: 0 23px;
+    }
+    .topbar-right {
+        gap: 11px;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation: none !important;
+        scroll-behavior: auto !important;
+    }
+}

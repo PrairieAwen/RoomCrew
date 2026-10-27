@@ -129,7 +129,7 @@
         // 1、完整会话中存在子作用域模型或工具事件。
         return (
             event.scope !== "main" &&
-            event.payload.presentation_external === true
+            event.payload.external_worker === true
         );
     }
     /** 因为失败诊断不应打印任务正文，需要只输出有限活动元数据。 */

@@ -1,6 +1,7 @@
 """多个独立 Runtime 的本机装配与显式空间请求分派。"""
 
 import asyncio
+from collections.abc import Callable
 from typing import Any
 
 from roomcrew.application.runtime import Runtime
@@ -11,38 +12,38 @@ WORKSPACE_METHODS = frozenset(
     {
         "overview",
         "configuration",
+        "agent_configurations",
+        "save_agent_configuration",
         "save_configuration",
         "test_connection",
         "new_conversation",
         "submit",
         "events",
+        "native_events",
         "artifacts",
         "read_artifact",
-        "studio_feed",
-        "scene_move",
-        "scene_edit",
         "member",
         "save_member",
         "member_events",
         "questions",
         "respond",
         "stop",
-        "preferences",
-        "avatar_catalog",
-        "avatar_asset",
-        "import_avatar",
-        "import_avatar_example",
-        "import_avatar_portrait",
-        "import_avatar_bundle",
     }
 )
 
 
 class WorkspaceHub:
-    def __init__(self, paths: AppPaths) -> None:
+    def __init__(
+        self,
+        paths: AppPaths,
+        runtime_factory: Callable[[AppPaths], Runtime] = Runtime,
+        extra_methods: frozenset[str] = frozenset(),
+    ) -> None:
         """因为会议室要各自保留成员与任务，需要用空间目录装配多个独立执行底座。"""
         # 1、这里只组装现有生产 Runtime，不新增模型循环或跨空间共享可变上下文。
         self.paths = paths
+        self._runtime_factory = runtime_factory
+        self._methods = WORKSPACE_METHODS | extra_methods
         self.repository = WorkspaceRepository(paths.data / "workspaces.sqlite")
         self.runtimes: dict[str, Runtime] = {}
         self.active_id = self.repository.active()
@@ -65,7 +66,7 @@ class WorkspaceHub:
         self.repository.get(identifier)
         async with self._opening:
             if identifier not in self.runtimes:
-                runtime = Runtime(self.paths.for_workspace(identifier))
+                runtime = self._runtime_factory(self.paths.for_workspace(identifier))
                 await runtime.start()
                 self.runtimes[identifier] = runtime
             return self.runtimes[identifier]
@@ -118,7 +119,7 @@ class WorkspaceHub:
     async def invoke(self, identifier: str, method: str, args: list[Any]) -> Any:
         """因为切换期间会有迟到请求，需要把每次操作固定到调用时的空间，而不是当前显示房间。"""
         # 1、只允许明确的 Runtime 用例；不接受属性、私有方法、执行器或任意导入。
-        if method not in WORKSPACE_METHODS or not isinstance(args, list) or len(args) > 8:
+        if method not in self._methods or not isinstance(args, list) or len(args) > 8:
             raise ValueError("不支持的工作空间请求")
         runtime = await self.runtime_for(identifier)
         if method == "save_configuration" and await self._global_busy():
@@ -132,7 +133,7 @@ class WorkspaceHub:
             raise ValueError("当前最多四个工作空间同时执行任务")
         result = await getattr(runtime, method)(*args)
         # 2、只给画布和概览添加普通空间身份；业务事件和产物依旧保存在各自目录。
-        if method in {"overview", "studio_feed"}:
+        if method == "overview":
             result = {**result, "workspace": self.repository.get(identifier)}
         if method == "overview":
             result["workspaces"] = (await self.state())["workspaces"]

@@ -50,7 +50,7 @@ def main() -> None:
         )
         window = webview.create_window(
             "RoomCrew desktop integration",
-            str(host.runtime.paths.desktop_ui / "index.html"),
+            str(host.runtime.paths.resources / "desktop/ui" / "index.html"),
             js_api=DesktopAPI(host),
             hidden=False,
             width=1380,
@@ -169,7 +169,7 @@ def main() -> None:
                 window.destroy()
 
         try:
-            # 2、真实 WebView2 主循环，后台验证线程只操作本测试创建的页面。
+            # 3、真实 WebView2 主循环，后台验证线程只操作本测试创建的页面。
             webview.start(verify, gui="edgechromium", debug=False, private_mode=True)
         finally:
             host.close()

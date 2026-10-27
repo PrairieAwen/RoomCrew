@@ -64,7 +64,8 @@ class CrewIdleDirector {
                 fact = facts.get(id);
             const reporting =
                 fact?.activity === "reporting" &&
-                Date.now() - Date.parse(fact.created_at) < 5000;
+                ((fact.bubble && !fact.report_acknowledged) ||
+                    Date.now() - Date.parse(fact.created_at) < 5000);
             const allowed =
                 healthy &&
                 profile &&
