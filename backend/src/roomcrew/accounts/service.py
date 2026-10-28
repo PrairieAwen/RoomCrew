@@ -45,7 +45,13 @@ class AccountService:
     def get(self, member_id: str) -> dict[str, Any]:
         """因为用户编辑与运行绑定需要精确身份，需要查询已存在人物而不按名字模糊匹配。"""
         # 1、完整定义仅通过人工配置或可信执行装配路径使用。
-        for member in self.repository.members():
+        return self._require_member(self.repository.members(), member_id)
+
+    @staticmethod
+    def _require_member(members: list[dict[str, Any]], member_id: str) -> dict[str, Any]:
+        """因为编辑和执行绑定都需要相同的身份校验，需要在本次读取的快照中精确选择成员。"""
+        # 1、不重新查询仓库、不按名字回退；历史 User 替身不能当作可编辑员工。
+        for member in members:
             if member["id"] == member_id and member["role"] != "user":
                 return dict(member)
         raise ValueError("成员不存在")
@@ -82,10 +88,9 @@ class AccountService:
         identifier = str(values.get("id") or uuid4().hex)
         if not re.fullmatch(r"[a-zA-Z0-9_-]{1,48}", identifier):
             raise ValueError("人物标识无效")
-        previous = next(
-            (item for item in self.repository.members() if item["id"] == identifier), None
-        )
-        if previous is None and len(self.members(include_archived=True)) >= 16:
+        snapshot = self.repository.members()
+        previous = next((item for item in snapshot if item["id"] == identifier), None)
+        if previous is None and sum(item["role"] != "user" for item in snapshot) >= 16:
             raise ValueError("首版最多 16 位人物，请先复用或编辑已有成员")
         if previous and values.get("agent_id", previous.get("agent_id")) != previous.get(
             "agent_id"
@@ -102,11 +107,7 @@ class AccountService:
         merged = {**(previous or {}), **values}
         reference = str(merged.get("agent_id") or "")
         shared = next(
-            (
-                item
-                for item in self.repository.members()
-                if reference and item.get("agent_id") == reference
-            ),
+            (item for item in snapshot if reference and item.get("agent_id") == reference),
             None,
         )
         if shared and not previous:
@@ -146,12 +147,13 @@ class AccountService:
     def binding(self, member_id: str = "assistant") -> dict[str, Any]:
         """因为运行必须固定当时的身份与属性，需要建立不含模型秘密的主子 Agent 快照。"""
         # 1、明确指定员工就使用该配置；老板和监管员不能成为执行 Agent。
-        root = self.get(member_id)
+        snapshot = self.repository.members()
+        root = self._require_member(snapshot, member_id)
         if not root["enabled"] or root["archived"] or root["agent_id"] is None:
             raise ValueError("该人物不是可执行的 Agent")
         members = [
             item
-            for item in self.repository.members()
+            for item in snapshot
             if item["role"] in {"employee", "assistant"}
             and item["enabled"]
             and not item["archived"]
@@ -160,7 +162,7 @@ class AccountService:
         main = self._spec(root, "main")
         # 2、只装配本空间显式配置的成员或独立定义，不再隐式增加通用外援。
         workers = [self._spec(item, "member_" + item["id"]) for item in members]
-        attached = {item.get("agent_id") for item in self.repository.members()}
+        attached = {item.get("agent_id") for item in snapshot}
         for definition in self.repository.agent_definitions():
             if definition["id"] not in attached:
                 reference = (

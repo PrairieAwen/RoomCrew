@@ -1,4 +1,4 @@
-# 因为构建失败不能破坏正在使用的程序，需要先验证完整候选，再以目录替换发布。
+﻿# 因为构建失败不能破坏正在使用的程序，需要先验证完整候选，再以目录替换发布。
 param([Parameter(Mandatory = $true)][string]$Candidate)
 $ErrorActionPreference = 'Stop'
 $roomcrewRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
@@ -50,6 +50,35 @@ try {
 # 4、压缩先写独立文件，完整生成后才替换原 ZIP；成功后清理旧程序缓存。
 Compress-Archive -LiteralPath $roomcrewDist -DestinationPath $roomcrewZipStage
 Move-Item -LiteralPath $roomcrewZipStage -Destination $roomcrewZip -Force
+
+# 5、完整发布成功才原子切换统一启动入口；延续已有数据目录，不因更新程序换成另一个会议室。
+$roomcrewManifestPath = Join-Path $PSScriptRoot 'active-release.json'
+$roomcrewExistingData = $null
+if (Test-Path -LiteralPath $roomcrewManifestPath -PathType Leaf) {
+    $roomcrewExistingManifest = Get-Content -LiteralPath $roomcrewManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $roomcrewExistingData = $roomcrewExistingManifest.data_directory
+}
+$roomcrewManifest = [ordered]@{
+    schema_version = 1
+    release_id = (Get-Date -Format 'yyyyMMdd-HHmmss')
+    executable = 'dist/RoomCrew/RoomCrew.exe'
+    data_directory = $roomcrewExistingData
+}
+$roomcrewManifestStage = Join-Path $PSScriptRoot ('active-release-' + [guid]::NewGuid().ToString('N') + '.json')
+try {
+    [IO.File]::WriteAllText($roomcrewManifestStage, ($roomcrewManifest | ConvertTo-Json), [Text.UTF8Encoding]::new($false))
+    if (Test-Path -LiteralPath $roomcrewManifestPath -PathType Leaf) {
+        [IO.File]::Replace($roomcrewManifestStage, $roomcrewManifestPath, [NullString]::Value)
+    } else {
+        [IO.File]::Move($roomcrewManifestStage, $roomcrewManifestPath)
+    }
+} finally {
+    if (Test-Path -LiteralPath $roomcrewManifestStage -PathType Leaf) {
+        Remove-Item -LiteralPath $roomcrewManifestStage -Force
+    }
+}
+
+# 6、旧缓存仅在新发行和启动指针均成功后清理，不删除任何用户数据目录。
 if (Test-Path -LiteralPath $roomcrewBackup) {
     Remove-Item -LiteralPath $roomcrewBackup -Recurse -Force
 }

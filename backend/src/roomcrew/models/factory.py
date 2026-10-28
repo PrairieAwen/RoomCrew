@@ -1,5 +1,8 @@
 """可信模型工厂：真实 SDK 参数只在此处读取使用。"""
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 import httpx
 from langchain_openai import ChatOpenAI
 from pydantic import SecretStr
@@ -34,3 +37,20 @@ def create_model(profile: ModelProfile, budget: ModelCallBudget | None = None) -
     model = PrivateChatModel(client, profile.api_key, profile.context_window, budget)
     model._clients = (sync_client, async_client)
     return model
+
+
+@asynccontextmanager
+async def model_session(
+    profile: ModelProfile, budget: ModelCallBudget | None = None
+) -> AsyncIterator[PrivateChatModel]:
+    """因为探测与辅助调用都会临时创建模型，需要共用成功、异常和取消时的连接释放规则。
+
+    仅可信应用层传入私有配置；调用方只获得通用代理，退出作用域后不能继续使用它。
+    """
+    # 1、仍经过同一模型工厂，不另设厂商入口、重试策略或环境密钥兜底。
+    model = create_model(profile, budget)
+    try:
+        yield model
+    finally:
+        # 2、无论模型返回、格式校验失败还是协程取消，都结束本次连接生命周期。
+        await model.close()

@@ -25,17 +25,20 @@ class SqliteAccountRepository:
 
     def members(self) -> list[dict[str, Any]]:
         """因为人物与 Agent 定义都按账号引用保存，需要返回完整属性供可信应用筛选。"""
-        # 1、排序稳定，不用自增行号作为未来云端身份。
+        # 1、一次读取共享定义，避免每名成员再发起单独查询；成员顺序仍按原来的 rowid。
+        agents = {
+            row["id"]: (row["body"], row["revision"])
+            for row in self._db.execute("SELECT id,revision,body FROM agent_definitions")
+        }
         result = []
         for row in self._db.execute("SELECT body FROM members ORDER BY rowid"):
             member = json.loads(row["body"])
             if member.get("agent_id"):
-                agent = self._db.execute(
-                    "SELECT revision,body FROM agent_definitions WHERE id=?", (member["agent_id"],)
-                ).fetchone()
+                agent = agents.get(member["agent_id"])
                 if agent:
-                    member.update(json.loads(agent["body"]))
-                    member["agent_revision"] = agent["revision"]
+                    # 2、逐成员恢复独立嵌套配置，避免编辑时互相污染；共享缓存仅保留序列化数据。
+                    member.update(json.loads(agent[0]))
+                    member["agent_revision"] = agent[1]
             result.append(member)
         return result
 

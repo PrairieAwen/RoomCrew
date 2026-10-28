@@ -5,23 +5,18 @@ import time
 from typing import Any
 
 from roomcrew.accounts.service import AccountService
-from roomcrew.agent_loop.engine import DeepAgentsLoop
-from roomcrew.application.components import agent_components
+from roomcrew.application.components import AgentLoopFactory
 from roomcrew.application.options import RunOptions
 from roomcrew.config.schema import ModelProfile
 from roomcrew.config.store import ConfigStore
 from roomcrew.contracts.agents import AgentSpec
 from roomcrew.contracts.errors import ERROR_MESSAGES, ExecutionError
-from roomcrew.middleware.delegation import ConfiguredDelegationMiddleware
 from roomcrew.middleware.limits import ModelCallBudget
-from roomcrew.middleware.stack import build_middleware
 from roomcrew.models.factory import create_model
 from roomcrew.platform.paths import AppPaths
-from roomcrew.skills.registry import resolve_skill_sources
 from roomcrew.storage.checkpoints import CheckpointStore
 from roomcrew.storage.run_state import RunStateStore
 from roomcrew.storage.sessions import SessionStore
-from roomcrew.tools.registry import file_backend
 
 
 class ExecutionService:
@@ -105,64 +100,9 @@ class ExecutionService:
         started = time.monotonic()
         waiting = False
         try:
-            self.options.capabilities.validate_release()
-            root = self.paths.session_files(conversation_id)
-            sources = resolve_skill_sources(root, self.options.skills)
+            factory = AgentLoopFactory(self.paths, conversation_id, self.options)
             model = create_model(profile, budget)
-            skill_home = self.paths.data / "skill-bundles"
-            skill_home.mkdir(exist_ok=True)
-            backend = file_backend(root, skill_home)
-            main = AgentSpec.restore(saved["binding"]["main"])
-            workers = [AgentSpec.restore(item) for item in saved["binding"]["workers"]]
-            script_lock = asyncio.Lock()
-            cache = self.paths.root / "cache"
-            mcp_catalog: dict[str, list[Any]] = {}
-            extra_tools, main_sources = await agent_components(
-                main,
-                workers,
-                root,
-                cache,
-                skill_home,
-                self.options.capabilities,
-                script_lock,
-                mcp_catalog,
-            )
-            worker_tools = {}
-            worker_skills = {}
-            for worker in workers:
-                tools, paths = await agent_components(
-                    worker,
-                    [],
-                    root,
-                    cache,
-                    skill_home,
-                    self.options.capabilities,
-                    script_lock,
-                    mcp_catalog,
-                )
-                worker_tools[worker.tool_name] = tools
-                worker_skills[worker.tool_name] = paths + sources
-            loop = DeepAgentsLoop(
-                model=model,
-                backend=backend,
-                tools=extra_tools,
-                middleware=[
-                    *build_middleware(model, backend, self.options.compression),
-                    ConfiguredDelegationMiddleware(workers),
-                ],
-                worker_middleware={
-                    worker.tool_name: build_middleware(model, backend, self.options.compression)
-                    for worker in workers
-                },
-                skills=main_sources + sources,
-                checkpointer=self.checkpoints.saver,
-                limits=self.options.limits,
-                redact=model.redact,
-                main=main,
-                workers=workers,
-                worker_tools=worker_tools,
-                worker_skills=worker_skills,
-            )
+            loop = await factory.build(saved["binding"], model, self.checkpoints)
             # 2、应用层只消费普通轨迹合同，Loop 不直接操作产品数据库。
             remaining = (
                 self.options.limits.total_seconds - saved["spent"] - (time.monotonic() - started)

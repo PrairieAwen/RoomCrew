@@ -13,9 +13,12 @@ from roomcrew.tools.human import ask_user
 
 def local_tools(policy: CapabilityPolicy) -> list[BaseTool]:
     """因为工具开放范围不应写死在 Loop 中，需要独立注册真实可用工具并校验版本能力。"""
-    # 1、注册时间与真实人工询问；文件工具、task 和规划工具由 SDK 根据后端注入。
+    # 1、复制已注册模板，避免某次装配修改元数据后污染其他 Agent / Run。
     policy.validate_release()
-    return [get_local_time, ask_user]
+    return [
+        item.model_copy(deep=True, update={"metadata": {"roomcrew_tool_kind": kind}})
+        for item, kind in ((get_local_time, "tool"), (ask_user, "human"))
+    ]
 
 
 def file_backend(root: Path, skill_home: Path | None = None) -> BackendProtocol:

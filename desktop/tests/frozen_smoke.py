@@ -1,5 +1,6 @@
 """发行 exe 的真实跨进程验收；需要在独立窗口发送合成任务。"""
 
+import argparse
 import asyncio
 import json
 import logging
@@ -47,6 +48,11 @@ def main() -> None:
     """因为源码通过不能证明打包完整，需要让发行 exe 自己运行 MCP 和随包隔离 Python。"""
     # 1、真实本机协议服务只返回合成响应，执行器与产物由发行程序自身生成。
     logging.disable(logging.CRITICAL)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--timeout-seconds", type=int, default=180)
+    timeout = parser.parse_args().timeout_seconds
+    if not 30 <= timeout <= 1800:
+        raise ValueError("发行验收等待时间需要在 30—1800 秒之间")
     project = Path(__file__).resolve().parents[2]
     root = project / ".cache/frozen-smoke" / uuid4().hex
     script = (
@@ -78,7 +84,7 @@ def main() -> None:
         print(json.dumps({"stage": "ready_for_native_input", "pid": process.pid}), flush=True)
         # 2、只观察发行程序自己写入的终态与文件，不能补写缺失结果。
         result: dict = {"ok": False}
-        deadline = time.monotonic() + 180
+        deadline = time.monotonic() + timeout
         while time.monotonic() < deadline and process.poll() is None:
             database = root / "data/sessions.sqlite"
             if database.exists():
@@ -102,8 +108,8 @@ def main() -> None:
                     break
             time.sleep(0.25)
         print(json.dumps(result, ensure_ascii=False), flush=True)
-        # 3、留出时间由原生界面关闭本测试窗口；超时不终止其他用户进程。
-        process.wait(timeout=120)
+        # 3、关闭阶段也使用显式等待预算，避免人工观察较慢时把已完成的执行误记为失败。
+        process.wait(timeout=timeout)
     if not result["ok"]:
         raise SystemExit(1)
 

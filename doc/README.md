@@ -1,98 +1,59 @@
 # RoomCrew 开发指导
 
-最新素材实现在 [ADR-0020](architecture/0020-unified-projection-assets.md)：八类设备固定投影重制、四角色配套工作/起坐、逐向源图注册和会议桌实体座点。当前为旧角色兼容预览；完整双手双脚接触、新骨架及全部动作仍按制作规范继续验收。
+先读根 `AGENTS.md` 和 `README.md`。日常启动统一运行根 `start.ps1`；`-Check` 查看活动发行和数据目录。历史文档中的 exe 路径仅指当时快照。当前数据目录为 `.cache/asset-v2-showcase`，发布保留它，不自动复制用户配置。
 
-新素材制作以 [统一规范 v1.0](assets/asset-production-standard/README.md) 与 [图解阅读版](assets/asset-production-standard/guide.html) 为准。先锁定投影与尺寸，再完成桌椅人物连续样板；正文区分地轴倾角、相机仰角、八向旋转、根点及双手双脚接触。制作端 JSON 仍是规范示例，当前导入器不支持；旧原图待重制、待验收。
+## 当前实现基线
 
-当前工位交互见 [ADR-0019](architecture/0019-paired-chair-interactions.md)：配套人物/椅子预设、六帧起坐、原座与目标座分离、滚椅与脚点交接。它修正 ADR-0018 的独立人物拼椅、投影距离当物理座高以及两张补页限制；用户导入仍为两页。任意自制素材的全向自然交互仍需专门美术与接触登记。
-
-当前视觉校准以 [ADR-0018](architecture/0018-coherent-office-art.md) 为准：修正各类家具的相对尺度、独立伸手工作姿态、椅背/会议桌遮挡、实际脚线阴影与窗景；视觉验收包含原生全景和放大近景，不能用功能测试数量替代。
-
-最新素材与布景以 [ADR-0017](architecture/0017-configurable-scene-assets.md) 为准：统一人物/设备合同、八方向关键帧、旋转占地与座面/脚底接触，四沙发围绕茶几；明确完整动画与自制家具导入的当前边界。它覆盖 ADR-0014—0016 的固定坐姿抬升和旧默认素材说明。
-
-本次检查与独立预览目录见 [素材验收](development/scene-assets-validation.md)。原程序未被强制关闭，新版使用独立预览数据启动。
-
-当前桌子与监管员美术接入见 [ADR-0016](architecture/0016-office-art-alignment.md)：同视角工位、直立监管员、共用接触注册与原图比例检查，覆盖旧安全台东北朝向说明。
-
-最新穿桌与接触点修正见 [ADR-0015](architecture/0015-office-contact-correction.md)：格心导航、椅子避障、桌前入座、身体座面高度、会议桌落地线与临时工作借座。它补充并修正 ADR-0014 的物理校准结论。
-
-最新办公行为见 [ADR-0014](architecture/0014-physical-office-interactions.md)：工位朝向、背向工作、转身起坐、椅背遮挡、整齐默认布局及安全台/档案柜，旧自定义布局保留。
-
-最新界面与工作区规范见 [ADR-0011](architecture/0011-coherent-studio-and-workspace-roster.md)：统一视觉注册、独立工作区与配置名单。它覆盖旧文档中隐式通用外援和深色界面的描述；档案室仅有规划入口，归档与长期记忆尚未开发。
-
-先读本页，再阅读相关 HTML。三份 HTML 是此前讨论中最后生成的版本，正文原样保留；后续已确定的选型和项目约定按本页与当前规范执行。
-
-## 当前交付：Windows 独立工作空间原型
-
-泡泡真实鼠标点击与同会话多轮结果已读规则见 [ADR-0013](architecture/0013-bubble-pointer-and-read-receipts.md)：成功展示后清除已读完成提示，人工问题仍需实际答复。
-
-消息正文已支持本地 Markdown 排版，历史消息同步生效；工具日志保留原文。格式、链接边界与原生验收见 [ADR-0012](architecture/0012-message-markdown.md)。
-
-最新人物属性和默认工具见 [ADR-0010](architecture/0010-member-materials-and-default-tools.md)：Agent 配置与员工素材页分开，支持触发类型→图集变体/帧序列，泡泡按人物头部跟随；所有 Agent 默认加载补充文件工具，Python 包含子任务及报错修正验收。
-
-最新执行底座以 [ADR-0009](architecture/0009-agent-foundation.md) 为准：后端不包含动作协议，Agent 定义单独持久化；Skills、HTTP MCP、成员发现和隔离 Python 已接入。桌面独立映射动作、短泡泡与右侧人工交互，验收见 [底座验证](development/agent-foundation-validation.md)。该决定覆盖旧文档中“Python/MCP 尚未开放”及后端包含表现模块的描述。
-
-模型配置入口已修复为「保存并测试连接」，支持当前表单先保存、失败短路和绑定稳定，见 [配置测试验收](development/model-settings-validation.md)。
-
-最新空间与目录规则以 [ADR-0007](architecture/0007-workspace-rooms.md) 为准：品牌只保留 RoomCrew；一工作空间对应一会议室，左侧选择后切换主画布，任务继续后台运行。用户桌面界面与原生壳统一位于根 desktop/，frontend/ 仅预留管理员 Web 界面。多空间验证见 [验收记录](development/workspace-validation.md)。
-
-最新人物与空间规则以 [ADR-0006](architecture/0006-living-studio.md) 为准：用户无需老板替身、助手接待、五至十分钟随机生活活动、同任务配置成员会议、无形象外援电话，以及手绘环境接入。此前三人最低配置与单动作逻辑由该决定覆盖。
-
-当前验证结果与发行包见 [生活与协作验收](development/living-studio-validation.md)。
-
-[ADR-0002：V1 范围与运行合同](architecture/0002-conversation-v1.md) 是原会话基线；当前用户进一步授权的事务所空间、人物持久化、单向表现协议与真实人工恢复以 [ADR-0004](architecture/0004-studio-interaction.md) 为准。正交游戏动画、自定义角色图集与全窗口布局以 [ADR-0005](architecture/0005-game-animation.md) 为准；素材样例见 [制作说明](assets/crew-avatar-example/README.md)。安全 VM 仍未接入。运行与构建见根 README；原会话验证保留在 [历史基线](development/v1-validation.md)，新增验证见 [事务所原型验证](development/studio-validation.md)。
-
-[ADR-0003：后端职责分层](architecture/0003-backend-layers.md) 是当前源码结构依据，包含模块目录、依赖方向、运行/压缩时序，以及新增工具、MCP、Skills 和模型适配的接入位置。实际生产 Loop 仍只有 Deep Agents 一套。
-
-最新原生动画与素材验收见 [游戏表现验证](development/game-animation-validation.md)：包括真实图集选帧、跑步与疑问表情叠加、素材绑定及不影响真实 Agent 工具执行。
-
-个人摸鱼偏好、跨上下文空闲判定与自绘生活片段见 [ADR-0005 第 10 节](architecture/0005-game-animation.md#10-没有工作时的人物生活动作)，仍是单向表现，不增加生产 Agent 循环。
-
-最新单角色美术样板与 v2 裁切协议见 ADR-0005 第 11 节。可从人物属性试用手绘角色并连播，正式任务仍由原有轨迹映射驱动。
-
-完整基础素材库与受限双页 v3 协议见 ADR-0005 第 12 节及 `desktop/ui/studio/assets/library-v1/README.md`：四套可导入角色、496 个姿态、每套 20 种动作，另有家具/装饰/状态特效和可播放总览。常用环境美术已接入房间；其余展示素材按总览说明区分。
-
-## 当前多 Agent 执行底座设计
-
-[ADR-0008：官方 Agent 执行记录](architecture/0008-native-agent-tracing.md) 采用官方消息、Runnable v2 事件和 Checkpointer，区分模型工具 ID、SDK 调用 ID、checkpoint 与 MCP 请求 ID。原生事件持久化与 HTTP MCP 已接入，附带模拟样例仍仅用于解释字段。
-
-[通用 Agent 与多 Agent 调度架构 v0.3](architecture/multi-agent-runtime.html)：本次方案包含 25 个章节与 9 张架构图，覆盖通用内核、模型私有配置与可信工厂、同配置多 Run、SQLite 轨迹、能力路由、Skills 加载、中间件压缩和恢复。User、助手与安全 VM 抽象按最新补充修正；具体实现待评审。
-
-## 文档与阅读顺序
-
-| 顺序 | 文档 | 版本与用途 |
+| 主题 | 当前依据 | 适用范围 |
 | --- | --- | --- |
-| 1 | [现行选型决定](architecture/0001-deepagents.md) | 已确定使用 Deep Agents，先了解与历史设计的差异 |
-| 2 | [图解架构与实施路线](architecture-roadmap.html) | 路线图 v1.0，基于设计 v1.4；由浅入深理解结构、交互与阶段 |
-| 3 | [产品设计文档](product-design.html) | v1.4；用户旅程、角色、画布、人物动作、事项和产品验收 |
-| 4 | [技术设计与架构选型](technical-design.html) | v1.4；前后端合同、Agent、上下文、执行、存储、安全与恢复 |
-| 5 | [Python 环境说明](development/environment.md) | 本仓库已准备的环境、解释器与依赖维护方式 |
+| 执行底座与扩展点 | [ADR-0021：底座整理](architecture/0021-runtime-refactoring.md)、[ADR-0009：Agent 能力](architecture/0009-agent-foundation.md) | 唯一 Deep Agents 循环、能力装配、模型资源与后续升级顺序 |
+| 包与依赖方向 | [ADR-0003](architecture/0003-backend-layers.md)、[ADR-0021](architecture/0021-runtime-refactoring.md) | 配置、模型、压缩、中间件、安全、工具、MCP、Skills、存储分层；最新说明修正历史目录 |
+| 官方执行记录 | [ADR-0008](architecture/0008-native-agent-tracing.md) | 消息、Runnable v2 事件、checkpoint 与产品 Run 分开 |
+| 成员配置与默认工具 | [ADR-0010](architecture/0010-member-materials-and-default-tools.md) | Agent 定义与素材分离，文件工具、Python、主子能力装配 |
+| 空间与协作名单 | [ADR-0007](architecture/0007-workspace-rooms.md)、[ADR-0011](architecture/0011-coherent-studio-and-workspace-roster.md) | 一空间一会议室，上下文隔离，仅委派本空间显式配置名单 |
+| 泡泡与人工交互 | [ADR-0013](architecture/0013-bubble-pointer-and-read-receipts.md) | 主 Agent 转达、局部挂点、真实点击及持久已读 |
+| Markdown | [ADR-0012](architecture/0012-message-markdown.md) | 展示层安全解析，原轨迹保留原文 |
+| 素材与人物接触 | [ADR-0020](architecture/0020-unified-projection-assets.md)、[ADR-0019](architecture/0019-paired-chair-interactions.md) | 固定投影兼容预览，四角色配套工作/起坐；完整动作及骨点仍待验收 |
+| 素材制作规范 | [规范 v1.0](assets/asset-production-standard/README.md)、[图解版](assets/asset-production-standard/guide.html) | 相机、尺寸、八向、接触、导出及验收；制作端 JSON 尚非导入合同 |
+| 环境 | [Python 环境](development/environment.md) | 版本以 uv.lock 为准，不改第三方源码，不依赖用户预装 Python |
 
-## 当前决定覆盖的历史内容
+后端不包含人物动作或泡泡协议，桌面单向消费已提交轨迹。主子 Agent 的消息、产物和 checkpoint 按任务隔离，不能用共享 agent_id 作为可变上下文。
 
-| 主题 | 当前有效约定 | 阅读历史文档时注意 |
+## 验证入口
+
+- 当前整理与兼容检查：[ADR-0021 验证记录](architecture/0021-runtime-refactoring.md#5-验证记录)。
+- Agent / Skills / MCP / Python / 人工恢复：[底座验收](development/agent-foundation-validation.md)。
+- 模型表单：[配置验收](development/model-settings-validation.md)；空间隔离：[工作区验收](development/workspace-validation.md)。
+- 场景、素材与原生截图：[素材验收](development/scene-assets-validation.md)；其他历史记录保留在 development/。
+- 常用检查、源码运行和打包命令统一见根 README.md，不在每篇文档复制一套。
+
+## 产品与长期设计
+
+| 顺序 | 文档 | 阅读方式 |
 | --- | --- | --- |
-| 项目名称 | RoomCrew | “数字工作室”等旧称表达同一产品 |
-| Agent Loop | Deep Agents，初始锁定 0.7.32 | 自建小型 Rust Harness / Loop 的推荐已被替代，不再照此实现第二套循环 |
-| 角色与并发 | 老板是 User，助手是通用 Agent 配置，监管员是安全 VM；同配置可并发多个独立 Run | 不按旧方案把三者都作为 Agent；首版协程与每空间 SQLite，不强制每 Run 一个进程 / 数据库 |
-| Rust 与界面框架 | Rust 可用于必要系统组件；Tauri / React / PixiJS 等仍需相应验证 | 不能把历史候选组合当成已完成或全部冻结的选型 |
-| 产品权威 | User、Agent 配置、任务与 Run、共享事实和权限由产品掌握 | 框架 checkpoint、模型声明和动画均不单独决定任务成功或授权 |
-| 代码目录 | desktop/ 为用户桌面，backend/ 为底层逻辑，frontend/ 仅预留管理员 Web 界面 | 不直接照搬历史多服务 / 多包目录模板，按实际任务再创建模块 |
-| 开发规范 | 根 [AGENTS.md](../AGENTS.md) | 所有方法中文说明“因为……，需要……”，方法体用中文编号步骤，常用能力合理抽象 |
-| 变更记录 | 根 [changelog/](../changelog/) 下每天一个 YYYYMMDD.md | 前后端统一记录，每次只简短写实际改动 |
-| 依赖版本 | 根 pyproject.toml、uv.lock 和 .python-version | HTML 中的历史版本或工具建议不能覆盖当前锁定环境 |
+| 1 | [Deep Agents 决定](architecture/0001-deepagents.md) | 已替代旧自建 Rust Loop 方案 |
+| 2 | [图解路线图](architecture-roadmap.html) | 从产品和宏观结构理解实施阶段 |
+| 3 | [产品设计](product-design.html) | v1.4 完整历史需求，不能把所有条目当成已交付 |
+| 4 | [技术设计](technical-design.html) | v1.4 长期指导，与现行 ADR 冲突时以最新决定为准 |
+| 5 | [通用 Agent 与调度设计](architecture/multi-agent-runtime.html) | v0.3 方案背景，落地边界见 ADR-0009 和 ADR-0021 |
 
-## 实现边界
+三份根 HTML 保留此前讨论的完整版本；通过现行决定说明差异，避免维护多份相近方案。下一阶段先升级通用 Runtime，再接入编码和日常工作能力，具体顺序见 ADR-0021。
 
-当前已进入事务所交互原型开发，保留会话基线。HTML 的完整产品流程、架构图和性能目标仍是长期指导；只有现行 ADR 和验证记录明确列出的能力已经接入，不代表安全 VM、浏览器、认证型 MCP、外部家具/骨骼文件导入或正式商业游戏美术已经完成。
+## 历史设计索引
 
-后续实现要先明确当前功能的行为、边界、合同与验收，再按授权任务开发；不能因为完整设计中存在某项能力就提前扩大实现范围。
+| 阶段 | 文档 |
+| --- | --- |
+| V1 与会话 | [0002 会话合同](architecture/0002-conversation-v1.md) |
+| 桌面表现与素材 | [0004 只读投影](architecture/0004-studio-interaction.md)、[0005 游戏动画](architecture/0005-game-animation.md)、[0006 生活协作](architecture/0006-living-studio.md) |
+| 办公物理校准 | [0014 办公行为](architecture/0014-physical-office-interactions.md)、[0015 接触修正](architecture/0015-office-contact-correction.md)、[0016 美术对齐](architecture/0016-office-art-alignment.md) |
+| 可配置素材演进 | [0017 八向合同](architecture/0017-configurable-scene-assets.md)、[0018 视觉校准](architecture/0018-coherent-office-art.md)、[0019 配套桌椅](architecture/0019-paired-chair-interactions.md) |
 
-人物位置与动作、真实任务状态、实际权限分别保持权威来源。任意代码、登录态和 Computer Use 的隔离能力需要独立实现与验证，Deep Agents 不自动提供整套凭据 VM。
+历史 ADR 保留当时的动机和验证事实。被替代的图像与脚本已从当前源码删除，需要追溯时查看 Git，不重新保留备用执行路径。
 
-发生冲突时，以用户当前明确决定、根 AGENTS.md 和对应已接受 ADR 为准；先同步设计差异，避免同时维护互相矛盾的方案。
+## 当前边界
 
-## 来源
+Windows 本地原型已支持用户模型配置、真实 Deep Agents、同会话主子轨迹、Skills、无认证 HTTP MCP、标准库隔离 Python、文件产物、人工恢复和多个工作空间。SQLite 产品状态与官方 checkpoint 分开，配置由可信入口保护和加载。
 
-本目录三个 HTML 复制自此前产出的 architecture-documents，保留原文件名，文档之间的相对链接可直接使用。
-为了保留原始内容，当前选型差异集中说明在本页，复制时未直接重写历史 HTML 正文。
+安全 VM、浏览器、Shell、Computer Use、认证型 MCP、云账号、档案室归档及长期记忆、外部家具/骨骼导入尚未实现。Python AppContainer 不是凭据 VM；人物动画不能授予权限。当前素材仍为兼容预览，功能测试通过不等于专业美术或全部动作验收。
+
+变更统一记录在根 changelog/YYYYMMDD.md。冲突时以当前用户决定、根规范和最新相关 ADR 为准，不照搬已被替代的版本、目录或实现。

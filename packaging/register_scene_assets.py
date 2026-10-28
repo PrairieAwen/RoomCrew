@@ -110,6 +110,19 @@ DEFINITIONS: dict[str, dict[str, Any]] = {
 }
 
 
+GEOMETRY_ART = {
+    "desk": "workstation",
+    "security": "workstation",
+    "chair": "chair",
+    "sofa": "sofa",
+    "meeting": "meeting",
+    "tea_table": "tea_table",
+    "screen": "screen",
+    "archive": "archive",
+    "bookcase": "bookcase",
+}
+
+
 def opaque(value: int) -> int:
     """因为低透明边缘不能把相邻方向连在一起，需要只在测量时使用明确轮廓。"""
     # 1、只返回分析蒙版，不更改源 PNG。
@@ -136,14 +149,11 @@ def rectangles(
         return result, list(picture.size)
 
 
-def character(path: Path, manifest: dict[str, Any], work_row: int | None = None) -> dict[str, Any]:
-    """因为待命和伸手工作需要不同姿态，需要共用尺度登记坐姿地面基线、髋部和手部标记。"""
+def character(path: Path, manifest: dict[str, Any]) -> dict[str, Any]:
+    """因为八向坐姿仍供兼容回退使用，需要只登记当前有效的地面基线和接触标记。"""
     # 1、同一角色所有方向共用头部尺度，源图保持不变。
-    rects, size = rectangles(path, 4 if work_row is not None else 2)
+    rects, size = rectangles(path)
     directions = list(DIRECTIONS)
-    if work_row is not None:
-        rects = rects[work_row * 4 : work_row * 4 + 4]
-        directions = ["nw", "nw", "ne", "ne"]
     with Image.open(path) as picture:
         alpha = picture.getchannel("A")
         widths = []
@@ -167,12 +177,8 @@ def character(path: Path, manifest: dict[str, Any], work_row: int | None = None)
         sole_alpha = picture.getchannel("A")
     for direction, rect in zip(directions, rects, strict=True):
         width, height = rect[2:]
-        hip_x = width * (
-            (0.76 if direction == "nw" else 0.24) if work_row is not None else roots[direction]
-        )
-        hip_y = height * (
-            0.81 if work_row is not None else 0.78 if direction in {"n", "nw", "ne"} else 0.73
-        )
+        hip_x = width * roots[direction]
+        hip_y = height * (0.78 if direction in {"n", "nw", "ne"} else 0.73)
         lower = (
             sole_alpha.crop(
                 (rect[0], rect[1] + round(height * 0.90), rect[0] + width, rect[1] + height)
@@ -194,13 +200,6 @@ def character(path: Path, manifest: dict[str, Any], work_row: int | None = None)
                 },
             }
         )
-        if work_row is not None:
-            # 2、作者按工作原图登记双手中心，供与桌面键盘的接触误差验收；不做手部拉伸。
-            hand_x = width * (0.22 if direction == "nw" else 0.78)
-            frames[-1]["contact"]["hands"] = [
-                (hand_x - hip_x) * scale * unit,
-                (height * 0.52 - height) * scale * unit,
-            ]
     return {
         "image": "studio/assets/" + path.parent.name + "/" + path.name,
         "size": size,
@@ -389,70 +388,59 @@ def main() -> None:
         .rstrip(";")
     )
     materials = {}
+    geometry: dict[str, dict[str, dict[str, Any]]] = {}
     for kind, definition in DEFINITIONS.items():
         definition.setdefault("default_direction", definition["base_direction"])
         definition.setdefault("seat_height", 22)
-        art = definition.get("art", kind)
-        path = folder / (art + ".png")
-        if path.exists():
-            if kind in {"desk", "security"}:
-                rects, size = rectangles(path, 3, (0, 350, 697, 887))
-                rects = rects[:8]
-            else:
-                rects, size = rectangles(path)
-            order = (
-                ("s", "sw", "w", "nw", "n", "ne", "e", "se")
-                if kind in {"fridge", "cabinet", "bookcase", "archive", "coffee"}
-                else DIRECTIONS
-            )
-            views = {
-                direction: {
-                    "rect": rect,
-                    "coverage": "drawn",
-                    "ground": [0.5, 1],
-                    "seat": [0.5, 0.58 if kind == "chair" else 0.63],
-                    "keyboard": [0.56, 0.45],
-                }
-                for direction, rect in zip(order, rects, strict=True)
+        if kind in GEOMETRY_ART:
+            art = GEOMETRY_ART[kind]
+            if art not in geometry:
+                geometry[art] = calibrated_furniture(art)
+                if art == "workstation":
+                    geometry[art]["se"].update(calibrated_workstation())
+            views = geometry[art]
+            materials[kind] = {
+                "image": "../scene-v2/" + art + ".png",
+                "atlas_size": views["s"]["atlas_size"],
+                "height": definition["height"],
+                "views": views,
             }
-            if kind == "meeting":
-                for view in views.values():
-                    view["ground"] = [0.5, 0.72]
-            if kind in {"desk", "security"}:
-                # 2、操作侧地面挂点逐向登记，背面与侧面不能沿用正面桌子的固定偏移。
-                operator_ground = {
-                    "s": [0.64, 1.0],
-                    "se": [0.70, 0.85],
-                    "e": [1.02, 0.95],
-                    "ne": [0.74, 0.78],
-                    "n": [0.50, 0.76],
-                    "nw": [0.26, 0.78],
-                    "w": [-0.02, 0.95],
-                    "sw": [0.30, 0.85],
-                }
-                for direction, point in operator_ground.items():
-                    views[direction]["operator_ground"] = point
+        elif kind in ("fridge", "cabinet", "coffee"):
+            # 2、尚在使用的旧八向资源独立登记，不再先装旧图后用新图覆盖两遍。
+            path = folder / (kind + ".png")
+            rects, size = rectangles(path)
+            order = ("s", "sw", "w", "nw", "n", "ne", "e", "se")
             materials[kind] = {
                 "image": "../scene-v1/" + path.name,
                 "atlas_size": size,
                 "height": definition["height"],
-                "views": views,
+                "views": {
+                    direction: {
+                        "rect": rect,
+                        "coverage": "drawn",
+                        "ground": [0.5, 1],
+                        "seat": [0.5, 0.63],
+                        "keyboard": [0.56, 0.45],
+                    }
+                    for direction, rect in zip(order, rects, strict=True)
+                },
             }
         else:
             entry = next(item for item in old["objects"] if item["id"] == definition["legacy"])
-            views = {
-                direction: {
-                    "rect": entry["frames"][0],
-                    "coverage": "symmetric" if definition.get("rotation_symmetric") else "legacy",
-                    "ground": [0.5, 1],
-                }
-                for direction in DIRECTIONS
-            }
             materials[kind] = {
                 "image": entry["image"],
                 "atlas_size": entry["atlas_size"],
                 "height": definition["height"],
-                "views": views,
+                "views": {
+                    direction: {
+                        "rect": entry["frames"][0],
+                        "coverage": "symmetric"
+                        if definition.get("rotation_symmetric")
+                        else "legacy",
+                        "ground": [0.5, 1],
+                    }
+                    for direction in DIRECTIONS
+                },
             }
     # 3、只有内容 ID 匹配的内置角色附加新坐姿，用户原素材和帧号不变。
     library = AvatarLibrary(ROOT / ".cache/scene-art-fingerprints")
@@ -464,9 +452,6 @@ def main() -> None:
             folder / f"seated-{role}.png", library.asset(asset["id"])["manifest"]
         )
         people[asset["id"]]["role"] = role
-        people[asset["id"]]["working"] = character(
-            folder / "working-v3.png", library.asset(asset["id"])["manifest"], row
-        )
         people[asset["id"]]["paired"] = paired_character(
             folder.parent / "scene-v2/paired-chair-v2.png",
             library.asset(asset["id"])["manifest"],
@@ -516,15 +501,7 @@ def main() -> None:
             "policy": "缺动作可复用兼容姿态；缺接触不能宣称适配；坐姿不能回退站姿",
         },
     }
-    # 4、默认桌向先接入通过轴线检查的新美术，其他方向维持真实旧资源与覆盖声明。
-    rebuilt = calibrated_workstation()
-    workstation_views = calibrated_furniture("workstation")
-    for kind in ("desk", "security"):
-        value["materials"][kind]["views"].update(workstation_views)
-        value["materials"][kind]["views"]["se"].update(rebuilt)
-    for kind in ("chair", "sofa", "meeting", "tea_table", "screen", "archive", "bookcase"):
-        value["materials"][kind]["views"].update(calibrated_furniture(kind))
-    # 5、两端读取同一份 JSON，浏览器脚本只是完全相同内容的只读包装。
+    # 4、两端读取同一份 JSON，浏览器脚本只是完全相同内容的只读包装。
     content = json.dumps(value, ensure_ascii=False, separators=(",", ":"))
     (folder / "catalog.json").write_text(content, "utf-8")
     (folder / "catalog.js").write_text("window.ROOMCREW_SCENE_ASSETS=" + content + ";\n", "utf-8")

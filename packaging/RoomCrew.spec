@@ -6,11 +6,10 @@ from pathlib import Path
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules, copy_metadata
 
 project = Path(SPECPATH).parent
-# 1、历史原图与三维制作底稿留在源码；发行包含运行时目录，不携带制作端网格与参考画布。
+# 1、发行只排除仍用于制作的三维底稿；已废弃资源不保留为另一套运行路径。
 ui_root = project / 'desktop/ui'
 datas = [(str(path), str(Path('desktop/ui') / path.relative_to(ui_root).parent))
          for path in ui_root.rglob('*') if path.is_file()
-         and 'office-v1' not in path.relative_to(ui_root).parts
          and path.parent != ui_root / 'studio/assets/scene-v2/source']
 datas += [(str(project / '.cache/python-runtime'), 'python-runtime')]
 datas += [(str(project / 'doc/assets/crew-avatar-example'), 'materials/crew-avatar-example')]

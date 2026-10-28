@@ -1,34 +1,31 @@
 # RoomCrew
 
-最新素材为统一投影兼容预览：八类家具八向、四角色配套工作和六帧起坐；参见 `doc/architecture/0020-unified-projection-assets.md`。原画、底稿、提示词与已知缺失保存在 `desktop/ui/studio/assets/scene-v2/`，尚不是全部动作和接触均完成的最终美术包。
+## 统一启动入口
 
-后续人物、家具与动作统一按 [素材制作规范 v1.0](doc/assets/asset-production-standard/README.md) 制作；[图解阅读版](doc/assets/asset-production-standard/guide.html) 包含统一相机、八方向投影、接触点、逐帧衔接与放行条件。规范和模板已建立，现有原图尚未按此重制或取得合格结论。
+所有会话在本项目根目录运行 `./start.ps1`。它只读取 `packaging/active-release.json`，明确选择程序版本和数据目录，不按目录时间或历史文档猜测。
 
-当前工位交互以 [ADR-0019](doc/architecture/0019-paired-chair-interactions.md) 为准：四套人物配套椅子、六帧起坐、椅子后移/推回、独立键盘与鞋底交接。标准预设限定在匹配人物和座高 22 的椅子；不代表任意自制家具已自动适配。源码与发行验证见 [素材验收](doc/development/scene-assets-validation.md)。
+```powershell
+# 只查看当前选定的程序与数据目录，不启动窗口。
+./start.ps1 -Check
+# 启动当前统一版本；同数据目录的重复启动由应用单实例锁阻止。
+./start.ps1
+```
 
-本轮新版为 `dist/RoomCrew-interaction-preview/RoomCrew.exe`，完整包为 `dist/RoomCrew-interaction-preview-windows-x64.zip`。旧正式窗口不能正常激活关闭，已保留原程序；预览使用 `.cache/paired-chair-showcase` 独立数据，不复制真实 Key 或旧会话。顶部点“会议室”可切全画布。
+当前程序以活动发行清单为准，默认数据为 `.cache/asset-v2-showcase`。这是四角色素材验证数据，和用户正式数据、其他历史预览目录分开。需要指定已有数据时显式使用 `./start.ps1 -DataDir '绝对路径'`；脚本不会复制 Key 或迁移数据库。当前包缺失会报错，不改用旧版本。成功执行 `packaging/publish.ps1` 后会更新活动发行清单，并保留原数据目录。
 
-最新办公室视觉修正见 [ADR-0018](doc/architecture/0018-coherent-office-art.md)：统一相对比例，工作使用独立伸手姿态，校准桌椅遮挡并增加手绘窗景、暖色地砖与织物地毯。当前正式程序位置仍为 `dist/RoomCrew/RoomCrew.exe`；下方 scene-preview 是上一轮预览记录。
+常规发行位于 `dist/RoomCrew`；其他 `dist/RoomCrew-*-preview` 为历史独立快照，不会随源码自动更新。所有会话按活动清单启动，避免打开不同版本。
 
-最新可配置素材见 [ADR-0017](doc/architecture/0017-configurable-scene-assets.md)：设备八方向、旋转占地、人物臀部/脚底接触与四沙发茶几布景。“布置会议室”可改方向和座高，“素材总览”可逐向查看。新坐姿为方向接触关键帧，完整八向动作动画仍需继续补充。
+## 当前实现与设计入口
 
-本轮独立预览位于 `dist/RoomCrew-scene-preview/RoomCrew.exe`，压缩包为 `dist/RoomCrew-scene-preview-windows-x64.zip`；原 `dist/RoomCrew` 保留。检查结果与启动数据说明见 [素材验收](doc/development/scene-assets-validation.md)。
+RoomCrew 是 Windows 本地工作空间原型：多会议室、人物与家具、Agent 定义、会话轨迹、文件产物与人工问答。底层只有 Deep Agents 一套生产循环，桌面单向消费轨迹；安全 VM 尚未接入。
 
-办公朝向、动作过渡和新版整齐布局见 [ADR-0014](doc/architecture/0014-physical-office-interactions.md)。工作面向显示器，手机/汇报可转向用户；只升级未自定义的旧默认模板。
+本轮整理见 [ADR-0021](doc/architecture/0021-runtime-refactoring.md)：主子 Agent 统一工厂装配、模型连接生命周期、成员批量读取及废弃资源清理；包含兼容验证和下一步通用 Runtime 升级顺序。完整主题索引见 [开发指导](doc/README.md)，历史设计和验收保留在 doc/。
 
-桌前座点和穿桌修正见 [ADR-0015](doc/architecture/0015-office-contact-correction.md)：人物走格心、避开空椅，坐在桌前膝部空位，电脑工作可临时借用空工位；无显示器处不会继续播放打字。
-
-默认桌子和监管员已统一视觉：同款浅木色桌型、单屏监管台、直立坐姿及相同工作方向，见 [ADR-0016](doc/architecture/0016-office-art-alignment.md)。
-
-属于你的会议室，一群陪你做事的伙伴。
-
-本版采用白底阅读界面、统一人物体型与家具接触点；顶部可直接新建独立工作区。Agent 只委派本空间已配置名单，同一成员不能并发克隆，跨会议室不共享任务上下文。档案室已有设施入口，归档、习惯提取与跨空间记忆尚未启用。详见 [ADR-0011](doc/architecture/0011-coherent-studio-and-workspace-roster.md)，其现行规则覆盖下文旧外援说明。
-
-当前是 Windows 本地工作空间原型：铺满客户区的 2.5D 场景、连续走跑/表情/起坐、可导入角色图集、人物与 Agent 定义、事项与按需轨迹，以及保留的完整会话视图。底层仍真实运行 Deep Agents，配置、历史和实际产物保存在本机；安全 VM 尚未接入。
+当前素材为统一投影兼容预览：八类家具八向、四角色配套工作和六帧起坐，见 [ADR-0020](doc/architecture/0020-unified-projection-assets.md)。后续按 [素材规范](doc/assets/asset-production-standard/README.md) 和 [图解版](doc/assets/asset-production-standard/guide.html) 制作；全动作、全部骨点及专业美术仍需验收。
 
 ## Windows 用户验证
 
-构建结果位于 `dist/RoomCrew/RoomCrew.exe`；对外传递使用完整的 `dist/RoomCrew-0.1.0-windows-x64.zip`。解压后双击 exe，保留 `_internal` 文件夹，不需要安装 Python 或启动后端。
+本仓库验证请使用根 `start.ps1`。常规构建/发布会产生 `dist/RoomCrew/RoomCrew.exe` 与 `dist/RoomCrew-0.1.0-windows-x64.zip`，成功后切换统一启动清单；独立预览有各自的打包快照。对外传递时使用选定发行的完整 ZIP，解压后双击 exe，保留 `_internal` 文件夹，不需要安装 Python 或启动后端。
 
 系统前提：Windows x64、WebView2 Runtime、.NET Framework 4.8。首版尚未签名或提供安装器；先在当前机器做真实模型验收，再验证全新机器分发兼容性。
 
@@ -44,7 +41,7 @@
 
 辅助模型旁白默认关闭。如需使用，在模型配置中选择“辅助旁白模型”单独填写，再勾选开关；它只接收活动数量等最小事实，超时回到规则动作，不使用执行模型 Key 兜底，也不能改变任务事实或代替用户答复。
 
-人物属性可设置最多四项空闲活动，默认手机、游戏、散步、同事闲聊；浇花和自绘休闲可作为替换项。首次空闲等待 0—120 秒，选定活动后每 **5–10 分钟随机轮换**。接单、派工或点击人物立即停止；假聊天不调用模型、不写消息。监管员保持值守。委派给已配置成员时，同任务人物集合站会；通用外援只展示轨迹，主 Agent 显示电话联系外援。临时视觉移动不改变持久化座位或执行进度。
+人物属性可设置最多四项空闲活动，默认手机、游戏、散步、同事闲聊；浇花和自绘休闲可作为替换项。首次空闲等待 0—120 秒，选定活动后每 **5–10 分钟随机轮换**。接单、派工或点击人物立即停止；假聊天不调用模型、不写消息。监管员保持值守。委派给已配置成员时，同任务人物集合站会；无形象的已配置 Agent 仅展示轨迹。临时视觉移动不改变持久化座位或执行进度。
 
 顶部“素材总览”提供四套可选形象（阿晨、小禾、小岚、监管员），共 496 个登记姿态，每套覆盖 20 种动作语义和 5 种闲置表情；可切换变体、暂停逐帧并检查真实覆盖矩阵。在人物属性选择角色后“导入完整角色”，保存才绑定，不自动覆盖原人物。另备齐 12 件家具、16 件装饰和 8 组四帧特效，常用家具与灯/咖啡机已接入房间，其余装饰和特效按总览详情标明用途。完整目录、约束与美术缺口见 `desktop/ui/studio/assets/library-v1/README.md`；专业逐帧精修与所有方向/站坐/表情组合仍待完善。
 
@@ -122,7 +119,7 @@ $env:UV_PYTHON_INSTALL_DIR = Join-Path (Get-Location) '.tools/python'
 & .\.tools\bootstrap\Scripts\uv.exe sync --locked --all-groups
 ```
 
-开发前先读 [开发指导](doc/README.md)；当前后端方案见 [通用 Agent 与调度设计](doc/architecture/multi-agent-runtime.html)。详细步骤见 [环境说明](doc/development/environment.md)，选型见 [Deep Agents 决定](doc/architecture/0001-deepagents.md)。
+开发前先读 [开发指导](doc/README.md)；当前后端扩展点与升级顺序见 [ADR-0021](doc/architecture/0021-runtime-refactoring.md)。详细步骤见 [环境说明](doc/development/environment.md)，选型见 [Deep Agents 决定](doc/architecture/0001-deepagents.md)。
 每次完成改动后，按 [项目规范](AGENTS.md) 更新 [变更日志](changelog/)，在当天 YYYYMMDD.md 中按 HHmm-标题简短说明改了什么。
 
 ## 源码运行、验证和打包
@@ -160,4 +157,4 @@ node desktop/tests/web/markdown.test.cjs
 
 打包先在 `.cache/` 构建完整候选，成功后再发布。若当前 RoomCrew 正在运行，发布会拒绝替换并保留候选；关闭程序后可用 `packaging/publish.ps1 -Candidate <候选目录>` 发布，无需再次构建。
 
-受限运行环境若阻止 Windows asyncio 的本地套接字初始化，需要在允许本机网络的终端运行测试；不要为了让测试通过修改生产 Loop。本次已使用用户保存配置完成真实模型端到端验收，包含委派、Skills、MCP、Python、日记与人工恢复；具体结果及边界见 [底座验收](doc/development/agent-foundation-validation.md)。
+受限运行环境若阻止 Windows asyncio 的本地套接字初始化，需要在允许本机网络的终端运行测试；不要为了让测试通过修改生产 Loop。此前真实服务验收见 [底座验收](doc/development/agent-foundation-validation.md)。本次整理使用本机合成模型验证，未读取用户真实 Key；兼容与发行检查见 ADR-0021。

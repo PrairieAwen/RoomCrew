@@ -86,6 +86,7 @@
 - storage/：产品 SQLite 与框架 checkpoint 分开管理；tracing/ 与 contracts/ 保存稳定产品语义。
 - 根 desktop/src/roomcrew_desktop 通过应用用例、产品合同和资源定位交互；表现缓存和布局由桌面独立管理。platform/ 定位本机路径，不承担界面业务。
 - 新能力在所属包实现，在应用装配点接入；不得为了扩展工具去修改 SDK 源码或复制生产 Loop。
+- ADR-0021：application/components.AgentLoopFactory 统一按次装配主子 Agent，execution 只管理运行生命周期；锁和 MCP 发现缓存不得跨 Run 全局共享。临时模型使用 models.factory.model_session 统一释放连接，成员绑定复用本次读取快照；新增能力不复制角色专属执行路径。
 - backend/tests/test_layers.py 检查实际导入方向；修改依赖规则必须同步说明职责变化，不能为消除报错随意放开。
 
 ## 4. 技术与产品事实
@@ -119,6 +120,9 @@
 - 默认不外发 tracing；.env 与本地数据不能提交。
 
 ## 6. 环境与协作
+
+- “启动项目 / 启动最新版”的唯一入口是根 start.ps1；先运行 start.ps1 -Check，按 packaging/active-release.json 返回的程序和数据目录启动或激活对应窗口。不得从历史 README、验收记录、目录名称或文件修改时间猜测发行版；当前同一路径已运行则复用，不强制结束旧窗口。
+- 程序版本与数据目录分别维护；预览数据不等于用户正式数据，不擅自复制密钥或迁移会话。当前程序以活动清单为准，数据为 .cache/asset-v2-showcase；正常 publish.ps1 发布成功会切换入口并保留原数据目录。历史发行仅供明确指定时复查，不作为自动回退。
 
 - 基线 Python 3.13.17、uv 0.13.5、Deep Agents 0.7.32；实际依赖以 uv.lock 为准。
 - 优先使用 .tools/bootstrap/Scripts/uv.exe，避免系统旧版本 uv 与 Python 3.9 混入。

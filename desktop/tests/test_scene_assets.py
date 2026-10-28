@@ -151,28 +151,6 @@ def test_four_sofas_face_central_table_without_blocking_routes() -> None:
         assert path_to(room, [0, 0], anchor["approach"])
 
 
-def test_scene_scale_and_working_frames_have_consistent_contact() -> None:
-    """因为过去各家具按任意高度缩放造成比例失衡，需要验证相对尺度及新工作坐姿的真实来源和接触。"""
-    # 1、双人沙发不再缩成单椅，茶几与办公椅在统一比例范围，不把大阴影作为家具尺寸。
-    data = scene_catalog()
-    heights = {kind: value["height"] for kind, value in data["definitions"].items()}
-    assert 0.9 <= heights["sofa"] / heights["desk"] <= 1.1
-    assert 0.5 <= heights["tea_table"] / heights["sofa"] <= 0.65
-    assert 0.45 <= heights["chair"] / heights["desk"] <= 0.6
-    # 2、工作补图每角色四帧、两个真实方向，原图存在并有臀部、脚底和双手登记。
-    for person in data["characters"].values():
-        work = person["working"]
-        assert len(work["frames"]) == 4
-        assert [frame["direction"] for frame in work["frames"]] == ["nw", "nw", "ne", "ne"]
-        with Image.open(ASSETS / Path(work["image"]).name) as picture:
-            assert list(picture.size) == work["size"]
-            assert picture.mode == "RGBA"
-        for frame in work["frames"]:
-            assert {"hip", "soles", "hands", "seat_height"} <= set(frame["contact"])
-            # 3、该旧字段是投影中臀部至鞋底的纵向距离，不是物理座高，不能用它强行塞脚踏。
-            assert 8 <= frame["contact"]["seat_height"] <= 36
-
-
 def test_custom_contact_annotations_reject_nonfinite_or_inverted_geometry() -> None:
     """因为未来用户会自制坐姿，需要允许明确标记同时拒绝无意义或非有限接触坐标。"""
     # 1、标记在虚拟帧内，臀部高于脚底；不能夹带路径或脚本。

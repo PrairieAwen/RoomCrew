@@ -70,10 +70,13 @@ class PrivateChatModel(BaseChatModel):
     async def close(self) -> None:
         """因为每轮创建独立模型连接，需要在任务结束后关闭 HTTP 连接池，避免累积句柄。"""
         # 1、只有工厂返回的根代理拥有连接，工具绑定副本不重复关闭共享客户端。
-        if self._clients:
-            self._clients[0].close()
-            await self._clients[1].aclose()
-            self._clients = None
+        clients, self._clients = self._clients, None
+        if clients:
+            try:
+                clients[0].close()
+            finally:
+                # 2、同步关闭失败也释放异步连接；先移除所有权，重复关闭不再次操作同一连接池。
+                await clients[1].aclose()
 
     def _generate(
         self,

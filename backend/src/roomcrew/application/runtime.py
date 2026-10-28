@@ -1,4 +1,4 @@
-"""桌面应用用例门面；不包含图构建、SDK 事件解析或文件路径算法。"""
+"""通用工作空间运行用例门面；不包含图构建、SDK 事件解析或客户端表现。"""
 
 import asyncio
 from typing import Any
@@ -214,13 +214,10 @@ class Runtime:
     async def generate_auxiliary(self, text: str) -> str:
         """因为客户端可能需要独立辅助文本，需要通过可信工厂调用单独模型并只返回字符串。"""
         # 1、只接受有界文本，模型配置不进入客户端对象或任务上下文。
-        from roomcrew.models.factory import create_model
+        from roomcrew.models.factory import model_session
 
         if not isinstance(text, str) or len(text) > 6000:
             raise ValueError("辅助文本请求超出限制")
-        model = create_model(self._aux_config.require_profile())
-        try:
+        async with model_session(self._aux_config.require_profile()) as model:
             reply = await model.ainvoke(text, max_tokens=160)
             return reply.content if isinstance(reply.content, str) else ""
-        finally:
-            await model.close()

@@ -134,9 +134,11 @@ class WorkspaceHub:
         result = await getattr(runtime, method)(*args)
         # 2、只给画布和概览添加普通空间身份；业务事件和产物依旧保存在各自目录。
         if method == "overview":
-            result = {**result, "workspace": self.repository.get(identifier)}
-        if method == "overview":
-            result["workspaces"] = (await self.state())["workspaces"]
+            result = {
+                **result,
+                "workspace": self.repository.get(identifier),
+                "workspaces": (await self.state())["workspaces"],
+            }
         return result
 
     async def _global_busy(self) -> bool:

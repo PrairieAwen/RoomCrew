@@ -11,7 +11,7 @@
 - 构建组 PyInstaller 6.22.3；Ruff、mypy、pytest 已用于 V1 会话版验证。
 
 所有项目工具 / 缓存 / 环境目录均 Git 忽略，不替换系统 Python，不改全局 PATH / 注册表。
-pyproject 的 package=false 表示使用源码和明确的冻结入口，不安装全局 RoomCrew 包。源码入口为 packaging/desktop_entry.py，发行入口为 dist/RoomCrew/RoomCrew.exe。
+pyproject 的 package=false 表示使用源码和明确的冻结入口，不安装全局 RoomCrew 包。源码入口为 packaging/desktop_entry.py；项目日常启动统一使用根 start.ps1，以 packaging/active-release.json 选择实际发行程序及数据目录，不直接按历史记录打开 dist/RoomCrew/RoomCrew.exe。
 
 ## PyCharm
 
