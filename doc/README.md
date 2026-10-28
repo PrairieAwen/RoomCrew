@@ -4,6 +4,8 @@
 
 ## 当前实现基线
 
+从图开始了解 Agent 后端：[当前架构图解](architecture/agent-runtime-map.html)。包含整体分层、定义与 Run、主子协作、上下文、能力接入、人工恢复、轨迹/checkpoint 及生命周期八张离线矢量图，并标明对应源码和当前边界。
+
 | 主题 | 当前依据 | 适用范围 |
 | --- | --- | --- |
 | 执行底座与扩展点 | [ADR-0021：底座整理](architecture/0021-runtime-refactoring.md)、[ADR-0009：Agent 能力](architecture/0009-agent-foundation.md) | 唯一 Deep Agents 循环、能力装配、模型资源与后续升级顺序 |
@@ -24,6 +26,7 @@
 - 当前整理与兼容检查：[ADR-0021 验证记录](architecture/0021-runtime-refactoring.md#5-验证记录)。
 - Agent / Skills / MCP / Python / 人工恢复：[底座验收](development/agent-foundation-validation.md)。
 - 模型表单：[配置验收](development/model-settings-validation.md)；空间隔离：[工作区验收](development/workspace-validation.md)。
+- 角色点击开启对话、右上角团队配置及简化画布入口：[当前交互验收](development/studio-validation.md#2026-10-28角色对话与简化画布入口)。
 - 场景、素材与原生截图：[素材验收](development/scene-assets-validation.md)；其他历史记录保留在 development/。
 - 常用检查、源码运行和打包命令统一见根 README.md，不在每篇文档复制一套。
 

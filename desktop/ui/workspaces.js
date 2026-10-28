@@ -70,8 +70,6 @@ class CrewWorkspaces {
         }
         el("workspace-name").textContent =
             state.workspace?.name || "我的工作空间";
-        el("room-name").textContent =
-            `${state.workspace?.name || "工作空间"} · 会议室`;
     }
 
     /** 因为用户切换房间时旧任务仍在执行，需要只请求改变活动空间并隔离迟到界面响应。 */

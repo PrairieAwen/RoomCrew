@@ -83,6 +83,7 @@
         )
             throw new Error("raw trace loaded without selection");
         window.__studioStage = "form";
+        el("workspace-options").open = true;
         el("toggle-team").click();
         el("add-member").click();
         el("member-name").value = "窗口资料员";
@@ -244,6 +245,10 @@
         document
             .querySelector('[data-member="assistant"].crew-avatar')
             .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+        if (!document.body.classList.contains("conversation-open") ||
+            document.body.classList.contains("team-open") ||
+            el("task-member").value !== "assistant")
+            throw new Error("character click did not open direct chat");
         el("anchor-target").value = "sofa";
         await studio.moveSelected();
         if (studio.renderer.motion.actors.get("assistant").route.length === 0)
@@ -257,6 +262,7 @@
         await until(saved);
         closeSettings();
         await newConversation();
+        studio.roomMode();
         el("prompt").value = "@窗口资料员 先询问我的心情，再保存给定记录";
         el("composer").requestSubmit();
         await until(waiting);
@@ -293,7 +299,7 @@
         form.requestSubmit();
         await until(completed);
         el("close-questions").click();
-        // 3、完成提示经用户点击后才恢复生活，再点击员工中止摸鱼并展开真实轨迹。
+        // 3、完成提示恢复生活，角色点击回到对话；原始人物轨迹仍从显式团队配置入口展开。
         window.__studioStage = "resume-leisure";
         await studio.refresh();
         studio.renderer.views.get(member.id).bubbleButton.click();
@@ -302,6 +308,11 @@
         document
             .querySelector('[data-member="' + member.id + '"].crew-avatar')
             .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+        if (el("task-member").value !== member.id || document.body.classList.contains("team-open"))
+            throw new Error("selected employee did not remain a chat recipient");
+        el("workspace-options").open = true;
+        el("toggle-team").click();
+        el("team-list").querySelector(`[data-member="${member.id}"]`).click();
         await studio.traceTab();
         await new Promise(pause);
         if (!el("member-trace").textContent.includes("human.requested"))

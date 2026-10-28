@@ -363,16 +363,6 @@ button.workspace-card.selected small {
     gap: 10px;
     margin: 4px 0 16px;
 }
-.room-name {
-    color: #605a4a;
-    font-size: 12px;
-    padding: 8px;
-    max-width: 260px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
 /* 会话停靠在右侧；世界仍铺满窗口，用户按需打开团队面板。 */
 .studio-mode.conversation-open #timeline {
     display: block;

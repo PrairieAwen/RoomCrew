@@ -100,13 +100,19 @@
                         <button id="view-room">会议室</button
                         ><button id="view-chat">会话</button>
                     </div>
-                    <button
-                        id="toggle-team"
-                        class="drawer-toggle"
-                        aria-expanded="false"
-                    >
-                        ♧ 我的团队</button
-                    ><button id="show-questions" class="question-button">
+                    <details id="workspace-options" class="workspace-options">
+                        <summary aria-label="更多选项" title="更多选项">⋯</summary>
+                        <div class="workspace-options-menu">
+                            <button
+                                id="toggle-team"
+                                class="drawer-toggle"
+                                aria-expanded="false"
+                            >
+                                ♧ 我的团队
+                            </button>
+                        </div>
+                    </details>
+                    <button id="show-questions" class="question-button">
                         待答复 <b id="pending-count">0</b></button
                     ><button id="toggle-details" class="quiet-button">
                         详情 ☷
@@ -132,9 +138,7 @@
                                 <button id="asset-library-open">
                                     ▧ 素材总览
                                 </button>
-                                <span id="room-name" class="room-name"
-                                    >会议室</span
-                                ><button id="layout-toggle">⌘ 布置会议室</button
+                                <button id="layout-toggle">⌘ 布置会议室</button
                                 ><button id="furniture-add" hidden>
                                     ＋ 家具
                                 </button>
@@ -144,13 +148,13 @@
                             <svg
                                 id="room-canvas"
                                 viewBox="-520 -170 1160 800"
-                                aria-label="2.5D 办公室，点击人物查看事项与轨迹"
+                                aria-label="2.5D 办公室，点击人物开启对话"
                             ></svg>
                         </div>
                         <div class="scene-footer">
                             <span id="layout-hint"
                                 >拖动空地平移 · 滚轮缩放 ·
-                                点击人物查看事项</span
+                                点击人物开启对话</span
                             >
                             <div>
                                 <button

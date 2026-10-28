@@ -148,8 +148,8 @@
         el("workspace-title").value = "乙会议室";
         el("workspace-form").requestSubmit();
         await until(renamed);
-        if (el("room-name").textContent !== "乙会议室 · 会议室")
-            throw new Error("room title did not update");
+        if (el("workspace-name").textContent !== "乙会议室" || el("room-name"))
+            throw new Error("workspace header or simplified scene tools incorrect");
         window.__workspaceSmoke = {
             ok: true,
             workspaces: 2,

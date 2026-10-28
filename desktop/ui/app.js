@@ -392,13 +392,16 @@ async function sendTask(event) {
                 );
             member = matches[0].id;
         }
+        const conversation = state.conversation;
         const result = await api(
             "submit",
-            state.conversation.id,
+            conversation.id,
             text,
             crypto.randomUUID(),
             member,
         );
+        // 4、只缓存真实受理的对话与最终接单人，历史切换不能改写这次发送的关联。
+        studio.rememberConversation(member, conversation);
         state.run = result.run_id;
         el("prompt").value = "";
         await loadEvents();

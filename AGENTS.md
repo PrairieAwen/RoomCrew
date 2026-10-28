@@ -8,6 +8,7 @@
 - V1 包括用户模型配置入口、真实 Deep Agents 执行、同会话主子 Agent 轨迹、文件产物和独立 exe 打包验证。
 - 当前用户进一步授权 Agent 配置、Skills、HTTP MCP 与隔离 Python 执行；最新范围和边界按 doc/architecture/0009-agent-foundation.md 执行。浏览器、Shell、Computer Use 和安全 VM 尚未开放。
 - 表现协议单向消费已提交轨迹；人物动作、旁白及动画回调不能决定任务结果或批准工具。新增表现能力不能成为执行器的前置依赖。
+- 桌面角色点击进入与该可执行 Agent 的对话并选定接单人，不自动发送任务或创建空会话；团队配置只从右上角“⋯ → 我的团队”进入。墙面不显示 RoomCrew 字样，场景工具栏不重复展示空间名；顶部及左侧保留空间身份。
 - 当前已有原始 main.py 是用户的 PyCharm 示例，保留原样；不要把它当正式入口。
 - 开发规则统一维护在根 AGENTS.md，不在前后端重复复制；先读本文与 README.md。
 - 实现前阅读 doc/README.md 与相关指导章节；历史自建 Rust Loop 方案已由 Deep Agents 决定覆盖，不照搬旧目录和环境版本。

@@ -9,6 +9,45 @@
     --muted: #667385;
     --accent: #315d91;
 }
+.workspace-options {
+    position: relative;
+    flex-shrink: 0;
+}
+.workspace-options summary {
+    list-style: none;
+    padding: 3px 12px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: var(--surface-soft);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 22px;
+    line-height: 26px;
+}
+.workspace-options summary::-webkit-details-marker {
+    display: none;
+}
+.workspace-options summary:focus-visible {
+    outline: 2px solid #6c93c2;
+    outline-offset: 3px;
+}
+.workspace-options-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 60;
+    min-width: 150px;
+    padding: 6px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px #20304818;
+}
+.workspace-options-menu .drawer-toggle {
+    display: block;
+    width: 100%;
+    text-align: left;
+}
 body,
 .studio-mode {
     background: var(--bg);
@@ -199,7 +238,6 @@ textarea::placeholder,
 kbd,
 .quiet-button,
 .material-preview small,
-.room-name,
 .detail-section p,
 .agent-abilities small {
     color: var(--muted);

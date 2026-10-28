@@ -18,7 +18,7 @@ function crewVisibleMember(member) {
 }
 
 class CrewRenderer {
-    /** 因为场景需要独立生命周期，需要只注入人物选择与家具点击两个用户回调。 */
+    /** 因为场景不能自行访问会话和配置，需要注入角色对话、家具操作与泡泡查看回调。 */
     constructor(
         svg,
         selectMember,
@@ -286,7 +286,6 @@ class CrewRenderer {
         this.zoneRug(floor, room, ["sofa"], "#ead6b5");
         this.environment.drawWalls(floor);
         this.environment.drawWindows(floor);
-        this.label(floor, [6, 1], "RoomCrew", -170);
         this.world.append(floor, this.depth, this.bubbles);
         for (const obj of room.objects) this.drawObject(obj);
     }
@@ -666,9 +665,9 @@ class CrewRenderer {
             this.collaboration.engage(identifier, performance.now());
     }
 
-    /** 因为人物点击用于展开轨迹，需要把稳定身份交给界面控制层。 */
+    /** 因为点击角色应开启与该 Agent 的对话，需要把稳定身份交给界面控制层。 */
     memberClick(event) {
-        // 1、只改变观察对象，默认不发任何任务。
+        // 1、停止空闲表演并选择对话对象，点击本身不提交任务。
         this.selected = event.currentTarget.dataset.member;
         this.engage(this.selected);
         this.selectMember(this.selected);

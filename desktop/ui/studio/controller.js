@@ -16,9 +16,11 @@ class CrewStudio {
         this.traceMember = null;
         this.memberRevision = 0;
         this.initialized = false;
+        this.directConversations = new Map();
+        this.talkGeneration = 0;
         this.renderer = new CrewRenderer(
             el("room-canvas"),
-            this.selectMember.bind(this),
+            this.talkToMember.bind(this),
             this.objectClick.bind(this),
             crewLoadAvatar,
             this.openConversation.bind(this),
@@ -125,6 +127,7 @@ class CrewStudio {
         // 1、界面只丢弃显示状态，不取消旧空间的真实任务。
         this.cursor = 0;
         this.refreshGeneration += 1;
+        this.talkGeneration += 1;
         this.data = null;
         this.selected = null;
         this.tab = "tasks";
@@ -140,6 +143,7 @@ class CrewStudio {
         el("member-trace").replaceChildren();
         el("team-list").replaceChildren();
         el("task-member").replaceChildren();
+        el("workspace-options").open = false;
         document.body.classList.remove("team-open", "layout-edit");
         this.renderer.resetWorkspace();
         this.materials.skins = this.renderer.skins;
@@ -304,11 +308,12 @@ class CrewStudio {
         this.renderer.focusMember(this.selected);
     }
 
-    /** 因为轨迹需要用户主动点击人物，需要记录观察对象并默认展开事项页。 */
-    selectMember(identifier) {
-        // 1、换人时清空旧游标，迟到的查询不能混入新人物。
-        document.body.classList.add("team-open");
-        el("toggle-team").setAttribute("aria-expanded", "true");
+    /** 因为角色对话和团队配置共用身份选择，需要由入口明确决定是否展开配置面板。 */
+    selectMember(identifier, openTeam = true) {
+        // 1、换人时清空旧游标；角色点击不展开配置，显式团队入口才打开。
+        document.body.classList.toggle("team-open", openTeam);
+        el("toggle-team").setAttribute("aria-expanded", String(openTeam));
+        if (openTeam) document.body.classList.remove("conversation-open");
         this.selected = identifier;
         this.renderer.selected = identifier;
         this.tab = "tasks";
@@ -317,6 +322,61 @@ class CrewStudio {
         el("member-trace").replaceChildren();
         this.renderTeam();
         this.renderSelection();
+    }
+
+    /** 因为点击角色意味着与其交流，需要打开独立对话草稿并准确选定接单 Agent。 */
+    async talkToMember(identifier) {
+        // 1、基础设施与停用成员不能伪装成可执行 Agent，不创建任务或打开配置表单。
+        if (state.switching || state.sending) {
+            this.renderer.selected = this.selected;
+            toast("正在切换空间或发送任务，请稍后再选择对话对象。");
+            return false;
+        }
+        const member = this.data?.members.find(crewIdMatches, identifier);
+        if (!member || !member.agent_id || !member.enabled || member.archived) {
+            this.renderer.selected = this.selected;
+            toast(
+                member?.role === "guardian"
+                    ? "监管员是安全服务入口，当前尚未接入对话。"
+                    : "该成员目前不能接单，可在右上角的我的团队中配置。",
+            );
+            return false;
+        }
+        const epoch = state.workspaceEpoch;
+        const generation = ++this.talkGeneration;
+        // 2、只复用当前窗口中向该成员发起的会话，不把其参与的其他主 Agent 任务当成私聊。
+        this.selectMember(identifier, false);
+        el("workspace-options").open = false;
+        el("task-member").value = identifier;
+        const conversation =
+            this.directConversations.get(`${state.workspace.id}:${identifier}`) || null;
+        if (state.conversation?.id !== conversation?.id)
+            resetConversation(conversation);
+        if (!conversation) el("chat-title").textContent = `与 ${member.name} 对话`;
+        try {
+            await this.chatMode(true);
+            // 3、点击本身不落库空会话；发送时才创建，迟到回调不能抢新人物或新空间焦点。
+            if (
+                generation !== this.talkGeneration ||
+                epoch !== state.workspaceEpoch
+            )
+                return false;
+            el("prompt").focus();
+            return true;
+        } catch (error) {
+            showError(error);
+            return false;
+        }
+    }
+
+    /** 因为再次点击同一角色应能回到已发送的对话，需要仅缓存真实受理后的空间与成员关联。 */
+    rememberConversation(identifier, conversation) {
+        // 1、只保留本窗口的普通会话引用；历史持久化仍由原有后端负责。
+        if (state.workspace && conversation?.id)
+            this.directConversations.set(`${state.workspace.id}:${identifier}`, {
+                id: conversation.id,
+                title: conversation.title,
+            });
     }
 
     /** 因为人物事项和执行轨迹不同，需要分别展示状态摘要和显式展开的事件列表。 */
@@ -433,6 +493,7 @@ class CrewStudio {
         // 1、主动切换后才开始订阅全会话原始日志。
         document.body.classList.add("conversation-open");
         document.body.classList.remove("team-open");
+        el("toggle-team").setAttribute("aria-expanded", "false");
         try {
             await loadEvents();
             await refreshArtifacts();
@@ -938,11 +999,13 @@ class CrewStudio {
         el("toggle-workspace").setAttribute("aria-expanded", String(open));
     }
 
-    /** 因为团队面板不应固定挤占画布，需要由用户或人物选择显式展开。 */
+    /** 因为团队属于配置入口，需要仅通过右上角选项展开并避免与对话面板重叠。 */
     toggleTeam() {
         // 1、收起时停止按需轨迹订阅，执行器继续运行。
         const open = document.body.classList.toggle("team-open");
         el("toggle-team").setAttribute("aria-expanded", String(open));
+        el("workspace-options").open = false;
+        if (open) document.body.classList.remove("conversation-open");
     }
 
     /** 因为快捷关闭不应误操作弹窗，需要只在没有人工表单时收起悬浮抽屉。 */
@@ -952,6 +1015,7 @@ class CrewStudio {
             document.body.classList.remove("workspace-open", "team-open");
             el("toggle-workspace").setAttribute("aria-expanded", "false");
             el("toggle-team").setAttribute("aria-expanded", "false");
+            el("workspace-options").open = false;
         }
     }
 
