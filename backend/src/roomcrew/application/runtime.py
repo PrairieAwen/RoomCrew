@@ -1,11 +1,14 @@
 """通用工作空间运行用例门面；不包含图构建、SDK 事件解析或客户端表现。"""
 
 import asyncio
+from collections.abc import Callable
 from typing import Any
 
+from roomcrew.accounts.configuration import agent_configuration
 from roomcrew.accounts.service import AccountService
 from roomcrew.application.artifacts import ArtifactService
 from roomcrew.application.execution import ExecutionService
+from roomcrew.application.mcp_settings import MCPSettings
 from roomcrew.application.options import RunOptions
 from roomcrew.config.store import ConfigStore
 from roomcrew.models.connection import test_model_connection, test_presentation_connection
@@ -24,6 +27,7 @@ class Runtime:
         self.store = SessionStore(paths.data / "sessions.sqlite")
         self._account_repository = SqliteAccountRepository(paths.data / "account.sqlite")
         self.accounts = self._create_accounts()
+        self._mcp_settings = MCPSettings(paths)
         self._aux_config = ConfigStore(paths.private, "presentation-model.dpapi")
         self._checkpoints = CheckpointStore(paths.data / "runtime.sqlite")
         self._artifacts = ArtifactService(paths, self.store)
@@ -94,13 +98,45 @@ class Runtime:
         return self.accounts.repository.agent_definitions()
 
     async def save_agent_configuration(
-        self, values: dict[str, Any], expected_revision: int
+        self,
+        values: dict[str, Any],
+        expected_revision: int,
+        mcp_auth: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """因为共享定义可能被多个执行者引用，需要在空闲时按版本保存配置。"""
         # 1、保护当前和待恢复的执行快照。
         if self.active or self._execution.state.questions():
             raise ValueError("请先完成或取消当前任务，再修改 Agent 定义")
-        return self.accounts.save_agent(values, expected_revision)
+        return self._save_agent_settings(
+            values, mcp_auth, self.accounts.save_agent, expected_revision
+        )
+
+    async def test_mcp_connection(
+        self, server: dict[str, Any], auth: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        """因为 MCP 可能尚未保存或尚未填写模型，需要允许人工单独测试当前服务的工具发现。"""
+        # 1、探测对象不复用 Run 工厂，临时输入不会留在长期运行服务中。
+        return await MCPSettings(self.paths).test(server, auth)
+
+    def _save_agent_settings(
+        self,
+        values: dict[str, Any],
+        auth: dict[str, Any] | None,
+        save: Callable[[dict[str, Any], int], dict[str, Any]],
+        revision: int,
+    ) -> dict[str, Any]:
+        """因为人物和独立定义都可编辑 MCP，需要共用秘密剥离、原子保护和版本失败回滚。"""
+        # 1、没有能力编辑时保持旧配置；无关鉴权字段直接拒绝。
+        if "mcp_servers" not in values:
+            if auth:
+                raise ValueError("请同时提交 MCP 服务列表")
+            return save(values, revision)
+        servers = agent_configuration(values)["mcp_servers"]
+        # 2、凭据不可变且绑定端点，传给业务仓库的副本只有引用；上下文内无异步切换。
+        with self._mcp_settings.credentials.prepare(
+            servers, {} if auth is None else auth
+        ) as public:
+            return save({**values, "mcp_servers": public}, revision)
 
     async def submit(
         self, conversation_id: str, text: str, request_id: str, member_id: str = "assistant"
@@ -204,12 +240,17 @@ class Runtime:
         # 1、桌面组合层可以覆盖属性校验，后端不导入素材或动作模块。
         return AccountService(self._account_repository)
 
-    async def save_member(self, values: dict[str, Any], expected_revision: int) -> dict[str, Any]:
+    async def save_member(
+        self,
+        values: dict[str, Any],
+        expected_revision: int,
+        mcp_auth: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """因为 Agent 配置需要固定运行快照，需要在空闲时接受可信用户的配置修改。"""
         # 1、在途或待答复任务不切换底层定义。
         if self.active or self._execution.state.questions():
             raise ValueError("请先完成或取消当前任务，再修改成员")
-        return self.accounts.save(values, expected_revision)
+        return self._save_agent_settings(values, mcp_auth, self.accounts.save, expected_revision)
 
     async def generate_auxiliary(self, text: str) -> str:
         """因为客户端可能需要独立辅助文本，需要通过可信工厂调用单独模型并只返回字符串。"""

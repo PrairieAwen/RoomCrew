@@ -16,6 +16,7 @@ WORKSPACE_METHODS = frozenset(
         "save_agent_configuration",
         "save_configuration",
         "test_connection",
+        "test_mcp_connection",
         "new_conversation",
         "submit",
         "events",

@@ -31,6 +31,7 @@
         <script src="studio/environment.js" defer></script>
         <script src="studio/furniture.js" defer></script>
         <script src="studio/materials.js" defer></script>
+        <script src="studio/mcp-settings.js" defer></script>
         <script src="studio/member-settings.js" defer></script>
         <script src="studio/renderer.js" defer></script>
         <script src="studio/bubble-layout.js" defer></script>
@@ -101,7 +102,9 @@
                         ><button id="view-chat">会话</button>
                     </div>
                     <details id="workspace-options" class="workspace-options">
-                        <summary aria-label="更多选项" title="更多选项">⋯</summary>
+                        <summary aria-label="更多选项" title="更多选项">
+                            ⋯
+                        </summary>
                         <div class="workspace-options-menu">
                             <button
                                 id="toggle-team"
@@ -534,18 +537,44 @@
                             files 存放技能的文本或 Python
                             辅助脚本。正文按需加载。</small
                         >
-                        <label
-                            >MCP 服务器（HTTP，JSON）<textarea
-                                id="member-mcp"
-                                rows="4"
-                                maxlength="8000"
-                                placeholder='[{"name":"calendar","url":"http://127.0.0.1:8000/mcp","enabled":true}]'
-                            ></textarea>
-                        </label>
-                        <small
-                            >目前支持 Streamable HTTP；此处不填写 Key、认证
-                            Header 或带凭据的 URL。</small
-                        >
+                        <fieldset id="member-mcp" class="mcp-editor">
+                            <legend>MCP 工具服务</legend>
+                            <p class="mcp-help">
+                                给当前 Agent 接入外部工具。支持 Streamable
+                                HTTP、无认证或 Bearer API Key；最多 8 项。
+                            </p>
+                            <div class="mcp-actions">
+                                <button
+                                    type="button"
+                                    id="mcp-add"
+                                    class="secondary-button"
+                                >
+                                    ＋ 自定义服务
+                                </button>
+                                <button
+                                    type="button"
+                                    id="mcp-bailian"
+                                    class="secondary-button"
+                                >
+                                    ＋ 百炼联网搜索
+                                </button>
+                            </div>
+                            <p id="mcp-empty" class="mcp-help">
+                                尚未添加 MCP 服务。
+                            </p>
+                            <div id="mcp-list"></div>
+                            <p class="mcp-help">
+                                Key 单独加密保存在本机，不进入 Agent
+                                定义、任务目录或轨迹。已保存的 Key
+                                不回显；同一地址留空保留，更换地址请重新填写。
+                            </p>
+                            <p class="mcp-help">
+                                百炼搜索使用普通百炼 API Key（sk-…），不能使用
+                                Token Plan 模型
+                                Key（sk-sp-…）。请先在百炼开通对应 MCP
+                                服务并确认额度，搜索可能产生费用。
+                            </p>
+                        </fieldset>
                     </details>
                 </section>
                 <section
@@ -879,9 +908,21 @@
                     投影。家具不能重叠，人物接近点必须可达。
                 </p>
                 <label>素材类型<select id="furniture-type"></select></label>
-                <label>家具正面方向<select id="furniture-direction"></select></label>
-                <label>座面高度<input id="furniture-seat-height" type="number" min="12" max="32" step="1" value="22" /></label>
-                <p class="field-help">转向会同步改变占地与交互点。坐着的人物需先离座；关键帧不通过旋转平面图片生成。</p>
+                <label
+                    >家具正面方向<select id="furniture-direction"></select
+                ></label>
+                <label
+                    >座面高度<input
+                        id="furniture-seat-height"
+                        type="number"
+                        min="12"
+                        max="32"
+                        step="1"
+                        value="22"
+                /></label>
+                <p class="field-help">
+                    转向会同步改变占地与交互点。坐着的人物需先离座；关键帧不通过旋转平面图片生成。
+                </p>
                 <div class="form-grid">
                     <label
                         >X 格<input

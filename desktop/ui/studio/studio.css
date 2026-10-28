@@ -1,3 +1,4 @@
+@layer roomcrew-components {
 /* 空间原型：温暖工作室与克制的工具界面共用一套层级。 */
 :root {
     --accent: #b9cfbb;
@@ -715,4 +716,5 @@ input[type="checkbox"] {
     .crew-avatar {
         filter: none;
     }
+}
 }

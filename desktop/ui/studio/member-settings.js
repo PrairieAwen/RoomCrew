@@ -27,6 +27,7 @@ class CrewMemberConfiguration {
     constructor(materials) {
         // 1、页签仅控制编辑状态，素材设置从不写入 Agent 能力字段。
         this.actions = new CrewActionEditor(materials);
+        this.mcp = new CrewMCPEditor();
         for (const key of ["agent", "material"])
             el(`member-tab-${key}`).addEventListener(
                 "click",
@@ -64,11 +65,7 @@ class CrewMemberConfiguration {
             null,
             2,
         );
-        el("member-mcp").value = JSON.stringify(
-            member.mcp_servers || [],
-            null,
-            2,
-        );
+        this.mcp.load(member.mcp_servers || []);
         el("member-python").checked = member.python_enabled !== false;
         el("member-abilities").hidden = member.role === "guardian";
         this.show();
@@ -85,7 +82,7 @@ class CrewMemberConfiguration {
                 ? {}
                 : {
                       skills: JSON.parse(el("member-skills").value || "[]"),
-                      mcp_servers: JSON.parse(el("member-mcp").value || "[]"),
+                      mcp_servers: this.mcp.read(),
                       python_enabled: el("member-python").checked,
                   }),
         };

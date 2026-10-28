@@ -4,7 +4,10 @@ ERROR_MESSAGES = {
     "CONTEXT_LIMIT": "压缩后输入仍超出模型上下文窗口，请缩小任务或调整正确的窗口配置。",
     "CAPABILITY_UNAVAILABLE": "当前发行版尚未开放此能力，不能启用或回退到宿主执行。",
     "SKILL_SOURCE_INVALID": "显式技能来源不存在、为空或超出允许目录，请检查配置。",
-    "MCP_CONNECTION": "无法发现 MCP 工具，请检查服务器地址、服务状态和工具数量。",
+    "MCP_CONNECTION": (
+        "无法发现 MCP 工具，请检查地址、API Key、服务权限和网络；当前支持 Streamable HTTP。"
+    ),
+    "MCP_TOOL": "MCP 工具调用失败或超时，未自动重试，请检查服务状态。",
     "PYTHON_UNAVAILABLE": "隔离 Python 运行时不可用，未回退到宿主执行。",
     "PYTHON_FAILED": "隔离 Python 进程启动失败，请检查运行时完整性。",
     "MODEL_TIMEOUT": "模型请求超时，请检查网络，或在配置中调整超时后新建会话。",

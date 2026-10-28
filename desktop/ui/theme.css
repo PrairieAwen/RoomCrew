@@ -6,8 +6,42 @@
     --surface-soft: #f6f7f9;
     --line: #e3e7ed;
     --text: #202936;
-    --muted: #667385;
+    --muted: #526174;
     --accent: #315d91;
+    --on-accent: #ffffff;
+    --control-bg: #ffffff;
+    --control-border: #c7d2df;
+    --placeholder: #667385;
+    --disabled-bg: #eef1f5;
+    --disabled-text: #58677a;
+    --error: #a23832;
+    --success: #2f654f;
+    --warning: #805a19;
+}
+/* 所有正文先继承白色主题，再由下面的语义角色赋色；不继承旧组件的浅字。 */
+body
+    :where(
+        label,
+        legend,
+        small,
+        summary,
+        b,
+        em,
+        i,
+        output,
+        h1,
+        h2,
+        h3,
+        p,
+        strong,
+        span,
+        button,
+        input,
+        select,
+        option,
+        textarea
+    ) {
+    color: inherit;
 }
 .workspace-options {
     position: relative;
@@ -153,18 +187,73 @@ dialog::backdrop {
 .welcome-icon span {
     color: var(--accent);
 }
+.mcp-editor {
+    border: 1px solid #dce2e8;
+    border-radius: 12px;
+    padding: 14px;
+    margin: 18px 0 0;
+    min-width: 0;
+}
+.mcp-editor legend {
+    padding: 0 6px;
+    font-weight: 600;
+}
+.mcp-help {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.7;
+    margin: 8px 0;
+}
+.mcp-card {
+    border: 1px solid #dce2e8;
+    border-radius: 10px;
+    padding: 14px;
+    margin-top: 12px;
+    background: #fff;
+}
+.mcp-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 16px;
+    align-items: center;
+}
+.mcp-card input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+}
+.settings-form .mcp-card input[type="checkbox"] {
+    padding: 0;
+    width: 18px;
+}
+.mcp-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+.mcp-status {
+    font-size: 12px;
+    line-height: 1.7;
+    color: #334155;
+    overflow-wrap: anywhere;
+    margin: 8px 0 0;
+}
+.mcp-editor:disabled {
+    opacity: 1;
+}
 .brand-icon,
 .send-button,
 .primary-button,
 #quick-create-workspace {
     background: var(--accent);
-    color: #fff;
+    color: var(--on-accent);
     border-color: var(--accent);
 }
 .view-switch button.active,
 .member-config-tabs button[aria-selected="true"],
 button.workspace-card.selected,
 .conversation-item.active,
+.conversation-item.selected,
 .team-card.selected {
     background: #eaf0f8;
     color: #264f81;
@@ -204,9 +293,9 @@ dialog textarea {
     border-radius: 8px;
 }
 input::placeholder,
-textarea::placeholder,
-.studio-mode #prompt::placeholder {
-    color: #7a8798;
+textarea::placeholder {
+    color: var(--placeholder);
+    opacity: 1;
 }
 .message.user .message-text {
     background: #f0f4fa;
@@ -339,6 +428,129 @@ code {
 .checkbox-label input {
     width: auto;
 }
+/* 表单状态共用同一组颜色；禁用只表达不可编辑，不以整体透明度降低可读性。 */
+.settings-form label,
+.move-label {
+    color: var(--muted);
+    font-size: 12px;
+}
+.settings-form small,
+.settings-form legend,
+.idle-pool legend,
+.action-binding-editor legend {
+    color: var(--muted);
+}
+.settings-form small {
+    font-size: 11px;
+}
+.settings-form :is(input, select, textarea),
+.move-label select {
+    color: var(--text);
+    background: var(--control-bg);
+    border-color: var(--control-border);
+    font-size: 13px;
+    min-width: 0;
+}
+select option {
+    background: var(--control-bg);
+    color: var(--text);
+}
+:is(input, select, textarea):is(:disabled, [readonly]),
+button:disabled {
+    background: var(--disabled-bg);
+    color: var(--disabled-text);
+    border-color: var(--control-border);
+    opacity: 1;
+}
+button:disabled {
+    cursor: not-allowed;
+}
+.idle-pool:disabled,
+.mcp-editor:disabled {
+    opacity: 1;
+}
+:is(.idle-pool, .mcp-editor):disabled label {
+    color: var(--disabled-text);
+}
+input[type="checkbox"] {
+    accent-color: var(--accent);
+}
+.config-note,
+.state-card,
+.avatar,
+.mini-avatar,
+.team-heading h2 small {
+    background: var(--surface-soft);
+    color: var(--text);
+    border-color: var(--line);
+}
+.state-card strong {
+    color: var(--accent);
+}
+.state-card :is(p, small),
+.team-name small,
+.team-heading .eyebrow,
+.team-bottom,
+.team-bottom p,
+.workspace-card small,
+.inspector-empty,
+.inspector-heading p,
+.member-tabs button,
+.member-event summary,
+.member-event pre,
+.welcome p,
+.welcome-cards :is(span, p),
+.composer-footer > span,
+.participant small,
+.artifacts small,
+.stats span,
+.message-label,
+.local-badge > span:last-child,
+.tool-event .tool-label,
+.capability-box p {
+    color: var(--muted);
+}
+.team-heading > button,
+.inspector-heading button,
+.text-button,
+.artifacts button,
+.conversation-symbol {
+    color: var(--accent);
+    border-color: var(--line);
+}
+.member-tabs,
+.idle-pool,
+.action-binding-editor,
+.agent-abilities,
+.member-event,
+.member-event pre {
+    border-color: var(--line);
+}
+.member-tabs button.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+.team-question {
+    background: #fff3d9;
+    color: var(--warning);
+}
+.settings-result.error,
+.run-event.error,
+.error {
+    color: var(--error);
+}
+.settings-result.success,
+.success {
+    color: var(--success);
+}
+.conversation-item:hover,
+.view-switch button:hover {
+    background: #edf2f8;
+}
+#composer {
+    background: var(--control-bg);
+    border-color: var(--control-border);
+}
 @media (max-width: 1200px) {
     .studio-mode .topbar {
         gap: 7px;
@@ -357,13 +569,19 @@ code {
 .studio-mode:not(.conversation-open) .composer-area:not(:focus-within) {
     padding: 8px 12px;
 }
-.studio-mode:not(.conversation-open) .composer-area:not(:focus-within) #prompt:placeholder-shown {
+.studio-mode:not(.conversation-open)
+    .composer-area:not(:focus-within)
+    #prompt:placeholder-shown {
     height: 32px;
     min-height: 32px;
 }
-.studio-mode:not(.conversation-open) .composer-area:not(:focus-within) .composer-hint {
+.studio-mode:not(.conversation-open)
+    .composer-area:not(:focus-within)
+    .composer-hint {
     display: none;
 }
-.studio-mode:not(.conversation-open) .composer-area:not(:focus-within) .run-status {
+.studio-mode:not(.conversation-open)
+    .composer-area:not(:focus-within)
+    .run-status {
     margin-bottom: 4px;
 }

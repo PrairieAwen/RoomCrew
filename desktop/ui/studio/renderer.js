@@ -620,23 +620,21 @@ class CrewRenderer {
                 );
                 if (!custom) this.rig.paint(view.rig, sample, dt);
                 if (view.bubbleText) this.positionBubble(view, sample, custom);
+                // 3、闲聊与开会由动作和状态文字表达，不再在两位参与者头顶重复绘制双向箭头。
                 view.badge.textContent = fact?.question_count
                     ? "?"
                     : fact?.warning_count
                       ? "!"
                       : sample.externalCall
                         ? "☎"
-                        : sample.meeting
-                          ? "↔"
-                          : {
-                                think: "···",
-                                talk: "↔",
-                                report: "▤",
-                                ask: "?",
-                                alert: "!",
-                            }[sample.action] || "";
+                        : {
+                              think: "···",
+                              report: "▤",
+                              ask: "?",
+                              alert: "!",
+                          }[sample.action] || "";
             }
-            // 3、按脚底深度排序，仅在顺序变化时移动节点，避免人物穿过前景家具。
+            // 4、按脚底深度排序，仅在顺序变化时移动节点，避免人物穿过前景家具。
             const ordered = [...this.depth.children].sort(crewEntityDepth),
                 signature = ordered.map(crewEntityId).join("|");
             if (signature !== this.depthSignature) {

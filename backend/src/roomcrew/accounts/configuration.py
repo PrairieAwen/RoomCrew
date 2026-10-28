@@ -71,8 +71,8 @@ def agent_configuration(value: dict[str, Any]) -> dict[str, Any]:
     names.clear()
     normalized_servers = []
     for server in servers:
-        if not isinstance(server, dict) or set(server) - {"name", "url", "enabled"}:
-            raise ValueError("MCP 配置只接受名称、HTTP 地址和启用开关；不能在此填写认证 Header")
+        if not isinstance(server, dict) or set(server) - {"name", "url", "enabled", "auth_ref"}:
+            raise ValueError("MCP 配置只接受名称、HTTP 地址、启用开关与凭据引用")
         name, url = server.get("name", ""), server.get("url", "")
         if (
             not isinstance(name, str)
@@ -98,6 +98,11 @@ def agent_configuration(value: dict[str, Any]) -> dict[str, Any]:
         normalized_servers.append(
             {"name": name, "url": url.rstrip("/"), "enabled": server.get("enabled", True)}
         )
+        reference = server.get("auth_ref")
+        if reference is not None:
+            if not isinstance(reference, str) or not re.fullmatch(r"[a-f0-9]{32}", reference):
+                raise ValueError("MCP 凭据引用无效")
+            normalized_servers[-1]["auth_ref"] = reference
     result = {
         "skills": normalized_skills,
         "mcp_servers": normalized_servers,

@@ -85,7 +85,9 @@ async def test_mcp_discovery_is_shared_with_workers_but_not_between_invocations(
         # 1、该工具不进入发行包，只检验注册与构图合同。
         return "echo"
 
-    async def discover(servers: list[dict[str, Any]]) -> list[BaseTool]:
+    async def discover(
+        servers: list[dict[str, Any]], keys: dict[str, str], redact: Any
+    ) -> list[BaseTool]:
         """因为需要计数发现生命周期，需要记录可信服务器配置并返回一个标准工具。"""
         # 1、每次发现返回新工具，不能用全局工具缓存让断言巧合通过。
         discoveries.append(servers)

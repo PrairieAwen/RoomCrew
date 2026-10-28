@@ -109,7 +109,12 @@ class DesktopRuntime(Runtime):
         # 1、此入口不注册为 Agent 工具。
         return await self._studio.preferences(values)
 
-    async def save_member(self, values: dict[str, Any], expected_revision: int) -> dict[str, Any]:
+    async def save_member(
+        self,
+        values: dict[str, Any],
+        expected_revision: int,
+        mcp_auth: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """因为用户需要管理可复用员工属性，需要在可信入口校验并持久化账号元数据。"""
         # 1、首版在忙碌时不修改人员定义，历史运行仍保留已经固定的快照。
         if self.active or self._execution.state.questions():
@@ -122,7 +127,7 @@ class DesktopRuntime(Runtime):
         candidate = values.get("avatar_id", "builtin:crew-v1")
         if candidate != "builtin:crew-v1" and candidate not in distinct and len(distinct) >= 8:
             raise ValueError("同一空间最多同时使用 8 套自定义图集，请复用已有素材")
-        return self.accounts.save(values, expected_revision)
+        return await super().save_member(values, expected_revision, mcp_auth)
 
     async def avatar_catalog(self) -> list[dict[str, Any]]:
         """因为成员表单只需要素材概况，需要按需读取本地库而不每轮广播图片。"""

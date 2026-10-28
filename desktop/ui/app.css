@@ -1,11 +1,6 @@
+/* 结构与历史组件样式放入同一层；最终语义配色统一由 theme.css 管理。 */
+@layer roomcrew-components {
 :root {
-    color-scheme: dark;
-    --bg: #191a1d;
-    --panel: #141517;
-    --line: #2b2d32;
-    --text: #ebebef;
-    --muted: #92959e;
-    --accent: #c5d8b5;
     font-family: "Segoe UI", "Microsoft YaHei UI", sans-serif;
     font-size: 14px;
 }
@@ -787,4 +782,5 @@ dialog::backdrop {
         animation: none !important;
         scroll-behavior: auto !important;
     }
+}
 }

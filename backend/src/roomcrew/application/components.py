@@ -7,6 +7,7 @@ from typing import Any
 
 from roomcrew.accounts.configuration import agent_configuration
 from roomcrew.agent_loop.engine import DeepAgentsLoop
+from roomcrew.application.mcp_settings import MCPSettings
 from roomcrew.application.options import RunOptions
 from roomcrew.contracts.agents import AgentSpec
 from roomcrew.mcp.provider import configured_mcp_tools
@@ -40,6 +41,7 @@ class AgentLoopFactory:
         self._cache = paths.root / "cache"
         self._script_lock = asyncio.Lock()
         self._mcp_catalog: dict[str, list[Any]] = {}
+        self._mcp = MCPSettings(paths)
 
     async def build(
         self,
@@ -65,6 +67,12 @@ class AgentLoopFactory:
             )
         # 2、主 Agent 才能委派；所有中间件仍经过公开扩展点，底层只有 Deep Agents 一套 Loop。
         tools, skills = components[main.tool_name]
+
+        def redact(value: Any) -> Any:
+            """因为原生轨迹不能携带模型或 MCP 凭据，需要组合当前 Run 的两类可信脱敏器。"""
+            # 1、闭包仅持有可信代理，不把 Key 作为框架状态或回调元数据。
+            return self._mcp.redact(model.redact(value))
+
         return DeepAgentsLoop(
             model=model,
             backend=self._backend,
@@ -74,7 +82,7 @@ class AgentLoopFactory:
             skills=skills,
             checkpointer=checkpoints.saver,
             limits=self._options.limits,
-            redact=model.redact,
+            redact=redact,
             main=main,
             workers=workers,
             worker_tools={spec.tool_name: components[spec.tool_name][0] for spec in workers},
@@ -95,7 +103,9 @@ class AgentLoopFactory:
         if policy.mcp:
             key = json.dumps(configuration["mcp_servers"], sort_keys=True)
             if key not in self._mcp_catalog:
-                self._mcp_catalog[key] = await configured_mcp_tools(configuration["mcp_servers"])
+                servers = configuration["mcp_servers"]
+                keys = self._mcp.connection_keys(servers)
+                self._mcp_catalog[key] = await configured_mcp_tools(servers, keys, self._mcp.redact)
             tools.extend(self._mcp_catalog[key])
         if len({item.name for item in tools}) != len(tools):
             raise ValueError("工具名称冲突，请调整 MCP 服务器名称")

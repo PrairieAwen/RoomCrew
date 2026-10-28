@@ -1,3 +1,4 @@
+@layer roomcrew-components {
 /* 沉浸工作空间：世界覆盖整个客户区，工具面板浮在场景之上。 */
 .studio-mode.conversation-open .scene-toolbar > div:first-child {
     visibility: hidden;
@@ -532,4 +533,5 @@ button.workspace-card.selected small {
     .studio-mode.conversation-open .scene-toolbar h1 {
         font-size: 17px;
     }
+}
 }

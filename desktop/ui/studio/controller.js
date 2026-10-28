@@ -261,6 +261,7 @@ class CrewStudio {
             row.dataset.member = member.id;
             const avatar = node("span", "team-avatar", member.name.slice(0, 1));
             avatar.style.backgroundColor = member.color;
+            avatar.style.color = crewAvatarInk(member.color);
             const text = node("span", "team-name", member.name);
             const description =
                 member.role === "guardian"
@@ -685,9 +686,12 @@ class CrewStudio {
             !this.editMemberValue?.id && Boolean(el("member-agent").value);
         el("member-description").disabled = shared;
         el("member-prompt").disabled = shared;
-        for (const key of ["member-skills", "member-mcp", "member-python"])
+        for (const key of ["member-skills", "member-python"])
             el(key).disabled =
                 shared || this.editMemberValue?.role === "guardian";
+        this.memberConfiguration.mcp.setDisabled(
+            shared || this.editMemberValue?.role === "guardian",
+        );
     }
 
     /** 因为人物属性需要跨重启保存，需要使用显式版本提交并处理冲突。 */
@@ -726,6 +730,7 @@ class CrewStudio {
                 "save_member",
                 values,
                 this.memberRevision,
+                this.memberConfiguration.mcp.readAuth(),
             );
             this.closeMember();
             await this.refresh();
@@ -742,6 +747,7 @@ class CrewStudio {
     /** 因为关闭编辑不应修改人物，需要直接结束本地表单。 */
     closeMember() {
         // 1、未保存值不进入执行定义。
+        this.memberConfiguration.mcp.clear();
         el("member-dialog").close();
     }
 
@@ -1110,4 +1116,19 @@ function crewQuestionPresenter(member) {
 function crewArchiveObject(object) {
     // 1、只匹配当前房间注册的档案室，不读取其他空间。
     return object.id === String(this) && object.type === "archive";
+}
+
+/** 因为用户可设置任意头像底色，需要按真实亮度选择黑白文字，避免浅字落在浅色头像上。 */
+function crewAvatarInk(color) {
+    // 1、成员颜色合同为六位十六进制；未知输入采用深色正文，不执行外部内容。
+    if (!/^#[0-9a-f]{6}$/i.test(color || "")) return "#000000";
+    const weights = [0.2126, 0.7152, 0.0722];
+    let luminance = 0;
+    for (let index = 0; index < 3; index++) {
+        const channel = parseInt(color.slice(1 + index * 2, 3 + index * 2), 16) / 255;
+        const linear = channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+        luminance += weights[index] * linear;
+    }
+    // 2、比较两种前景的对比度；文字颜色仅影响团队列表，不修改人物服装或 Agent 配置。
+    return (luminance + 0.05) / 0.05 >= 1.05 / (luminance + 0.05) ? "#000000" : "#ffffff";
 }

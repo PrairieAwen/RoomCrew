@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "release_id": "20261028-222406",
-  "executable": "dist/RoomCrew/RoomCrew.exe",
+  "release_id": "20261029-002656",
+  "executable": "dist/releases/20261029-002656/RoomCrew/RoomCrew.exe",
   "data_directory": ".cache/asset-v2-showcase"
 }

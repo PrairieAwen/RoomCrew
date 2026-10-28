@@ -11,5 +11,10 @@ def redact_value(value: Any, key: str) -> Any:
     if isinstance(value, list):
         return [redact_value(item, key) for item in value]
     if isinstance(value, dict):
-        return {name: redact_value(item, key) for name, item in value.items()}
+        return {
+            name.replace(key, "[已隐藏凭据]") if isinstance(name, str) else name: redact_value(
+                item, key
+            )
+            for name, item in value.items()
+        }
     return value

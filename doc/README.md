@@ -12,6 +12,7 @@
 | 包与依赖方向 | [ADR-0003](architecture/0003-backend-layers.md)、[ADR-0021](architecture/0021-runtime-refactoring.md) | 配置、模型、压缩、中间件、安全、工具、MCP、Skills、存储分层；最新说明修正历史目录 |
 | 官方执行记录 | [ADR-0008](architecture/0008-native-agent-tracing.md) | 消息、Runnable v2 事件、checkpoint 与产品 Run 分开 |
 | 成员配置与默认工具 | [ADR-0010](architecture/0010-member-materials-and-default-tools.md) | Agent 定义与素材分离，文件工具、Python、主子能力装配 |
+| MCP 可视化与鉴权 | [ADR-0022](architecture/0022-authenticated-mcp.md) | Bearer 保护引用、百炼搜索预设、当前表单连接测试与模型前脱敏 |
 | 空间与协作名单 | [ADR-0007](architecture/0007-workspace-rooms.md)、[ADR-0011](architecture/0011-coherent-studio-and-workspace-roster.md) | 一空间一会议室，上下文隔离，仅委派本空间显式配置名单 |
 | 泡泡与人工交互 | [ADR-0013](architecture/0013-bubble-pointer-and-read-receipts.md) | 主 Agent 转达、局部挂点、真实点击及持久已读 |
 | Markdown | [ADR-0012](architecture/0012-message-markdown.md) | 展示层安全解析，原轨迹保留原文 |
@@ -55,8 +56,8 @@
 
 ## 当前边界
 
-Windows 本地原型已支持用户模型配置、真实 Deep Agents、同会话主子轨迹、Skills、无认证 HTTP MCP、标准库隔离 Python、文件产物、人工恢复和多个工作空间。SQLite 产品状态与官方 checkpoint 分开，配置由可信入口保护和加载。
+Windows 本地原型已支持用户模型配置、真实 Deep Agents、同会话主子轨迹、Skills、无认证/Bearer HTTP MCP、标准库隔离 Python、文件产物、人工恢复和多个工作空间。SQLite 产品状态与官方 checkpoint 分开，配置由可信入口保护和加载。
 
-安全 VM、浏览器、Shell、Computer Use、认证型 MCP、云账号、档案室归档及长期记忆、外部家具/骨骼导入尚未实现。Python AppContainer 不是凭据 VM；人物动画不能授予权限。当前素材仍为兼容预览，功能测试通过不等于专业美术或全部动作验收。
+安全 VM、浏览器、Shell、Computer Use、MCP OAuth/stdio/自定义 Header、云账号、档案室归档及长期记忆、外部家具/骨骼导入尚未实现。Python AppContainer 不是凭据 VM；人物动画不能授予权限。当前素材仍为兼容预览，功能测试通过不等于专业美术或全部动作验收。
 
 变更统一记录在根 changelog/YYYYMMDD.md。冲突时以当前用户决定、根规范和最新相关 ADR 为准，不照搬已被替代的版本、目录或实现。

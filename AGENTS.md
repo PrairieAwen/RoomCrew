@@ -60,6 +60,7 @@
 - backend/src/roomcrew 保存后端用例和领域模块，不导入桌面或 WebView；desktop/tests 保存原生集成验证与界面检查，backend/tests 保存后端验证，packaging/ 管理 Windows 打包。
 - Deep Agents / LangChain 类型留在后端适配边界，不成为前端合同或领域对象。
 - 会话 Markdown 只在 desktop 展示层解析，原始轨迹与工具日志保留原文；禁用原始 HTML，以白名单 DOM 创建内容，不使用模型文本写入 innerHTML，不自动加载消息中的远程图片。
+- 白色界面配色统一由 desktop/ui/theme.css 的语义变量维护；app.css、studio/studio.css、studio/immersive.css 位于 roomcrew-components 层，主题规则不放入该层。新增表单、禁用状态、提示与错误文字不能继续使用旧深色界面的浅字；不靠不断增加选择器权重或 important 覆盖。视觉修正须目检真实 WebView 的人物/素材/模型/MCP/家具/人工弹窗和侧栏，不能只检查某一张卡片。素材总览保留原 sandbox，不为配色检查扩张权限。
 
 ### 3.1 后端职责包与依赖方向
 
@@ -71,7 +72,7 @@
 - middleware/：中间件组装和模型调用额度；主子 Agent 的组件实例分开，同一 Run 的总额度共享。
 - security/：DPAPI、脱敏、路径和能力约束；实际安全 VM 仍未实现，不以目录名称冒充隔离。
 - tools/：真实本地工具和文件后端注册；不要把工具实现写进应用 Runtime 或 Loop。
-- mcp/：按 Agent 定义装配官方 HTTP MCP 工具；当前不支持 stdio、OAuth 或认证 Header，不能返回假工具或将凭据放入 URL。
+- mcp/：按 Agent 定义装配官方 Streamable HTTP MCP 工具，支持无认证或可信连接层注入 Bearer；公开定义仅保存 auth_ref，不含 Key 或认证 Header。config/mcp_credentials 负责 DPAPI，application/mcp_settings 负责空间/端点绑定与装配，结果进入模型前过滤凭据回显；不支持 stdio、OAuth，不将凭据放入 URL。
 - skills/：将用户显式配置的技能发布为只读版本目录，由 SDK 渐进加载；默认不自动扫描磁盘，不因 Skill 指令扩权。
 - desktop/src/roomcrew_desktop/assets/ 与 presentation/：分别维护素材校验、轨迹归约与动作提示；后端不得导入这些模块。素材或动画不能更改 Run、权限和人工答复。
 - ADR-0010：人物属性分 Agent 配置和员工素材配置；动作帧与泡泡按 member_id 保存，不进入 Agent 快照。主子 Agent 默认文件工具统一在 application/components 装配，不在角色或 UI 中另写一套执行。

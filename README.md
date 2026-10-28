@@ -49,7 +49,7 @@ RoomCrew 是 Windows 本地工作空间原型：多会议室、人物与家具�
 
 当前支持文件读写/检索、规划、成员发现与子 Agent 委派、本机时间、人工信息确认、配置 Skills、HTTP MCP 和隔离 Python。未接入 Shell、浏览器、Computer Use、安全 VM 与云端账号同步。当前每个空间同时执行一个会话，最多四个空间并行执行；成功会话可多轮继续，失败或取消会话只保留查看，继续需新建。同一 Agent 定义绑定的不同人物仍使用独立主线程上下文。
 
-Agent 配置与执行流程见 [ADR-0009](doc/architecture/0009-agent-foundation.md)。Skills 表单目前使用 JSON，框架先读名称与描述，再按任务读取完整说明及附带文本；MCP 目前支持无认证的 Streamable HTTP 服务。Python 仅包含标准库，不支持 pip、外网和子进程；用户无需预装 Python。安全审核对应的动作映射已预留，真实安全 VM 尚未实现。
+Agent 配置与执行流程见 [ADR-0009](doc/architecture/0009-agent-foundation.md)。Skills 表单目前使用 JSON，框架先读名称与描述，再按任务读取完整说明及附带文本。MCP 提供可视化 Streamable HTTP 服务配置，支持无认证、Bearer API Key 和百炼联网搜索预设，见 [MCP 配置与鉴权](doc/architecture/0022-authenticated-mcp.md)。Python 仅包含标准库，不支持 pip、外网和子进程；用户无需预装 Python。安全审核对应的动作映射已预留，真实安全 VM 尚未实现。
 
 人物属性分为“Agent 配置”和“员工素材配置”。在素材页可为 MCP、普通工具、Python、人工、完成等触发类型选择动作，导入图集后可编辑具体变体、帧号、帧率与循环，预览和场景使用同一播放器。泡泡按当前人物头部跟随，平移/缩放时保持归属。默认文件工具另补 file_info、make_directory、copy_file、move_file、delete_file，主子 Agent 均可使用；二进制复制不转码，文本工具不等于 Office/PDF 解析。详见 [ADR-0010](doc/architecture/0010-member-materials-and-default-tools.md)。
 
