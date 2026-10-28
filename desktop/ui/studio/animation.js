@@ -69,7 +69,9 @@ class CrewAnimator {
             fact?.warning_count > 0 ||
             ["question", "warning"].includes(fact?.activity);
         const moving = actor.phase === "moving" && !actor.interactionHold,
-            transition = ["stand_up", "sit_down"].includes(actor.phase);
+            transition = ["stand_up", "sit_down", "turn_to_seat", "seat_turn", "seat_turn_in"].includes(
+                actor.phase,
+            );
         if (player.sourceSeq !== fact?.source_seq) {
             const age = (Date.now() - Date.parse(fact?.created_at)) / 1000;
             player.factAge = Number.isFinite(age) ? Math.max(0, age) : 0;
@@ -106,7 +108,8 @@ class CrewAnimator {
                 expression = "neutral";
         }
         if (moving) action = actor.gait;
-        if (transition) action = actor.phase;
+        if (transition)
+            action = ["turn_to_seat","seat_turn","seat_turn_in"].includes(actor.phase) ? "idle" : actor.phase;
         if (urgent)
             expression =
                 fact?.question_count > 0 || fact?.activity === "question"
@@ -168,7 +171,24 @@ class CrewAnimator {
             expression = "focused";
             relaxing = false;
         }
-        // 5、切动作重置片段时钟，内置骨架用连续混合，自定义图集按声明帧率取帧。
+        // 5、工作面向显示器，暂停手部动作后再转向用户；移动与起坐沿运动层朝向。
+        const desired =
+            typeof crewOfficeFacing === "function"
+                ? crewOfficeFacing(actor, action, fact, layer)
+                : actor.direction || "se";
+        const facing =
+            typeof crewOfficeTurn === "function"
+                ? crewOfficeTurn(player, actor, desired, dt, reduced)
+                : { direction: desired, turning: false };
+        if (facing.turning) action = "idle";
+        // 6、没有显示器的座位不播放打字或电脑游戏；无空工位仍可思考，不伪造工具失败。
+        if (typeof crewOfficeAction === "function") {
+            const previousAction = action;
+            action = crewOfficeAction(actor, action);
+            if (previousAction === "game" && action === "phone")
+                caption = "摸鱼 · 玩手机（此处没有电脑）";
+        }
+        // 7、切动作重置片段时钟，内置骨架用连续混合，自定义图集按声明帧率取帧。
         if (player.action !== action) {
             player.action = action;
             player.time = 0;
@@ -183,24 +203,27 @@ class CrewAnimator {
                 ? 0
                 : Math.floor(player.time * spec.fps) % spec.frames,
             locomotion: moving ? actor.gait : "idle",
-            posture: actor.posture,
+            posture: ["seat_turn","seat_turn_in"].includes(actor.phase) ? "seated" : transition && actor.phase !== "turn_to_seat"
+                ? (actor.seatMix >= 0.5 ? "seated" : "standing") : actor.posture,
             phase: actor.phase,
+            transition_progress: actor.progress,
+            pose_progress: actor.poseProgress,
             seatMix: actor.seatMix ?? (actor.posture === "seated" ? 1 : 0),
-            direction:
-                !moving &&
-                !transition &&
-                (fact?.requires_input ||
-                    (fact?.activity === "reporting" &&
-                        !fact?.report_acknowledged))
-                    ? "s"
-                    : actor.direction || "se",
+            direction: facing.direction,
+            turning: facing.turning,
+            surface: crewAttachedSeat(actor)?.purpose,
+            seat_height: crewAttachedSeat(actor)?.contact?.seat_height,
             cue: Boolean(player.cue),
             reduced,
             leisure: relaxing,
             caption,
             externalCall,
             meeting: layer?.kind === "meeting",
-            idleActivity: relaxing ? layer?.activity || action : null,
+            idleActivity: relaxing
+                ? layer?.activity === "game" && action === "phone"
+                    ? "phone"
+                    : layer?.activity || action
+                : null,
         };
     }
 

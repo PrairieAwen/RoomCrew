@@ -25,6 +25,9 @@
         <script src="studio/skins.js" defer></script>
         <script src="studio/camera.js" defer></script>
         <script src="studio/assets/library-v1/catalog.js" defer></script>
+        <script src="studio/assets/scene-v1/catalog.js" defer></script>
+        <script src="studio/scene-assets.js" defer></script>
+        <script src="studio/office-behavior.js" defer></script>
         <script src="studio/environment.js" defer></script>
         <script src="studio/furniture.js" defer></script>
         <script src="studio/materials.js" defer></script>
@@ -790,7 +793,7 @@
                             </button>
                         </div>
                         <p class="scope-note">
-                            导入图集后可选择具体变体并调整帧序列；自动适配保留方向和坐姿匹配。更换素材保留动作，重置旧帧号。
+                            可选择变体、帧序列和速度。工位工作优先匹配显示器朝向；不兼容的固定帧自动回退，保留原配置。更换素材保留动作，重置旧帧号。
                         </p>
                         <pre id="binding-summary" class="scope-note"></pre>
                     </fieldset>
@@ -868,10 +871,13 @@
                     </button>
                 </div>
                 <p class="modal-intro">
-                    固定画布 24 × 19 格，统一 2:1
+                    <span id="furniture-room-size"></span>，统一 2:1
                     投影。家具不能重叠，人物接近点必须可达。
                 </p>
                 <label>素材类型<select id="furniture-type"></select></label>
+                <label>家具正面方向<select id="furniture-direction"></select></label>
+                <label>座面高度<input id="furniture-seat-height" type="number" min="12" max="32" step="1" value="22" /></label>
+                <p class="field-help">转向会同步改变占地与交互点。坐着的人物需先离座；关键帧不通过旋转平面图片生成。</p>
                 <div class="form-grid">
                     <label
                         >X 格<input

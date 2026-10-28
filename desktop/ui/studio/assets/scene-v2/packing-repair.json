@@ -1,0 +1,7 @@
+{
+  "mode": "builtin image_gen",
+  "prompt": "Use case: precise-object-edit. TARGET is this 6 columns x 4 rows character-and-chair animation atlas. Fix ONLY SPRITE PACKING AND TRANSPARENCY. Preserve all 24 characters, chair designs, exact row identities and 6 progressive animation poses. ALL 24 SPRITES MUST BE ABOUT 15% SMALLER within their cell, uniformly scaled as a complete character+chair, so each cell has at least 15 source pixels truly transparent padding on ALL FOUR SIDES. Exactly 6 equal-width columns, 4 equal-height rows, output aspect ratio 3:2 like input. No hand, shoe, hair or wheel can touch or spill across a cell boundary. Every sprite should have a stable chair central wheel pivot at the same local cell point. This is critical: the previous image leaks shoes/wheels from one row into the next row and clips the right edge of chairs. Remove every isolated speck/fragment that does not belong to the character and chair in that cell. True RGBA transparent background with no brown colour plate or faint semi-transparent haze. No floor, no cast shadow, no labels, no grid outlines. Do NOT redesign characters, chair or camera. Preserve identity/pose/cloth/artstyle. This is a packing repair, not new character art.",
+  "input": "exec-3c26a12a-141e-4a58-9869-69947b4d8674.png",
+  "selected": "exec-d28318ed-b8cb-4294-9375-80097439e9a7.png",
+  "reason": "修正六列四行的鞋底、脚轮串帧与裁切边界"
+}

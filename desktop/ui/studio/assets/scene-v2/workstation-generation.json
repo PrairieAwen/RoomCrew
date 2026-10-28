@@ -1,0 +1,6 @@
+{
+  "mode": "builtin image_gen",
+  "prompt": "Use case: sketch-to-render. Asset type: eight-direction transparent 2.5D game furniture atlas. Input 1 is EXACT GEOMETRY & GRID, input 2 is the detailed finished target desk style (not grid). Paint INPUT 1 into the SAME lovely detailed desk as input 2 in eight rotations. Preserve 4 equal square columns by 2 rows, exact silhouettes, height, monitor location, empty knee space, all three drawer fronts, and direction order. Source models use actual orthographic elevation 30 degrees, quarter-view desk edges slope +/-0.5 on screen. Do not draw flatter or steeper desk surfaces. Same physical table, same scale across all eight views. Warm finely grained oak top, sage green pedestal, three brass drawer handles, matching sage wood legs, black single monitor with pale blue screen. Back of monitor only appears in back views. No keyboard, mouse, chair, person, floor, drop shadows, labels or watermark. Plain true TRANSPARENT background. All sprites fully contained in their original cells. Preserve reference 1's projection and arrangement absolutely.",
+  "source": "exec-3d9f91de-9934-487f-b927-b9c1ae08cabc.png",
+  "status": "authored-runtime-review"
+}

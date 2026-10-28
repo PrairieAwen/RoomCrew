@@ -35,14 +35,14 @@ foreach ($roomcrewProcess in @(Get-Process -Name RoomCrew -ErrorAction SilentlyC
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot '使用说明.txt') -Destination (Join-Path $roomcrewCandidate '使用说明.txt') -Force
 New-Item -ItemType Directory -Path (Join-Path $roomcrewRoot 'dist') -Force | Out-Null
 
-# 3、先移出旧目录再安放完整候选；安放失败时恢复旧目录，避免逐文件删除或半覆盖。
+# 3、同卷目录使用原子重命名，避免 Move-Item 遇到占用文件时退为逐项移动而留下半个旧目录。
 $roomcrewHadOld = Test-Path -LiteralPath $roomcrewDist
 try {
-    if ($roomcrewHadOld) { Move-Item -LiteralPath $roomcrewDist -Destination $roomcrewBackup }
-    Move-Item -LiteralPath $roomcrewCandidate -Destination $roomcrewDist
+    if ($roomcrewHadOld) { [IO.Directory]::Move($roomcrewDist, $roomcrewBackup) }
+    [IO.Directory]::Move($roomcrewCandidate, $roomcrewDist)
 } catch {
     if ((Test-Path -LiteralPath $roomcrewBackup) -and -not (Test-Path -LiteralPath $roomcrewDist)) {
-        Move-Item -LiteralPath $roomcrewBackup -Destination $roomcrewDist
+        [IO.Directory]::Move($roomcrewBackup, $roomcrewDist)
     }
     throw
 }

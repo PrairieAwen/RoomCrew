@@ -7,106 +7,77 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-CATALOG = {
-    "desk": (3, 3),
-    "sofa": (4, 2),
-    "meeting": (5, 4),
-    "plant": (1, 1),
-    "fridge": (1, 2),
-    "screen": (4, 1),
-    "cabinet": (2, 1),
-    "bookcase": (2, 1),
-    "coffee": (1, 1),
-    "lamp": (1, 1),
-    "archive": (2, 1),
-}
+from roomcrew_desktop.assets.scene_catalog import (
+    DIRECTIONS,
+    footprint,
+    interaction_anchors,
+    object_direction,
+    scene_catalog,
+)
+
+CATALOG = {key: tuple(value["footprint"]) for key, value in scene_catalog()["definitions"].items()}
 
 
 def default_room() -> dict[str, Any]:
     """因为首次打开需要完整办公布局，需要给固定画布配置可编辑的家具和会议区。"""
     # 1、所有家具遵循同一格网和投影，人物锚点由家具类型生成。
     return {
-        "width": 24,
-        "height": 19,
+        "width": 32,
+        "height": 25,
         "revision": 1,
         "objects": [
             {"id": "reception-desk", "type": "desk", "x": 3, "y": 2},
             {"id": "desk-1", "type": "desk", "x": 3, "y": 8},
             {"id": "desk-2", "type": "desk", "x": 8, "y": 8},
-            {"id": "desk-3", "type": "desk", "x": 8, "y": 13},
-            {"id": "sofa", "type": "sofa", "x": 2, "y": 15},
-            {"id": "conference", "type": "meeting", "x": 16, "y": 3},
-            {"id": "guardian-station", "type": "cabinet", "x": 19, "y": 14},
-            {"id": "fridge", "type": "fridge", "x": 21, "y": 10},
-            {"id": "screen", "type": "screen", "x": 16, "y": 1},
+            {"id": "desk-3", "type": "desk", "x": 3, "y": 13},
+            {"id": "desk-4", "type": "desk", "x": 8, "y": 13},
+            {"id": "sofa", "type": "sofa", "x": 19, "y": 12, "direction": "sw"},
+            {"id": "conference", "type": "meeting", "x": 16, "y": 4},
+            {"id": "guardian-station", "type": "security", "x": 8, "y": 2},
+            {"id": "fridge", "type": "fridge", "x": 28, "y": 20},
+            {"id": "screen", "type": "screen", "x": 17, "y": 1},
             {"id": "plant-1", "type": "plant", "x": 1, "y": 2},
             {"id": "plant-2", "type": "plant", "x": 22, "y": 2},
-            {"id": "plant-3", "type": "plant", "x": 14, "y": 15},
-            {"id": "reading-shelf", "type": "bookcase", "x": 1, "y": 11},
-            {"id": "archive-room", "type": "archive", "x": 11, "y": 1},
-            {"id": "reading-lamp", "type": "lamp", "x": 1, "y": 17},
-            {"id": "coffee-corner", "type": "coffee", "x": 22, "y": 13},
-            {"id": "lounge-sofa", "type": "sofa", "x": 16, "y": 16},
-            {"id": "lounge-plant", "type": "plant", "x": 22, "y": 17},
+            {"id": "plant-3", "type": "plant", "x": 13, "y": 11},
+            {"id": "reading-shelf", "type": "bookcase", "x": 1, "y": 5},
+            {"id": "archive-room", "type": "archive", "x": 12, "y": 1},
+            {"id": "reading-lamp", "type": "lamp", "x": 13, "y": 20},
+            {"id": "coffee-corner", "type": "coffee", "x": 28, "y": 18},
+            {"id": "lounge-sofa", "type": "sofa", "x": 19, "y": 21, "direction": "ne"},
+            {"id": "lounge-west-sofa", "type": "sofa", "x": 15, "y": 16, "direction": "se"},
+            {"id": "lounge-east-sofa", "type": "sofa", "x": 25, "y": 16, "direction": "nw"},
+            {"id": "lounge-tea-table", "type": "tea_table", "x": 20, "y": 16, "direction": "sw"},
+            {"id": "lounge-plant", "type": "plant", "x": 28, "y": 23},
         ],
     }
 
 
 def anchors(room: dict[str, Any]) -> list[dict[str, Any]]:
-    """因为素材像素不能决定人物位置，需要从格网家具生成独立的接近点、座点和姿态。"""
-    # 1、地面导航点与坐姿接触点分开，不能把坐着的角色沿路径拖动。
+    """因为方向和接触点是素材能力的一部分，需要从统一目录派生座位，而非逐类硬编码。"""
+    # 1、保留旧主座位 ID；不同朝向同时改变接近位置、人物朝向与座面接触。
     result = []
     for obj in room["objects"]:
-        width, height = CATALOG[obj["type"]]
-        if obj["type"] == "meeting":
-            for index, (dx, dy) in enumerate(((1, -1), (3, -1), (1, height), (3, height))):
-                point = [obj["x"] + dx, obj["y"] + dy]
-                result.append(
-                    {
-                        "id": obj["id"] + f":seat-{index + 1}",
-                        "object_id": obj["id"],
-                        "approach": point,
-                        "position": point,
-                        "posture": "seated",
-                    }
-                )
-        elif obj["type"] in {"desk", "sofa"}:
+        result.extend(interaction_anchors(obj))
+        if obj["id"] == "guardian-station" and obj["type"] == "cabinet":
+            width, depth = footprint(obj)
+            point = [obj["x"] + width, obj["y"] + depth]
             result.append(
                 {
                     "id": obj["id"],
                     "object_id": obj["id"],
-                    "approach": [obj["x"] + 1, obj["y"] + height],
-                    "position": [obj["x"] + width / 2, obj["y"] + height - 0.55],
-                    "posture": "seated",
-                }
-            )
-            result.append(
-                {
-                    "id": obj["id"] + ":reception",
-                    "object_id": obj["id"],
-                    "approach": [obj["x"] + 2, obj["y"] + height],
-                    "position": [obj["x"] + 2, obj["y"] + height],
-                    "posture": "standing",
-                    "purpose": "reception",
-                }
-            )
-        elif obj["id"] == "guardian-station":
-            result.append(
-                {
-                    "id": obj["id"],
-                    "object_id": obj["id"],
-                    "approach": [obj["x"] + width, obj["y"] + height],
-                    "position": [obj["x"] + width, obj["y"] + height],
+                    "approach": point,
+                    "position": [value + 0.5 for value in point],
                     "posture": "standing",
                 }
             )
+    # 2、地面目标保持整数索引和格心位置，不借用任何执行状态。
     for x in range(2, room["width"] - 1, 2):
         result.append(
             {
                 "id": f"floor-{x}",
                 "object_id": None,
                 "approach": [x, room["height"] - 1],
-                "position": [x, room["height"] - 1],
+                "position": [x + 0.5, room["height"] - 0.5],
                 "posture": "standing",
             }
         )
@@ -119,16 +90,21 @@ def path_to(room: dict[str, Any], start: list[int], end: list[int]) -> list[list
     blocked = {
         (obj["x"] + dx, obj["y"] + dy)
         for obj in room["objects"]
-        for dx in range(CATALOG[obj["type"]][0])
-        for dy in range(CATALOG[obj["type"]][1])
+        for dx in range(footprint(obj)[0])
+        for dy in range(footprint(obj)[1])
     }
     origin, target = tuple(start), tuple(end)
+    # 2、空椅也有实体，路线不能穿过其他坐席；起终点仅允许本次离座和入座。
+    chair_cells = {
+        tuple(anchor["approach"]) for anchor in anchors(room) if anchor["posture"] == "seated"
+    }
+    blocked.update(chair_cells - {origin, target})
     if origin in blocked or target in blocked:
         raise ValueError("目标接近点被家具阻挡")
     queue = [(0, origin)]
     costs = {origin: 0}
     previous: dict[tuple[int, ...], tuple[int, ...]] = {}
-    # 2、固定画布限制搜索规模；找不到路时保持原姿态并用文字反馈。
+    # 3、固定画布限制搜索规模；找不到路时保持原姿态并用文字反馈。
     while queue:
         _, cell = heapq.heappop(queue)
         if cell == target:
@@ -170,7 +146,145 @@ class SceneStore:
         with self.db:
             self.db.execute("INSERT OR IGNORE INTO room VALUES(1,?)", (json.dumps(default_room()),))
         self._migrate_reception()
+        self._migrate_office_template()
+        self._migrate_lounge()
         self._migrate_archive()
+        self._migrate_chair_clearance()
+
+    def _migrate_chair_clearance(self) -> None:
+        """因为旧默认盆栽紧邻第四工位的拉椅区，需要仅为完全匹配的旧模板留出离座空间。"""
+        # 1、完整比较家具清单和房间尺寸；任何用户新增、移动或座高修改都会保留原布局。
+        room = json.loads(self.db.execute("SELECT body FROM room WHERE id=1").fetchone()[0])
+        updated = default_room()
+        previous = json.loads(json.dumps(updated))
+        next(obj for obj in previous["objects"] if obj["id"] == "plant-3")["y"] = 13
+        if (room["width"], room["height"], room["objects"]) != (
+            previous["width"],
+            previous["height"],
+            previous["objects"],
+        ):
+            return
+        # 2、不变更人物锚点与执行记录，仅提交桌面布局的新版本。
+        updated["revision"] = room["revision"] + 1
+        with self.db:
+            self.db.execute("UPDATE room SET body=? WHERE id=1", (json.dumps(updated),))
+
+    def _migrate_office_template(self) -> None:
+        """因为旧默认工位和基础设施散落，需要仅升级未经用户改动的模板，并保持人物锚点身份。
+
+        自定义家具、已移动模板或未知布局保持原样；只更新桌面场景，不修改 Agent 与会话。
+        """
+        # 1、按原默认家具的完整坐标与类型识别，不能只凭 revision 覆盖用户布置。
+        room = json.loads(self.db.execute("SELECT body FROM room WHERE id=1").fetchone()[0])
+        expected = {
+            "reception-desk": ("desk", 3, 2),
+            "desk-1": ("desk", 3, 8),
+            "desk-2": ("desk", 8, 8),
+            "desk-3": ("desk", 8, 13),
+            "sofa": ("sofa", 2, 15),
+            "conference": ("meeting", 16, 3),
+            "guardian-station": ("cabinet", 19, 14),
+            "fridge": ("fridge", 21, 10),
+            "screen": ("screen", 16, 1),
+            "plant-1": ("plant", 1, 2),
+            "plant-2": ("plant", 22, 2),
+            "plant-3": ("plant", 14, 15),
+            "reading-shelf": ("bookcase", 1, 11),
+            "reading-lamp": ("lamp", 1, 17),
+            "coffee-corner": ("coffee", 22, 13),
+            "lounge-sofa": ("sofa", 16, 16),
+            "lounge-plant": ("plant", 22, 17),
+        }
+        objects = {
+            obj["id"]: (obj["type"], obj["x"], obj["y"])
+            for obj in room["objects"]
+            if obj["type"] != "archive"
+        }
+        if room["width"] != 24 or room["height"] != 19 or objects != expected:
+            return
+        archives = [obj for obj in room["objects"] if obj["type"] == "archive"]
+        if len(archives) > 1 or any(
+            (obj["x"], obj["y"]) not in {(11, 1), (20, 1)} for obj in archives
+        ):
+            return
+        # 2、保留原档案入口 ID 与所有人物目标，两张沙发统一收拢到同一休闲区。
+        updated = default_room()
+        updated["revision"] = room["revision"] + 1
+        archive = next((obj for obj in room["objects"] if obj["type"] == "archive"), None)
+        if archive:
+            next(obj for obj in updated["objects"] if obj["type"] == "archive")["id"] = archive[
+                "id"
+            ]
+        for anchor in anchors(updated):
+            path_to(updated, [0, 0], anchor["approach"])
+        with self.db:
+            self.db.execute("UPDATE room SET body=? WHERE id=1", (json.dumps(updated),))
+            for member, body in self.db.execute("SELECT * FROM placements").fetchall():
+                placement = json.loads(body)
+                placement["generation"] += 1
+                self.db.execute(
+                    "UPDATE placements SET body=? WHERE member_id=?",
+                    (json.dumps(placement), member),
+                )
+
+    def _migrate_lounge(self) -> None:
+        """因为默认休闲区要升级为四张相向沙发，需要只匹配已知旧模板并保留自定义场景和座位身份。"""
+        # 1、完整匹配此前标准布局，未知额外家具和人工移动都不会被覆盖。
+        room = json.loads(self.db.execute("SELECT body FROM room WHERE id=1").fetchone()[0])
+        expected = {
+            "reception-desk": ("desk", 3, 2),
+            "desk-1": ("desk", 3, 8),
+            "desk-2": ("desk", 8, 8),
+            "desk-3": ("desk", 3, 13),
+            "desk-4": ("desk", 8, 13),
+            "sofa": ("sofa", 16, 12),
+            "conference": ("meeting", 16, 4),
+            "guardian-station": ("security", 8, 2),
+            "fridge": ("fridge", 22, 15),
+            "screen": ("screen", 17, 1),
+            "plant-1": ("plant", 1, 2),
+            "plant-2": ("plant", 22, 2),
+            "plant-3": ("plant", 13, 13),
+            "reading-shelf": ("bookcase", 1, 5),
+            "reading-lamp": ("lamp", 15, 16),
+            "coffee-corner": ("coffee", 22, 13),
+            "lounge-sofa": ("sofa", 16, 16),
+            "lounge-plant": ("plant", 22, 17),
+        }
+        actual = {
+            obj["id"]: (obj["type"], obj["x"], obj["y"])
+            for obj in room["objects"]
+            if obj["type"] != "archive"
+        }
+        archives = [obj for obj in room["objects"] if obj["type"] == "archive"]
+        if len(archives) > 1 or any((obj["x"], obj["y"]) != (12, 1) for obj in archives):
+            return
+        if (
+            room["width"] != 24
+            or room["height"] != 19
+            or actual != expected
+            or any("direction" in obj for obj in room["objects"])
+        ):
+            return
+        # 2、新模板先验证全部交互点可达，保留档案室 ID 与成员原锚点引用。
+        updated = default_room()
+        updated["revision"] = room["revision"] + 1
+        archive = next((obj for obj in room["objects"] if obj["type"] == "archive"), None)
+        if archive:
+            next(obj for obj in updated["objects"] if obj["type"] == "archive")["id"] = archive[
+                "id"
+            ]
+        for anchor in anchors(updated):
+            path_to(updated, [0, 0], anchor["approach"])
+        with self.db:
+            self.db.execute("UPDATE room SET body=? WHERE id=1", (json.dumps(updated),))
+            for member, body in self.db.execute("SELECT * FROM placements").fetchall():
+                placement = json.loads(body)
+                placement["generation"] += 1
+                self.db.execute(
+                    "UPDATE placements SET body=? WHERE member_id=?",
+                    (json.dumps(placement), member),
+                )
 
     def _migrate_archive(self) -> None:
         """因为已有会议室也需要档案室入口，需要在空闲墙边补充设施并保留用户所有原位置。"""
@@ -181,8 +295,8 @@ class SceneStore:
         occupied = {
             (obj["x"] + dx, obj["y"] + dy)
             for obj in room["objects"]
-            for dx in range(CATALOG[obj["type"]][0])
-            for dy in range(CATALOG[obj["type"]][1])
+            for dx in range(footprint(obj)[0])
+            for dy in range(footprint(obj)[1])
         }
         for x in range(room["width"] - 4, 1, -1):
             if {(x, 1), (x + 1, 1)} & occupied:
@@ -270,8 +384,15 @@ class SceneStore:
                         )
                     current[member["id"]], occupied = placement, occupied | {anchor_id}
         return {
-            "room": room,
+            "room": {
+                **room,
+                "objects": [
+                    {**obj, "direction": object_direction(obj), "footprint": list(footprint(obj))}
+                    for obj in room["objects"]
+                ],
+            },
             "anchors": anchors(room),
+            "asset_contract": {"version": 1, "definitions": scene_catalog()["definitions"]},
             "placements": list(current.values()),
             "catalog": {key: list(value) for key, value in CATALOG.items()},
             "navigation": navigation_map(room),
@@ -349,7 +470,7 @@ class SceneStore:
         kind = str(values.get("type", existing["type"] if existing else "plant"))
         if kind not in CATALOG:
             raise ValueError("未知家具类型")
-        if set(values) - {"id", "type", "x", "y", "remove"}:
+        if set(values) - {"id", "type", "x", "y", "direction", "seat_height", "remove"}:
             raise ValueError("布局字段不受支持")
         if values.get("remove"):
             if existing is None:
@@ -369,11 +490,28 @@ class SceneStore:
         x, y = values["x"], values["y"]
         if existing is None and len(room["objects"]) >= 64:
             raise ValueError("首版每个房间最多 64 件家具")
-        width, height = CATALOG[kind]
+        direction = (
+            values.get("direction", existing.get("direction") if existing else None)
+            or scene_catalog()["definitions"][kind]["default_direction"]
+        )
+        if direction not in DIRECTIONS:
+            raise ValueError("家具方向必须是八方向之一")
+        seat_height = values.get("seat_height", existing.get("seat_height", 22) if existing else 22)
+        if type(seat_height) is not int or not 12 <= seat_height <= 32:
+            raise ValueError("座面高度需要是 12～32 的整数")
+        candidate = {
+            "id": identifier,
+            "type": kind,
+            "x": x,
+            "y": y,
+            "direction": direction,
+            "seat_height": seat_height,
+        }
+        width, height = footprint(candidate)
         if x < 1 or y < 1 or x + width >= room["width"] or y + height >= room["height"]:
             raise ValueError("家具超出固定画布")
         for obj in room["objects"]:
-            other_w, other_h = CATALOG[obj["type"]]
+            other_w, other_h = footprint(obj)
             if (
                 obj["id"] != identifier
                 and x < obj["x"] + other_w
@@ -386,8 +524,7 @@ class SceneStore:
         updated = {
             **room,
             "revision": revision + 1,
-            "objects": [obj for obj in room["objects"] if obj["id"] != identifier]
-            + [{"id": identifier, "type": kind, "x": x, "y": y}],
+            "objects": [obj for obj in room["objects"] if obj["id"] != identifier] + [candidate],
         }
         candidate_anchors = anchors(updated)
         for anchor in candidate_anchors:
@@ -412,8 +549,8 @@ def navigation_map(room: dict[str, Any]) -> dict[str, Any]:
         {
             (obj["x"] + dx, obj["y"] + dy)
             for obj in room["objects"]
-            for dx in range(CATALOG[obj["type"]][0])
-            for dy in range(CATALOG[obj["type"]][1])
+            for dx in range(footprint(obj)[0])
+            for dy in range(footprint(obj)[1])
         }
     )
     return {
@@ -422,4 +559,5 @@ def navigation_map(room: dict[str, Any]) -> dict[str, Any]:
         "width": room["width"],
         "height": room["height"],
         "blocked": [list(point) for point in blocked],
+        "seats": [anchor["approach"] for anchor in anchors(room) if anchor["posture"] == "seated"],
     }

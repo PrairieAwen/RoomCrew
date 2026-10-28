@@ -134,7 +134,11 @@ def validate_frame_rects(
         raise ValueError("frame_rects 需要 1—512 个裁切描述")
     for item in value:
         expected = {"rect", "offset", "page", "scale"} if paged else {"rect", "offset"}
-        if not isinstance(item, dict) or set(item) != expected:
+        if (
+            not isinstance(item, dict)
+            or not expected <= set(item)
+            or set(item) - expected - {"contact"}
+        ):
             raise ValueError("裁切描述字段不匹配")
         page = integer(item["page"], 0, len(sizes) - 1, "图集页号") if paged else 0
         size = sizes[page]
@@ -158,4 +162,30 @@ def validate_frame_rects(
         integer(offset[1], 0, frame[1], "帧内 Y")
         if offset[0] + width * scale > frame[0] or offset[1] + height * scale > frame[1]:
             raise ValueError("缩放后的裁切区域超出虚拟画布")
+        if "contact" in item:
+            validate_frame_contact(item["contact"], frame)
     return len(value)
+
+
+def validate_frame_contact(value: Any, frame: tuple[int, int]) -> None:
+    """因为自制坐姿也要能匹配座面，需要允许有限的髋部、脚底、手部和泡泡标记，拒绝脚本与非数值。"""
+    # 1、标记使用统一虚拟帧坐标，不包含文件路径或运行权限。
+    if (
+        not isinstance(value, dict)
+        or not {"hip", "soles"} <= set(value)
+        or set(value) - {"hip", "soles", "hands", "bubble"}
+    ):
+        raise ValueError("接触标记必须包含 hip 和 soles")
+    for point in value.values():
+        if not isinstance(point, list) or len(point) != 2:
+            raise ValueError("接触标记需要二维坐标")
+        if any(
+            type(coordinate) not in {int, float}
+            or not math.isfinite(coordinate)
+            or not 0 <= coordinate <= frame[axis]
+            for axis, coordinate in enumerate(point)
+        ):
+            raise ValueError("接触标记超出虚拟画布")
+    # 2、坐姿必须有正向臀部到脚底高度，避免零腿长或颠倒接触进入求解器。
+    if not value["hip"][1] < value["soles"][1]:
+        raise ValueError("臀部需要高于脚底")

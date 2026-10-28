@@ -72,7 +72,22 @@ def register_frames(manifest: dict[str, Any], pages: list[bytes]) -> dict[str, A
                 "head_width": (head or statistics.median(valid)) * scale * unit,
             }
         )
-    # 3、泡泡按整套姿态缓存稳定挂点，不能再追逐单帧裁切或手臂摆动。
+        if "contact" in frame:
+            # 3、自制标记随同一等比变换移动，不能在人物归一后继续使用旧帧坐标。
+            points = {}
+            for name, point in frame["contact"].items():
+                points[name] = [
+                    (
+                        geometry[-1]["offset"][axis]
+                        + (point[axis] - frame["offset"][axis]) / old_scale * scale
+                        - (pivot_x if axis == 0 else pivot_y)
+                    )
+                    * unit
+                    for axis in range(2)
+                ]
+            points["seat_height"] = points["soles"][1] - points["hip"][1]
+            geometry[-1]["contact"] = points
+    # 4、泡泡按整套姿态缓存稳定挂点，不能再追逐单帧裁切或手臂摆动。
     sockets = {}
     for posture in ("standing", "seated"):
         tops = [

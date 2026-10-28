@@ -162,7 +162,7 @@ class CrewStudio {
         // 1、固定资源地址只在首次访问时加载，不读取账号、轨迹或模型配置。
         const frame = el("asset-library-frame");
         if (!frame.getAttribute("src"))
-            frame.src = "studio/assets/library-v1/index.html";
+            frame.src = "studio/assets/scene-v1/index.html";
         el("asset-library-dialog").showModal();
     }
 
@@ -880,11 +880,22 @@ class CrewStudio {
         this.furnitureId = identifier;
         el("furniture-type").replaceChildren();
         for (const type of Object.keys(this.data.scene.catalog)) {
-            const option = node("option", "", type);
+            const option = node("option", "", this.data.scene.asset_contract?.definitions[type]?.label || type);
             option.value = type;
             el("furniture-type").append(option);
         }
         el("furniture-type").value = obj?.type || "plant";
+        el("furniture-direction").replaceChildren();
+        for (const direction of CREW_DIRECTIONS) {
+            const option = node("option", "", CREW_DIRECTION_LABELS[direction]);
+            option.value = direction;
+            el("furniture-direction").append(option);
+        }
+        el("furniture-direction").value = obj?.direction || "se";
+        el("furniture-seat-height").value = obj?.seat_height || 22;
+        el("furniture-room-size").textContent = `${this.data.scene.room.width} × ${this.data.scene.room.height} 格`;
+        el("furniture-x").max = this.data.scene.room.width - 2;
+        el("furniture-y").max = this.data.scene.room.height - 2;
         el("furniture-x").value = obj?.x || 12;
         el("furniture-y").value = obj?.y || 10;
         el("furniture-dialog").showModal();
@@ -899,6 +910,8 @@ class CrewStudio {
             type: el("furniture-type").value,
             x: Number(el("furniture-x").value),
             y: Number(el("furniture-y").value),
+            direction: el("furniture-direction").value,
+            seat_height: Number(el("furniture-seat-height").value),
         };
         if (this.furnitureId) values.id = this.furnitureId;
         try {
@@ -944,7 +957,7 @@ class CrewStudio {
 
     /** 因为角色可能走出当前视口，需要通过相机定位而不是传送人物。 */
     focusMember() {
-        // 1、没有选中时定位老板，后端布局与任务不改变。
+        // 1、没有选中时定位助手，后端布局与任务不改变。
         this.renderer.focusMember(this.selected || "assistant");
     }
 

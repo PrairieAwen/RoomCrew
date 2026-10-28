@@ -574,7 +574,7 @@ function verifyIdleRotationAndInterruption() {
     assert.equal(motion.actors.get("a").generation, 1);
     motion.returnVisual("a", nav);
     for (let i = 0; i < 150; i++) motion.step(0.05);
-    assert.deepEqual(Array.from(motion.actors.get("a").position), [2, 2]);
+    assert.deepEqual(Array.from(motion.actors.get("a").position), [2.5, 2.5]);
     assert.equal(motion.actors.get("a").visualKind, undefined);
     assert.equal(crewIdleProfile({ role: "user" }), null);
     assert.equal(
@@ -685,7 +685,7 @@ function verifyIdleChatPair() {
     ]) {
         const anchor = {
             id,
-            position: point,
+            position: [point[0] + 0.5, point[1] + 0.5],
             approach: point,
             posture: "standing",
         };

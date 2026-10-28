@@ -1,0 +1,108 @@
+{
+  "tool": "image_gen.imagegen",
+  "mode": "built-in",
+  "assets": [
+    {
+      "file": "chair.png",
+      "generation_id": "exec-f92ebac6-8638-4099-a80e-bdaa3d8416f7.png",
+      "prompt": "Use case: precise-object-edit. EDIT INPUT 1, a mathematically projected furniture atlas, into finished detailed warm hand-painted office-game sprites. INPUT 1 is the strict EDIT TARGET for camera, all corner coordinates, object identity, dimensions, layout and opacity placement. INPUT 2 is STYLE ONLY: fine brown outlines, muted sage fabric, warm oak, soft painted texture, gentle upper-left light. Preserve the original 2:1 landscape canvas aspect ratio and EXACT four-column by two-row layout with eight isolated complete sprites at exactly their existing cell centers and scale. Do NOT enlarge sprites to fill gutters, rearrange cells, recenter individual objects, crop feet, repeat front views, change camera, or redesign their geometry. This is material painting, not shape reinterpretation. The provided rigid edges use exact orthographic 2:1 projection, ground axes slope +/-0.5 in the quarter views, fixed camera elevation 30 degrees, perfectly vertical uprights. Keep the image's direction-specific slopes: edge-on or front-on views correctly have horizontal/vertical projected edges. Do NOT copy the shallower furniture angles from input 2. Paint fine texture, soft edge highlights and material detail inside the exact geometry, removing the flat proxy-model look; restrained refined illustrated game art, not low-resolution pixel art or thick icon. Maintain a genuinely transparent RGBA background, all empty gutters fully transparent. No backdrop, floor, cast shadows, grid lines, labels, text, people or extra furniture. SUBJECT: One sage-green upholstered swivel office chair with subtle fabric weave, rounded plush seat and backrest, warm oak arm supports, five dark caster legs. Keep the exact seat/back/arm geometry, genuine front/side/back views, empty chair only. The cushions may be softly rounded inside their existing outline. No person.",
+      "transparent_background": true,
+      "references": [
+        {
+          "file": "source/chair-guide.png",
+          "role": "geometry_edit_target"
+        },
+        {
+          "file": "用户提供的暖色办公室参考",
+          "role": "style_only"
+        }
+      ],
+      "status": "candidate_pending_source_and_scene_checks"
+    },
+    {
+      "file": "sofa.png",
+      "generation_id": "exec-bca468f0-9de3-43a5-ad54-d00b0d26bba3.png",
+      "prompt": "Use case: precise-object-edit. EDIT INPUT 1, a mathematically projected furniture atlas, into finished detailed warm hand-painted office-game sprites. INPUT 1 is the strict EDIT TARGET for camera, all corner coordinates, object identity, dimensions, layout and opacity placement. INPUT 2 is STYLE ONLY: fine brown outlines, muted sage fabric, warm oak, soft painted texture, gentle upper-left light. Preserve the original 2:1 landscape canvas aspect ratio and EXACT four-column by two-row layout with eight isolated complete sprites at exactly their existing cell centers and scale. Do NOT enlarge sprites to fill gutters, rearrange cells, recenter individual objects, crop feet, repeat front views, change camera, or redesign their geometry. This is material painting, not shape reinterpretation. The provided rigid edges use exact orthographic 2:1 projection, ground axes slope +/-0.5 in the quarter views, fixed camera elevation 30 degrees, perfectly vertical uprights. Keep the image's direction-specific slopes: edge-on or front-on views correctly have horizontal/vertical projected edges. Do NOT copy the shallower furniture angles from input 2. Paint fine texture, soft edge highlights and material detail inside the exact geometry, removing the flat proxy-model look; restrained refined illustrated game art, not low-resolution pixel art or thick icon. Maintain a genuinely transparent RGBA background, all empty gutters fully transparent. No backdrop, floor, cast shadows, grid lines, labels, text, people or extra furniture. SUBJECT: One cozy two-seat sage-green sofa with two cream pillows, fine seams, oak feet and warm painted fabric. Same dimensions and upholstery in every cell. Round upholstery corners gently inside the existing geometry; retain each true front, side and back view. No person.",
+      "transparent_background": true,
+      "references": [
+        {
+          "file": "source/sofa-guide.png",
+          "role": "geometry_edit_target"
+        },
+        {
+          "file": "用户提供的暖色办公室参考",
+          "role": "style_only"
+        }
+      ],
+      "status": "candidate_pending_source_and_scene_checks"
+    },
+    {
+      "file": "meeting.png",
+      "generation_id": "exec-11d789e4-da6f-4862-82f4-4b3abf0ff09b.png",
+      "prompt": "Use case: precise-object-edit. EDIT INPUT 1, a mathematically projected furniture atlas, into finished detailed warm hand-painted office-game sprites. INPUT 1 is the strict EDIT TARGET for camera, all corner coordinates, object identity, dimensions, layout and opacity placement. INPUT 2 is STYLE ONLY: fine brown outlines, muted sage fabric, warm oak, soft painted texture, gentle upper-left light. Preserve the original 2:1 landscape canvas aspect ratio and EXACT four-column by two-row layout with eight isolated complete sprites at exactly their existing cell centers and scale. Do NOT enlarge sprites to fill gutters, rearrange cells, recenter individual objects, crop feet, repeat front views, change camera, or redesign their geometry. This is material painting, not shape reinterpretation. The provided rigid edges use exact orthographic 2:1 projection, ground axes slope +/-0.5 in the quarter views, fixed camera elevation 30 degrees, perfectly vertical uprights. Keep the image's direction-specific slopes: edge-on or front-on views correctly have horizontal/vertical projected edges. Do NOT copy the shallower furniture angles from input 2. Paint fine texture, soft edge highlights and material detail inside the exact geometry, removing the flat proxy-model look; restrained refined illustrated game art, not low-resolution pixel art or thick icon. Maintain a genuinely transparent RGBA background, all empty gutters fully transparent. No backdrop, floor, cast shadows, grid lines, labels, text, people or extra furniture. SUBJECT: One warm oak rectangular meeting table with four straight legs and one small green notebook on the top. Detailed restrained wood grain, fine warm brown edges. Keep the exact tabletop corners and leg endpoints, identical table dimensions and notebook position across all true views. No chairs.",
+      "transparent_background": true,
+      "references": [
+        {
+          "file": "source/meeting-guide.png",
+          "role": "geometry_edit_target"
+        },
+        {
+          "file": "用户提供的暖色办公室参考",
+          "role": "style_only"
+        }
+      ],
+      "status": "candidate_pending_source_and_scene_checks"
+    },
+    {
+      "file": "tea_table.png",
+      "generation_id": "exec-5a32b250-2824-464b-8b76-55c97fcac9bd.png",
+      "prompt": "Use case: precise-object-edit. EDIT INPUT 1, a mathematically projected furniture atlas, into finished detailed warm hand-painted office-game sprites. INPUT 1 is the strict EDIT TARGET for camera, all corner coordinates, object identity, dimensions, layout and opacity placement. INPUT 2 is STYLE ONLY: fine brown outlines, muted sage fabric, warm oak, soft painted texture, gentle upper-left light. Preserve the original 2:1 landscape canvas aspect ratio and EXACT four-column by two-row layout with eight isolated complete sprites at exactly their existing cell centers and scale. Do NOT enlarge sprites to fill gutters, rearrange cells, recenter individual objects, crop feet, repeat front views, change camera, or redesign their geometry. This is material painting, not shape reinterpretation. The provided rigid edges use exact orthographic 2:1 projection, ground axes slope +/-0.5 in the quarter views, fixed camera elevation 30 degrees, perfectly vertical uprights. Keep the image's direction-specific slopes: edge-on or front-on views correctly have horizontal/vertical projected edges. Do NOT copy the shallower furniture angles from input 2. Paint fine texture, soft edge highlights and material detail inside the exact geometry, removing the flat proxy-model look; restrained refined illustrated game art, not low-resolution pixel art or thick icon. Maintain a genuinely transparent RGBA background, all empty gutters fully transparent. No backdrop, floor, cast shadows, grid lines, labels, text, people or extra furniture. SUBJECT: One low warm oak coffee table with a lower shelf, four short straight legs and one small green book. Rich restrained painted wood grain. Keep every structural corner and actual low height. No plant or sofa.",
+      "transparent_background": true,
+      "references": [
+        {
+          "file": "source/tea_table-guide.png",
+          "role": "geometry_edit_target"
+        },
+        {
+          "file": "用户提供的暖色办公室参考",
+          "role": "style_only"
+        }
+      ],
+      "status": "candidate_pending_source_and_scene_checks"
+    },
+    {
+      "file": "screen.png",
+      "generation_id": "exec-a6d929ec-a7de-40d5-be8f-95f803f2b767.png",
+      "prompt": "Use case: precise-object-edit. EDIT INPUT 1, a mathematically projected furniture atlas, into finished detailed warm hand-painted office-game sprites. INPUT 1 is the strict EDIT TARGET for camera, all corner coordinates, object identity, dimensions, layout and opacity placement. INPUT 2 is STYLE ONLY: fine brown outlines, muted sage fabric, warm oak, soft painted texture, gentle upper-left light. Preserve the original 2:1 landscape canvas aspect ratio and EXACT four-column by two-row layout with eight isolated complete sprites at exactly their existing cell centers and scale. Do NOT enlarge sprites to fill gutters, rearrange cells, recenter individual objects, crop feet, repeat front views, change camera, or redesign their geometry. This is material painting, not shape reinterpretation. The provided rigid edges use exact orthographic 2:1 projection, ground axes slope +/-0.5 in the quarter views, fixed camera elevation 30 degrees, perfectly vertical uprights. Keep the image's direction-specific slopes: edge-on or front-on views correctly have horizontal/vertical projected edges. Do NOT copy the shallower furniture angles from input 2. Paint fine texture, soft edge highlights and material detail inside the exact geometry, removing the flat proxy-model look; restrained refined illustrated game art, not low-resolution pixel art or thick icon. Maintain a genuinely transparent RGBA background, all empty gutters fully transparent. No backdrop, floor, cast shadows, grid lines, labels, text, people or extra furniture. SUBJECT: One freestanding cream whiteboard with a thin dark bronze frame, dark straight support posts, a small marker tray and four small casters on two feet. Subtle warm painted board surface. Keep every exact panel corner, vertical upright, foot and wheel position from the template. Maintain proper front/back/edge-on views, no text or drawings.",
+      "transparent_background": true,
+      "references": [
+        {
+          "file": "source/screen-guide.png",
+          "role": "geometry_edit_target"
+        },
+        {
+          "file": "用户提供的暖色办公室参考",
+          "role": "style_only"
+        }
+      ],
+      "status": "candidate_pending_source_and_scene_checks"
+    },
+    {
+      "file": "archive.png",
+      "generation_id": "exec-073db6fb-d727-483c-a2e5-fb5e0a6a6654.png",
+      "prompt": "Use case: precise-object-edit. EDIT INPUT 1, a mathematically projected furniture atlas, into finished detailed warm hand-painted office-game sprites. INPUT 1 is the strict EDIT TARGET for camera, all corner coordinates, object identity, dimensions, layout and opacity placement. INPUT 2 is STYLE ONLY: fine brown outlines, muted sage fabric, warm oak, soft painted texture, gentle upper-left light. Preserve the original 2:1 landscape canvas aspect ratio and EXACT four-column by two-row layout with eight isolated complete sprites at exactly their existing cell centers and scale. Do NOT enlarge sprites to fill gutters, rearrange cells, recenter individual objects, crop feet, repeat front views, change camera, or redesign their geometry. This is material painting, not shape reinterpretation. The provided rigid edges use exact orthographic 2:1 projection, ground axes slope +/-0.5 in the quarter views, fixed camera elevation 30 degrees, perfectly vertical uprights. Keep the image's direction-specific slopes: edge-on or front-on views correctly have horizontal/vertical projected edges. Do NOT copy the shallower furniture angles from input 2. Paint fine texture, soft edge highlights and material detail inside the exact geometry, removing the flat proxy-model look; restrained refined illustrated game art, not low-resolution pixel art or thick icon. Maintain a genuinely transparent RGBA background, all empty gutters fully transparent. No backdrop, floor, cast shadows, grid lines, labels, text, people or extra furniture. SUBJECT: One compact warm oak filing credenza, six small cream drawer fronts in two outer columns, two central wooden doors, and three muted olive file binders on top. Fine wood grain, small antique-gold handles and a coherent warm office-illustration finish. Preserve the exact cabinet geometry, drawer/door layout and real front/back/side orientation from the template.",
+      "transparent_background": true,
+      "references": [
+        {
+          "file": "source/archive-guide.png",
+          "role": "geometry_edit_target"
+        },
+        {
+          "file": "用户提供的暖色办公室参考",
+          "role": "style_only"
+        }
+      ],
+      "status": "candidate_pending_source_and_scene_checks"
+    }
+  ]
+}

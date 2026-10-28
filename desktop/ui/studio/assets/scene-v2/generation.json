@@ -1,0 +1,19 @@
+{
+  "tool": "image_gen.imagegen",
+  "mode": "built-in",
+  "asset": "workstation-se.png",
+  "generation_id": "exec-621e7532-d2f0-4b7a-b8a0-0a797fa900e1.png",
+  "transparent_background": true,
+  "prompt": "Use case: precise-object-edit. Edit image 1, the exact 1024x1024 RoomCrew desk geometry template, into finished warm detailed hand-painted office-game artwork. Image 1 is the EDIT TARGET and strict geometry/position/camera authority. Image 2 is a STYLE REFERENCE only, for fine brown outlines, warm oak, muted sage-green cabinetry, soft painted texture and gentle upper-left illumination. Preserve image 1's exact 1024x1024 canvas, object placement, complete silhouette, all tabletop corner coordinates, all leg endpoints, drawer widths and monitor corners. Do not recenter, resize, crop, distort, tilt, change camera, or reinterpret perspective. The tabletop four TOP corners are (700,251.4), (968.8,385.8), (431.2,654.6), (162.4,520.2), with edges of slope exactly +0.5 and -0.5. Vertical edges must remain exactly vertical. This strict 2:1 orthographic projection is critical: do NOT use the shallower tabletop angles from image 2. The task is detailed material painting over the supplied geometry, not redesigning its shapes. Keep the same single desk, three left-side sage-green drawers and antique-gold handles, clear knee space on the right, four floor-contact feet, one slim monitor with pale blue screen, consistent warm oak tabletop and visible restrained wood grain. Add subtle painted edge bevel shading and textile-like soft surface variation, but do not move any hard edge or change its slope. Do NOT add keyboard, mouse, chair, person, plants, props, ground plane, cast shadow, background, labels, guides or text. Preserve genuine transparent RGBA alpha outside the entire complete isolated desk and monitor; all tips and feet remain inside the original margins. Fine illustrated detail, not pixel art, not a flat placeholder or thick vector icon. Keep only ONE complete finished desk in the output.",
+  "references": [
+    {
+      "file": "workstation-guide.png",
+      "role": "edit_target_geometry"
+    },
+    {
+      "file": "用户提供的目标办公室图",
+      "role": "style_only"
+    }
+  ],
+  "status": "candidate_pending_axis_and_scene_validation"
+}

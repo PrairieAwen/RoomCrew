@@ -34,6 +34,7 @@ class CrewRenderer {
         this.motion = new CrewMotion();
         this.navigator = new CrewNavigator();
         this.idle = new CrewIdleDirector(this.motion, this.navigator);
+        this.workstations = new CrewWorkstationDirector(this.motion, this.navigator);
         this.collaboration = new CrewCollaborationDirector(
             this.motion,
             this.navigator,
@@ -47,6 +48,7 @@ class CrewRenderer {
         this.depth = crewSvg("g");
         this.bubbles = crewSvg("g", { class: "crew-bubble-layer" });
         this.views = new Map();
+        this.seats = new Map();
         this.facts = new Map();
         this.scene = null;
         this.revision = 0;
@@ -82,6 +84,10 @@ class CrewRenderer {
         this.collaboration.blocked.clear();
         this.collaboration.retryAt.clear();
         this.motion.actors.clear();
+        this.motion.chairs.clear();
+        this.motion.presetMembers.clear();
+        this.motion.chairRevision = null;
+        this.workstations.clear();
         this.animator.clear();
         this.navigator.revision = -1;
         this.facts.clear();
@@ -110,6 +116,7 @@ class CrewRenderer {
             this.revision = data.scene.room.revision;
             this.world.replaceChildren();
             this.views.clear();
+            this.seats.clear();
             this.depth = crewSvg("g");
             this.bubbles = crewSvg("g", { class: "crew-bubble-layer" });
             this.drawRoom(data.scene.room);
@@ -143,6 +150,12 @@ class CrewRenderer {
                 this.motion.actors.delete(identifier);
             }
         }
+        // 3、配套椅片段只授权给真正有该补页的内置人物；自制图集不能套用椅脚定位的运动。
+        this.motion.presetMembers.clear();
+        for (const member of members)
+            if (window.ROOMCREW_SCENE_ASSETS?.characters[member.avatar_id]?.paired &&
+                !this.skins.errors.has(member.avatar_id)) this.motion.presetMembers.set(member.id,
+                    window.ROOMCREW_SCENE_ASSETS.characters[member.avatar_id].transition.standing_foot);
         for (const place of data.scene.placements)
             this.motion.restore(place, data.scene.anchors, this.revision);
         for (const raw of data.actors) {
@@ -244,11 +257,11 @@ class CrewRenderer {
             patternUnits: "userSpaceOnUse",
         });
         pattern.append(
-            crewSvg("rect", { width: 96, height: 48, fill: "#f3f3ef" }),
+            crewSvg("rect", { width: 96, height: 48, fill: "#f5eee1" }),
             crewSvg("path", {
                 d: "M0,24 L48,0 L96,24 L48,48Z M-48,0 L0,24 L48,0 M48,48 L96,24 L144,48",
                 fill: "none",
-                stroke: "#dcdfdc",
+                stroke: "#d5c8b4",
                 "stroke-width": 0.6,
             }),
             crewSvg("path", {
@@ -268,40 +281,39 @@ class CrewRenderer {
                 fill: "url(#crew-floor)",
             }),
         );
-        // 2、软装保持原格网，高墙单独延伸到镜头外，窗户与标识随新墙面抬高。
-        this.rug(floor, [2, 7], 11, 5, "#dce3de");
-        this.rug(floor, [15, 2], 8, 7, "#dbe3e8");
-        this.rug(floor, [1, 14], 6, 4, "#e8dfd0");
+        // 2、办公区保留完整地砖，休闲区铺统一织物地毯，不画生硬的功能分区框。
+        this.environment.drawLighting(floor);
+        this.zoneRug(floor, room, ["sofa"], "#ead6b5");
         this.environment.drawWalls(floor);
-        for (let i = 0; i < 12; i++) {
-            const p = crewProject([0.1, 3 + i * 3.1]),
-                window = crewSvg("g", {
-                    transform: `translate(${p[0]},${p[1] - 154})`,
-                });
-            window.append(
-                crewSvg("path", {
-                    d: "M0,0 L-62,31 L-62,88 L0,57Z",
-                    fill: "#bdd0bc",
-                    stroke: "#8f927b",
-                    "stroke-width": 3,
-                }),
-                crewSvg("path", {
-                    d: "M-30,15 L-30,72 M0,29 L-62,60",
-                    stroke: "#f6edda",
-                    "stroke-width": 3,
-                }),
-                crewSvg("path", {
-                    d: "M-60,34 L-1,5 L-1,16 L-60,45Z",
-                    fill: "#ffffff44",
-                }),
-            );
-            floor.append(window);
-        }
+        this.environment.drawWindows(floor);
         this.label(floor, [6, 1], "RoomCrew", -170);
-        this.label(floor, [19, 8], "MEETING · 会议区", 12);
-        this.label(floor, [6, 12], "WORK · 团队工位", 10);
         this.world.append(floor, this.depth, this.bubbles);
         for (const obj of room.objects) this.drawObject(obj);
+    }
+
+    /** 因为家具可以移动而功能区不应留在旧位置，需要按同类家具外沿生成整齐的低对比区域。 */
+    zoneRug(parent, room, types, color) {
+        // 1、接待台单独临墙，不并入员工方阵；自定义布局仍按现有家具推导范围。
+        let left = room.width,
+            top = room.height,
+            right = 0,
+            bottom = 0;
+        for (const object of room.objects) {
+            if (!types.includes(object.type) || object.id === "reception-desk")
+                continue;
+            const [width, depth] = object.footprint || this.scene.catalog[object.type];
+            left = Math.min(left, object.x - 1);
+            top = Math.min(top, object.y - 1);
+            right = Math.max(right, object.x + width + 1);
+            bottom = Math.max(bottom, object.y + depth + 1);
+        }
+        // 2、区域只修饰地板，不作为墙、碰撞或隐藏的占座边界。
+        if (right <= left) return;
+        left = Math.max(1, left);
+        top = Math.max(1, top);
+        right = Math.min(room.width - 1, right);
+        bottom = Math.min(room.height - 1, bottom);
+        this.rug(parent, [left, top], right - left, bottom - top, color);
     }
 
     /** 因为地毯应随家具格网一致透视，需要从同一占地顶点生成软装区域。 */
@@ -318,11 +330,18 @@ class CrewRenderer {
             crewSvg("polygon", {
                 points: points.map(crewPoint).join(" "),
                 fill: color,
-                opacity: 0.62,
-                stroke: "#8a9381",
-                "stroke-width": 2,
+                opacity: 0.92,
+                stroke: "#c5a97f",
+                "stroke-width": 0.8,
             }),
         );
+        // 2、细织纹与内沿使用同一地面投影，避免误看成碰撞边框。
+        const inset = 0.22;
+        parent.append(crewSvg("polygon", { points:[
+            [x+inset,y+inset],[x+width-inset,y+inset],
+            [x+width-inset,y+depth-inset],[x+inset,y+depth-inset]
+        ].map(crewProject).map(crewPoint).join(" "), fill:"url(#crew-rug-weave)",
+            stroke:"#c4a77d", "stroke-width":0.45, opacity:0.65 }));
     }
 
     /** 因为空间名称只提供方向信息，需要使用纯文本地面标识。 */
@@ -367,10 +386,10 @@ class CrewRenderer {
         const shadow = crewSvg("ellipse", {
             cx: 0,
             cy: 2,
-            rx: 18,
-            ry: 7,
+            rx: 12,
+            ry: 4,
             fill: "#625746",
-            opacity: 0.18,
+            opacity: 0.11,
         });
         const rig = this.rig.create(member),
             badge = crewSvg("text", {
@@ -441,11 +460,14 @@ class CrewRenderer {
         bubbleMount.append(bubbleLink, bubble);
         const bubbleActor = crewSvg("g", { "data-member": member.id });
         bubbleActor.append(bubbleMount);
-        group.append(shadow, rig.root, badge, name, leisureLabel);
+        const body = crewSvg("g", { class: "crew-body" });
+        body.append(rig.root);
+        group.append(shadow, body, badge, name, leisureLabel);
         this.depth.append(group);
         this.bubbles.append(bubbleActor);
         return {
             group,
+            body,
             rig,
             badge,
             name,
@@ -496,6 +518,13 @@ class CrewRenderer {
                 timestamp,
                 this.collaboration.participants,
             );
+            this.workstations.tick(
+                this.scene,
+                this.views,
+                this.facts,
+                this.collaboration.participants,
+                healthy,
+            );
             for (const [identifier, actor] of this.motion.actors) {
                 const fact = this.facts.get(identifier);
                 actor.interactionHold = Boolean(
@@ -503,6 +532,7 @@ class CrewRenderer {
                 );
             }
             this.motion.step(dt);
+            this.furniture.frameChairs();
             for (const [id, view] of this.views) {
                 const actor = this.motion.actors.get(id);
                 if (!actor) continue;
@@ -526,12 +556,25 @@ class CrewRenderer {
                 if (
                     binding &&
                     sample.locomotion === "idle" &&
-                    !sample.meeting
+                    !sample.meeting &&
+                    !sample.turning &&
+                    actor.phase === "settled"
                 ) {
-                    sample.action = binding.action;
-                    sample.material_binding = binding;
+                    sample.action = crewOfficeAction(actor, binding.action);
+                    if (crewOfficeBindingCompatible(binding, sample)) sample.material_binding = binding;
                 }
                 crewSetActorTransform(view, p);
+                // 2、臀部与脚底分别匹配座面和支撑，不再统一抬高；泡泡继承同一局部修正。
+                const contact = crewSeatContact(this.skins.cache.get(view.member.avatar_id), actor, sample);
+                const elevation = contact.elevation;
+                view.contact = contact;
+                view.shadow.setAttribute("cx", contact.soleX);
+                view.shadow.setAttribute("cy", contact.soleY + (contact.composite ? 0 : 2));
+                view.group.dataset.contact = contact.verified ? "registered" : "unmarked";
+                view.body.setAttribute("transform", `translate(${contact.offsetX},${-elevation})`);
+                view.body.dataset.elevation = String(elevation);
+                actor.visualDirection = sample.direction;
+                this.furniture.faceSeat(actor, sample);
                 view.group.dataset.depth =
                     actor.position[0] + actor.position[1] + 0.1;
                 view.group.classList.toggle(
@@ -563,6 +606,7 @@ class CrewRenderer {
                     view.member.avatar_id,
                     sample,
                 );
+                this.furniture.occupy(view,actor,sample,custom);
                 const loading =
                     view.member.avatar_id?.startsWith("avatar:") &&
                     !custom &&
@@ -593,7 +637,7 @@ class CrewRenderer {
                                 alert: "!",
                             }[sample.action] || "";
             }
-            // 2、按脚底深度排序，仅在顺序变化时移动节点，避免人物穿过前景家具。
+            // 3、按脚底深度排序，仅在顺序变化时移动节点，避免人物穿过前景家具。
             const ordered = [...this.depth.children].sort(crewEntityDepth),
                 signature = ordered.map(crewEntityId).join("|");
             if (signature !== this.depthSignature) {
@@ -662,6 +706,15 @@ class CrewRenderer {
                 ? this.skins.cache.get(view.member.avatar_id)?.registration
                 : null;
         const anchor = crewBubbleAnchor(manifest, seat, registration);
+        anchor.y -= view.contact?.elevation || 0;
+        anchor.x += view.contact?.offsetX || 0;
+        // 2、起坐预设的站立脚点相对椅脚有位移，提示沿同一预设骨点过渡，接回步行时不跳到椅子上。
+        if(["stand_up","sit_down"].includes(sample.phase) && view.sprite?.dataset.includesSeat === "true") {
+            const actor = this.motion.actors.get(view.member.id);
+            const origin = crewProject(actor.position), foot = crewProject(crewActorFootPosition(actor));
+            anchor.x += foot[0] - origin[0];
+            anchor.y += foot[1] - origin[1];
+        }
         const key = `${anchor.x.toFixed(3)},${anchor.y.toFixed(3)}`;
         // 2、挂点位于共用人物变换的提示根节点，镜头由共同 world 继承，不单独追踪屏幕位置。
         if (key !== view.bubblePosition) {

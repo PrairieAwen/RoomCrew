@@ -1,5 +1,25 @@
 # RoomCrew
 
+最新素材为统一投影兼容预览：八类家具八向、四角色配套工作和六帧起坐；参见 `doc/architecture/0020-unified-projection-assets.md`。原画、底稿、提示词与已知缺失保存在 `desktop/ui/studio/assets/scene-v2/`，尚不是全部动作和接触均完成的最终美术包。
+
+后续人物、家具与动作统一按 [素材制作规范 v1.0](doc/assets/asset-production-standard/README.md) 制作；[图解阅读版](doc/assets/asset-production-standard/guide.html) 包含统一相机、八方向投影、接触点、逐帧衔接与放行条件。规范和模板已建立，现有原图尚未按此重制或取得合格结论。
+
+当前工位交互以 [ADR-0019](doc/architecture/0019-paired-chair-interactions.md) 为准：四套人物配套椅子、六帧起坐、椅子后移/推回、独立键盘与鞋底交接。标准预设限定在匹配人物和座高 22 的椅子；不代表任意自制家具已自动适配。源码与发行验证见 [素材验收](doc/development/scene-assets-validation.md)。
+
+本轮新版为 `dist/RoomCrew-interaction-preview/RoomCrew.exe`，完整包为 `dist/RoomCrew-interaction-preview-windows-x64.zip`。旧正式窗口不能正常激活关闭，已保留原程序；预览使用 `.cache/paired-chair-showcase` 独立数据，不复制真实 Key 或旧会话。顶部点“会议室”可切全画布。
+
+最新办公室视觉修正见 [ADR-0018](doc/architecture/0018-coherent-office-art.md)：统一相对比例，工作使用独立伸手姿态，校准桌椅遮挡并增加手绘窗景、暖色地砖与织物地毯。当前正式程序位置仍为 `dist/RoomCrew/RoomCrew.exe`；下方 scene-preview 是上一轮预览记录。
+
+最新可配置素材见 [ADR-0017](doc/architecture/0017-configurable-scene-assets.md)：设备八方向、旋转占地、人物臀部/脚底接触与四沙发茶几布景。“布置会议室”可改方向和座高，“素材总览”可逐向查看。新坐姿为方向接触关键帧，完整八向动作动画仍需继续补充。
+
+本轮独立预览位于 `dist/RoomCrew-scene-preview/RoomCrew.exe`，压缩包为 `dist/RoomCrew-scene-preview-windows-x64.zip`；原 `dist/RoomCrew` 保留。检查结果与启动数据说明见 [素材验收](doc/development/scene-assets-validation.md)。
+
+办公朝向、动作过渡和新版整齐布局见 [ADR-0014](doc/architecture/0014-physical-office-interactions.md)。工作面向显示器，手机/汇报可转向用户；只升级未自定义的旧默认模板。
+
+桌前座点和穿桌修正见 [ADR-0015](doc/architecture/0015-office-contact-correction.md)：人物走格心、避开空椅，坐在桌前膝部空位，电脑工作可临时借用空工位；无显示器处不会继续播放打字。
+
+默认桌子和监管员已统一视觉：同款浅木色桌型、单屏监管台、直立坐姿及相同工作方向，见 [ADR-0016](doc/architecture/0016-office-art-alignment.md)。
+
 属于你的会议室，一群陪你做事的伙伴。
 
 本版采用白底阅读界面、统一人物体型与家具接触点；顶部可直接新建独立工作区。Agent 只委派本空间已配置名单，同一成员不能并发克隆，跨会议室不共享任务上下文。档案室已有设施入口，归档、习惯提取与跨空间记忆尚未启用。详见 [ADR-0011](doc/architecture/0011-coherent-studio-and-workspace-roster.md)，其现行规则覆盖下文旧外援说明。
@@ -129,6 +149,8 @@ node desktop/tests/web/model-settings.test.cjs
 node desktop/tests/web/material-bindings.test.cjs
 node desktop/tests/web/bubble-read.test.cjs
 node desktop/tests/web/camera-pointer.test.cjs
+node desktop/tests/web/office-behavior.test.cjs
+& .\.venv\Scripts\python.exe desktop/tests/office_scene_smoke.py
 node desktop/tests/web/markdown.test.cjs
 & .\.venv\Scripts\python.exe desktop/tests/markdown_smoke.py
 

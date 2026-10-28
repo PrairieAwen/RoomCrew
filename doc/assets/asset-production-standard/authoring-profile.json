@@ -1,0 +1,81 @@
+{
+  "format": "roomcrew.asset-authoring-profile",
+  "version": 1,
+  "profile_id": "rc-ortho-2to1-v1",
+  "status": "production_specification_only",
+  "runtime_import_supported": false,
+  "world": {
+    "space": "world_grid",
+    "meters_per_tile": 0.5,
+    "positive_x_screen": "down_right",
+    "positive_y_screen": "down_left",
+    "positive_z": "up",
+    "blender_mapping": ["world_x", "-world_y", "world_z"]
+  },
+  "projection": {
+    "type": "orthographic_dimetric",
+    "screen_y_positive": "down",
+    "matrix": [[24, -24, 0], [12, 12, -29.393876913398138]],
+    "ground_axis_degrees": 26.56505117707799,
+    "camera_elevation_degrees": 30,
+    "ground_tile_bounds_view": [48, 24]
+  },
+  "blender_camera": {
+    "position": [8, -8, 6.531972647421808],
+    "target": [0, 0, 0],
+    "local_tracking_axis": "-Z",
+    "local_up_axis": "Y",
+    "world_up_axis": "Z",
+    "type": "ORTHO",
+    "square_render_required": true,
+    "pixel_aspect": [1, 1],
+    "object_z_rotation_degrees": "-world_yaw_degrees"
+  },
+  "authoring": {
+    "source_pixels_per_view_unit": 8,
+    "character_canvas_px": [1024, 1024],
+    "character_canvas_origin_px": [512, 896],
+    "square_1024_ortho_scale": 3.7712361663282534,
+    "large_canvas_px": [2048, 2048],
+    "square_2048_ortho_scale": 7.542472332656507,
+    "color_space": "sRGB",
+    "alpha": "straight",
+    "format": "PNG_RGBA8"
+  },
+  "directions": {
+    "e": {"world_yaw_degrees": 315, "world_forward": [1, -1]},
+    "se": {"world_yaw_degrees": 0, "world_forward": [1, 0]},
+    "s": {"world_yaw_degrees": 45, "world_forward": [1, 1]},
+    "sw": {"world_yaw_degrees": 90, "world_forward": [0, 1]},
+    "w": {"world_yaw_degrees": 135, "world_forward": [-1, 1]},
+    "nw": {"world_yaw_degrees": 180, "world_forward": [-1, 0]},
+    "n": {"world_yaw_degrees": 225, "world_forward": [-1, -1]},
+    "ne": {"world_yaw_degrees": 270, "world_forward": [0, -1]}
+  },
+  "sample_interaction": {
+    "profile_id": "humanoid-desk-044-072-v1",
+    "status": "sample_target_pending_visual_validation",
+    "character_height_m": 1.6,
+    "desk_dimensions_m": [1.4, 0.7, 0.72],
+    "chair_seat_height_m": 0.44,
+    "chair_seat_height_world_tiles": 0.88,
+    "desk_surface_height_world_tiles": 1.44
+  },
+  "quality_targets": {
+    "hard_axis_error_degrees_max": 1,
+    "scale_relative_error_max": 0.01,
+    "contact_error_view_units_max": 1,
+    "rigid_shape_relative_drift_max": 0.02,
+    "transition_extra_jump_view_units_max": 1,
+    "stance_foot_slide_world_tiles_max": 0.03,
+    "loops_per_direction_min": 10
+  },
+  "performance_targets_unmeasured": {
+    "visible_actors": 8,
+    "character_texture_resident_mib_max": 128,
+    "scene_texture_resident_mib_max": 256,
+    "frame_time_p95_ms_max": 16.7,
+    "atlas_edge_default_max": 2048,
+    "atlas_edge_exception_max": 4096
+  }
+}

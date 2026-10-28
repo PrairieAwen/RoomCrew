@@ -1,0 +1,20 @@
+{
+  "tool": "image_gen.imagegen",
+  "mode": "built-in",
+  "assets": [
+    {
+      "file": "working-v2.png",
+      "generation_id": "exec-352d8e7f-0c53-4d5f-8e7d-f492b84f8e57.png",
+      "transparent_background": true,
+      "references": ["seated-assistant.png", "seated-guardian.png", "用户提供的目标办公室参考图"],
+      "prompt": "Create ONE production transparent sprite atlas for RoomCrew, illustration-story. Input1 green cardigan brown-haired assistant identity, input2 navy-haired glasses blue jacket guardian identity; input3 exact desired office illustration visual style and human-to-desk proportions. Output 4 columns by 4 rows, 16 separate full-body seated WORKING sprites on genuinely transparent alpha, generous empty margins in each equal cell, no overlap, no clipping. All people face AWAY from viewer toward an unseen desktop monitor. No chair, no desk, no monitor, no keyboard, no shadows, no props, no text, no background. Each character sits upright with hips on imaginary chair, knees bent at 90 degrees, both shoes planted on SAME horizontal ground baseline, forearms extend FORWARD and fingers typing on imaginary desktop at elbow height. Legs long enough that seat height is about 30 percent of full seated height. Keep same character scale and clean grounded anatomy. Col1 = back three-quarter facing upper-left (NW) typing pose A, col2 same NW typing pose B tiny finger movement only, col3 back three-quarter upper-right (NE) typing pose A, col4 same NE pose B. Row1 green cardigan brown-haired male assistant matching input1. Row2 pink cardigan brown-haired female employee. Row3 blue jacket dark blue-haired male guardian wearing glasses matching input2. Row4 tan blazer brown-haired male coworker. Same warm hand-painted detailed chibi office-game art, fine brown outlines, top-left warm light; smaller heads relative to torso than input1, around 2.8 heads total seated height. CONSISTENT camera isometric 2:1 viewed down 27 degrees, no front-facing faces. Elbows and hands must reach forward over imaginary table, not rest on thighs. All 16 full sprites independent, no furniture anywhere. Exact 4x4 layout."
+    },
+    {
+      "file": "window-garden-v2.png",
+      "generation_id": "exec-b1bcc02f-b095-4fbc-ab04-16daebd394e8.png",
+      "transparent_background": false,
+      "references": [],
+      "prompt": "Use case stylized-concept. Create a seamless soft hand-painted scenic foliage texture for a cozy 2.5D office game's window glass, warm illustrated storybook material matching a refined Japanese hand-painted office interior. Rectangular landscape image. Only softly focused pale blue sky at top, sunlit sage and olive green leafy tree canopies in middle, soft pale golden bokeh sunlight. Fine watercolor/gouache texture with subtle warm brown details, lush actual recognizable painted leaves rather than geometric circles. Flat straight-on surface texture; no window frame, no buildings, no objects, no characters, no text, no borders, no cast shadows. Low contrast and pastel bright colors, muted subtle detail, light coming from upper left. Intended to be clipped onto repeated window panes. Not photorealistic, not pixel art."
+    }
+  ]
+}

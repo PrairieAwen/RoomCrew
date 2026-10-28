@@ -314,3 +314,18 @@ code {
         padding: 8px;
     }
 }
+
+/* 会议室浏览时收紧空输入区，点入后恢复完整编辑，不覆盖前排家具。 */
+.studio-mode:not(.conversation-open) .composer-area:not(:focus-within) {
+    padding: 8px 12px;
+}
+.studio-mode:not(.conversation-open) .composer-area:not(:focus-within) #prompt:placeholder-shown {
+    height: 32px;
+    min-height: 32px;
+}
+.studio-mode:not(.conversation-open) .composer-area:not(:focus-within) .composer-hint {
+    display: none;
+}
+.studio-mode:not(.conversation-open) .composer-area:not(:focus-within) .run-status {
+    margin-bottom: 4px;
+}

@@ -1,455 +1,161 @@
-/* 同一格网下的精细矢量家具，形状不会决定导航或任务权限。 */
+/* 家具实例只消费统一素材合同；方向、接触与图层不进入 Agent。 */
 "use strict";
 
 class CrewFurniture {
-    /** 因为家具与人物应共用投影尺度，需要复用场景的立体绘制能力。 */
+    /** 因为家具要随布局和素材一起变化，需要只引用场景渲染能力。 */
     constructor(renderer) {
-        // 1、只引用绘图能力，不连接模型或桌面接口。
+        // 1、不持有模型、工具或任务执行接口。
         this.renderer = renderer;
     }
 
-    /** 因为家具类型必须可注册且尺度一致，需要用有限目录绘制装饰与交互面。 */
+    /** 因为所有设备都需支持方向配置，需要从同一目录绘制独立关键帧，而非按类型堆偏移。 */
     draw(obj) {
-        // 1、占地来自后端目录，用户字符串仅作为稳定 ID 和文本。
-        const r = this.renderer,
-            [w, d] = r.scene.catalog[obj.type],
-            p = crewProject([obj.x + w / 2, obj.y + d / 2]);
-        const group = crewSvg("g", {
-            class: "room-object",
-            "data-object": obj.id,
-            tabindex: 0,
-            role: "button",
-            "aria-label": obj.id,
-        });
+        // 1、占地来自原生端旋转后的合同，显示方向与碰撞方向一致。
+        const r = this.renderer, material = crewSceneMaterial(obj.type, obj.direction);
+        if (!material) return;
+        const [w, d] = obj.footprint || r.scene.catalog[obj.type];
+        const p = crewProject([obj.x + w / 2, obj.y + d / 2]);
+        const group = crewSvg("g", { class: "room-object", "data-object": obj.id,
+            tabindex: 0, role: "button", "aria-label": material.definition.label });
         group.dataset.depth = obj.x + obj.y + (w + d) / 2;
         group.dataset.entity = "object:" + obj.id;
+        group.dataset.material = obj.type;
+        group.dataset.direction = material.direction;
+        group.dataset.coverage = material.view.coverage;
         group.addEventListener("click", r.objectClick.bind(r));
         group.addEventListener("keydown", r.objectKey.bind(r));
-        group.append(
-            crewSvg("ellipse", {
-                cx: p[0] + 4,
-                cy: p[1] + 12,
-                rx: w * 17,
-                ry: d * 7,
-                fill: "#766554",
-                opacity: 0.12,
-            }),
-        );
-        if (this.paintMaterial(group, obj, p, w, d)) {
-            r.depth.append(group);
-            return;
+        const shadow = crewSvg("ellipse", { fill:"#76624b", opacity:0.12,
+            filter:"url(#crew-contact-shadow)", "data-contact-shadow":"true" });
+        group.append(shadow);
+        const anchor = r.scene.anchors.find(crewObjectAnchor, obj.id);
+        let picture;
+        // 2、坐席以座面和地面两个标记注册；桌子的操作侧与人物座位共用同一地面基线。
+        if (anchor && ["desk", "security"].includes(obj.type)) {
+            const floor = crewProject(anchor.furniture_position || anchor.position);
+            const desk = { ...material, view: { ...material.view, ground: material.view.operator_ground } };
+            picture = crewScenePicture(group, desk, floor);
+        } else if (anchor && ["sofa", "chair"].includes(obj.type)) {
+            const floor = crewProject(anchor.position);
+            picture = crewScenePicture(group, material, floor, [floor[0], floor[1] - anchor.contact.seat_height]);
+        } else picture = crewScenePicture(group, material,
+            [p[0], p[1] + (material.view.world_origin_at_center ? 0 : 12)]);
+        // 3、接触阴影跟随实际图片脚线，不能按占地中心画出远离家具的大椭圆。
+        const px = Number(picture.getAttribute("x")), py = Number(picture.getAttribute("y"));
+        const pw = Number(picture.getAttribute("width")), ph = Number(picture.getAttribute("height"));
+        if (["desk", "security"].includes(obj.type)) {
+            const keyboard = window.ROOMCREW_SCENE_ASSETS.attachments?.keyboard;
+            const direction = anchor.direction;
+            const view = keyboard?.views[direction];
+            if (view) {
+                const keyPicture = { ...keyboard, frames:[view.rect] };
+                const keyHeight = keyboard.width * view.rect[3] / view.rect[2];
+                crewEnvironmentPicture(group,keyPicture,px+pw*material.view.keyboard[0]-keyboard.width/2,
+                    py+ph*material.view.keyboard[1]-keyHeight/2,keyboard.width);
+            }
         }
-        if (["desk", "meeting"].includes(obj.type)) {
-            for (const point of [
-                [0.25, 0.35],
-                [w - 0.55, 0.35],
-                [0.25, d - 0.55],
-                [w - 0.55, d - 0.55],
-            ])
-                r.box(
-                    group,
-                    obj.x + point[0],
-                    obj.y + point[1],
-                    0.2,
-                    0.2,
-                    26,
-                    "#635447",
-                    "#655446",
-                );
-            r.box(
-                group,
-                obj.x,
-                obj.y,
-                w,
-                d,
-                4,
-                obj.type === "desk" ? "#cbb28b" : "#ad8061",
-                "#997652",
-                27,
-            );
-            if (obj.type === "desk") this.desk(group, p, obj);
-            else this.meeting(group, obj, p);
-        } else if (obj.type === "sofa") this.sofa(group, obj, w, d);
-        else if (obj.type === "plant") this.plant(group, p, obj);
-        else if (obj.type === "screen") {
-            r.box(
-                group,
-                obj.x + 0.1,
-                obj.y + 0.2,
-                w - 0.2,
-                0.3,
-                64,
-                "#6a7e7b",
-                "#4b6360",
-            );
-            group.append(
-                crewSvg("rect", {
-                    x: p[0] - 37,
-                    y: p[1] - 65,
-                    width: 74,
-                    height: 42,
-                    rx: 4,
-                    fill: "#e8e5cf",
-                    stroke: "#526864",
-                    "stroke-width": 3,
-                }),
-                crewSvg("path", {
-                    d: `M${p[0] - 28},${p[1] - 54} h45 M${p[0] - 28},${p[1] - 46} h30 M${p[0] - 28},${p[1] - 37} h37`,
-                    stroke: "#809a84",
-                    "stroke-width": 2.2,
-                }),
-                crewSvg("circle", {
-                    cx: p[0] + 26,
-                    cy: p[1] - 35,
-                    r: 4,
-                    fill: "#c49b68",
-                }),
-            );
-        } else {
-            r.box(
-                group,
-                obj.x,
-                obj.y,
-                w,
-                d,
-                49,
-                obj.type === "fridge" ? "#d5ded1" : "#91aaa8",
-                "#8b9f97",
-            );
-            group.append(
-                crewSvg("path", {
-                    d: `M${p[0] - 12},${p[1] - 34} h24 M${p[0] - 12},${p[1] - 18} h24`,
-                    stroke: "#e7ead9",
-                    "stroke-width": 2.5,
-                }),
-                crewSvg("circle", {
-                    cx: p[0] + 8,
-                    cy: p[1] - 28,
-                    r: 1.6,
-                    fill: "#627c70",
-                }),
-            );
-            if (obj.type === "cabinet")
-                group.append(
-                    crewSvg(
-                        "text",
-                        {
-                            x: p[0],
-                            y: p[1] - 53,
-                            "text-anchor": "middle",
-                            "font-size": 8,
-                            fill: "#547364",
-                        },
-                        "SECURITY",
-                    ),
-                );
+        shadow.setAttribute("cx", px + pw * 0.5);
+        shadow.setAttribute("cy", py + ph - 2);
+        shadow.setAttribute("rx", pw * 0.37);
+        shadow.setAttribute("ry", Math.max(3, Math.min(8, pw * 0.065)));
+        if (obj.type === "tea_table") {
+            const point = material.view.plant_attachment || [0.48, 0.30];
+            const pot = crewEnvironmentMaterial("furniture-12");
+            const height = 23 * pot.frames[0][3] / pot.frames[0][2];
+            crewEnvironmentPicture(group, pot, px + pw * point[0] - 11.5,
+                py + ph * point[1] - height, 23);
         }
+        if (["archive", "security"].includes(obj.type))
+            group.append(crewSvg("text", { x: px + pw * 0.5, y: py - 9,
+                "text-anchor": "middle", "font-size": 9, fill: "#526174", stroke: "#fff",
+                "paint-order": "stroke", "stroke-width": 3 },
+                obj.type === "archive" ? "档案室 · 规划中" : "安全服务台 · 未接入"));
         r.depth.append(group);
+        // 4、工作椅和会议椅也是同一个八向素材，不使用另一套前后朝向图片规则。
+        if (["desk", "security", "meeting"].includes(obj.type))
+            for (const seat of r.scene.anchors)
+                if (seat.object_id === obj.id) this.chair(seat);
     }
 
-    /** 因为环境不能长期停留在低细节几何占位，需要将已核验的家具原图接入相同格网与交互容器。 */
-    paintMaterial(group, obj, p, width, depth) {
-        // 1、碰撞、锚点和点击事件仍由既有合同控制，只替换外观。
-        const mapping = {
-            desk: "furniture-02",
-            meeting: "furniture-03",
-            sofa: "furniture-05",
-            plant: "furniture-11",
-            fridge: "furniture-09",
-            screen: "furniture-10",
-            cabinet: "furniture-08",
-            bookcase: "furniture-07",
-            coffee: "decor-09",
-            lamp: "decor-07",
-            archive: "furniture-07",
-        };
-        const identifier = mapping[obj.type];
-        const material = crewEnvironmentMaterial(identifier);
-        if (!material) return false;
-        const sizes = {
-            desk: 136,
-            sofa: 164,
-            meeting: 210,
-            plant: 54,
-            fridge: 64,
-            cabinet: 57,
-            bookcase: 72,
-            archive: 72,
-            coffee: 46,
-            lamp: 44,
-            screen: 112,
-        };
-        const span =
-                sizes[obj.type] || Math.max(135, (width + depth) * 24 * 0.95),
-            rect = material.frames[0],
-            height = (span * rect[3]) / rect[2];
-        if (obj.type === "coffee")
-            this.renderer.box(
-                group,
-                obj.x - 0.2,
-                obj.y - 0.2,
-                1.4,
-                1.4,
-                26,
-                "#c2a27d",
-                "#a18566",
-            );
-        const anchor = this.renderer.scene.anchors.find(
-            crewAnchorMatches,
-            obj.id,
-        );
-        const seat = anchor ? crewProject(anchor.position) : null;
-        let left = p[0] - span / 2;
-        let top = p[1] + (obj.type === "coffee" ? -23 : 8) - height;
-        // 2、桌面与沙发按实际手部/座面接触点注册，不能只按图片外框摆在占地中心。
-        if (seat && obj.type === "desk") {
-            left = seat[0] - 4 - span * 0.55;
-            top = seat[1] - 46 - height * 0.48;
-        } else if (seat && obj.type === "sofa") {
-            left = seat[0] - span * 0.48;
-            top = seat[1] - 28 - height * 0.63;
+    /** 因为坐着的人可以转向用户，需要预先创建八向椅子和有限遮挡层，帧循环只切换可见性。 */
+    chair(anchor) {
+        // 1、椅子脚底和人物根节点位于同一地面点，座面高度从交互合同读取。
+        const floor = crewProject(anchor.position), r = this.renderer;
+        const root = crewSvg("g", { "data-depth": anchor.position[0] + anchor.position[1] - 0.2,
+            "data-entity": "chair:" + anchor.id, "pointer-events": "none" });
+        const front = crewSvg("g", { "data-depth": anchor.position[0] + anchor.position[1] + 0.2,
+            "data-entity": "chair-front:" + anchor.id, "pointer-events": "none" });
+        const variants = new Map(), overlays = new Map();
+        const id = "seat-clip-" + r.revision + "-" + r.seats.size;
+        const clip = crewSvg("clipPath", { id });
+        clip.append(crewSvg("rect", { x: floor[0] - 50,
+            y: floor[1] - 35, width: 100, height: 49 }));
+        front.append(clip);
+        // 2、每向都使用真实关键帧，背部椅背仅在腰线以下形成前景遮挡。
+        for (const direction of CREW_DIRECTIONS) {
+            const material = crewSceneMaterial("chair", direction);
+            const base = crewSvg("g"), overlay = crewSvg("g", { "clip-path": "url(#" + id + ")" });
+            crewScenePicture(base, material, floor, [floor[0], floor[1] - anchor.contact.seat_height]);
+            overlay.append(...[...base.children].map(crewCloneNode));
+            variants.set(direction, base);
+            overlays.set(direction, overlay);
+            root.append(base);
+            front.append(overlay);
         }
-        crewEnvironmentPicture(group, material, left, top, span);
-        group.dataset.material = identifier;
-        if (obj.type === "archive")
-            group.append(
-                crewSvg(
-                    "text",
-                    {
-                        x: p[0],
-                        y: top - 10,
-                        "text-anchor": "middle",
-                        "font-size": 10,
-                        fill: "#526174",
-                        "paint-order": "stroke",
-                        stroke: "#fff",
-                        "stroke-width": 3,
-                    },
-                    "档案室 · 规划中",
-                ),
-            );
-        if (obj.type === "desk") {
-            const anchor = this.renderer.scene.anchors.find(
-                crewAnchorMatches,
-                obj.id,
-            );
-            if (anchor) this.chair(group, anchor.position, "#71877d");
+        r.depth.append(root, front);
+        r.seats.set(anchor.id, { root, front, variants, overlays, anchor, floor });
+        this.faceSeat({ target: anchor, phase: "settled" }, { direction: anchor.direction });
+    }
+
+    /** 因为椅子应跟随实际人物而不是屏幕镜像，需要切换方向对应的原绘关键帧。 */
+    faceSeat(actor, sample) {
+        // 1、离座后不让空椅跟随走远的人转向；固定方向时不重复改 DOM。
+        const attached = crewAttachedSeat(actor);
+        const seat = this.renderer.seats.get(attached?.id);
+        if (!seat || actor.phase === "moving" || seat.direction === sample.direction) return;
+        seat.direction = sample.direction;
+        for (const [direction, variant] of seat.variants)
+            variant.setAttribute("display", direction === sample.direction ? "inline" : "none");
+        for (const [direction, overlay] of seat.overlays)
+            overlay.setAttribute("display", direction === sample.direction && ["n", "ne", "nw"].includes(direction) ? "inline" : "none");
+    }
+
+    /** 因为配套交互帧已包含整张椅子，需要在同一帧隐藏空椅，并在人物起身后恢复。 */
+    occupy(view, actor, sample, custom) {
+        // 1、起身属于离开的椅子，行走不绑定任何椅子；不能远程隐藏目的地的椅子。
+        const anchor = crewAttachedSeat(actor);
+        const paired = custom && view.sprite?.dataset.includesSeat === "true";
+        const identifier = paired ? anchor?.id : null;
+        if (view.pairedSeat && view.pairedSeat !== identifier) {
+            const old = this.renderer.seats.get(view.pairedSeat);
+            old?.root.setAttribute("visibility","visible");
+            old?.front.setAttribute("visibility","visible");
         }
-        if (obj.type === "meeting")
-            for (const anchor of this.renderer.scene.anchors)
-                if (anchor.object_id === obj.id)
-                    this.chair(group, anchor.position, "#657b74");
-        return true;
-    }
-
-    /** 因为工位应有生活感和明确的工作方向，需要添加显示器、纸张、杯子和座椅。 */
-    desk(group, p, obj) {
-        // 1、所有细节使用局部坐标，换位置后不需要重画素材。
-        group.append(
-            crewSvg("path", {
-                d: `M${p[0] - 4},${p[1] - 33} v-13 l11,-2 v14`,
-                fill: "#566361",
-            }),
-            crewSvg("rect", {
-                x: p[0] - 19,
-                y: p[1] - 67,
-                width: 43,
-                height: 29,
-                rx: 3,
-                fill: "#405b5f",
-                stroke: "#3e5150",
-                "stroke-width": 2,
-            }),
-            crewSvg("path", {
-                d: `M${p[0] - 15},${p[1] - 63} h34 l-4,20 h-30Z`,
-                fill: "#a5c8bd",
-            }),
-            crewSvg("path", {
-                d: `M${p[0] - 11},${p[1] - 58} h20 M${p[0] - 11},${p[1] - 53} h25 M${p[0] - 11},${p[1] - 48} h14`,
-                stroke: "#6d9a8e",
-                "stroke-width": 1.4,
-            }),
-            crewSvg("path", {
-                d: `M${p[0] - 10},${p[1] - 31} l28,-1 l-4,7 l-30,0Z`,
-                fill: "#758783",
-                stroke: "#4f6460",
-                "stroke-width": 0.8,
-            }),
-            crewSvg("path", {
-                d: `M${p[0] - 31},${p[1] - 35} l15,-4 l8,9 l-16,4Z`,
-                fill: "#eee6cb",
-                stroke: "#b4aa8a",
-                "stroke-width": 0.6,
-            }),
-            crewSvg("ellipse", {
-                cx: p[0] + 33,
-                cy: p[1] - 34,
-                rx: 5,
-                ry: 3,
-                fill: "#f4ead5",
-                stroke: "#a29379",
-                "stroke-width": 1,
-            }),
-            crewSvg("path", {
-                d: `M${p[0] + 28},${p[1] - 34} v7 q5,5 10,0 v-7 M${p[0] + 38},${p[1] - 32} q7,-1 2,6`,
-                fill: "#ead8b6",
-                stroke: "#a29379",
-                "stroke-width": 1,
-            }),
-        );
-        const anchor = this.renderer.scene.anchors.find(
-            crewAnchorMatches,
-            obj.id,
-        );
-        if (anchor) this.chair(group, anchor.position, "#738985");
-    }
-
-    /** 因为会议区需要多人座位，需要按照后端注册锚点绘制独立椅子和资料。 */
-    meeting(group, obj, p) {
-        // 1、每席外观与占座规则使用同一 object ID，不在渲染器新增隐形座位。
-        for (const anchor of this.renderer.scene.anchors)
-            if (anchor.object_id === obj.id)
-                this.chair(group, anchor.position, "#829697");
-        group.append(
-            crewSvg("path", {
-                d: `M${p[0] - 34},${p[1] - 38} l23,-4 l11,10 l-24,5Z M${p[0] + 14},${p[1] - 25} l23,-4 l9,9 l-23,5Z`,
-                fill: "#eee5cf",
-                stroke: "#bcaa87",
-                "stroke-width": 0.8,
-            }),
-            crewSvg("rect", {
-                x: p[0] - 5,
-                y: p[1] - 40,
-                width: 18,
-                height: 12,
-                rx: 2,
-                fill: "#738f88",
-                transform: `rotate(-18 ${p[0]} ${p[1]})`,
-            }),
-        );
-    }
-
-    /** 因为人物落座需要真实的视觉接触点，需要统一绘制椅背、座垫与椅脚。 */
-    chair(group, position, color) {
-        // 1、地面脚底保持同一投影，不参与路径阻塞计算。
-        const p = crewProject(position);
-        const material = crewEnvironmentMaterial("furniture-04");
-        if (material) {
-            const chair = crewSvg("g", {
-                "data-depth": position[0] + position[1] + 0.05,
-                "data-entity": `chair:${position.join(",")}`,
-                "pointer-events": "none",
-            });
-            const width = 48,
-                height =
-                    (width * material.frames[0][3]) / material.frames[0][2];
-            crewEnvironmentPicture(
-                chair,
-                material,
-                p[0] - width * 0.52,
-                p[1] - height,
-                width,
-            );
-            this.renderer.depth.append(chair);
-            return;
+        // 2、始终最多一张真实可见椅子，交互结束时不保留隐藏的空座。
+        const seat = this.renderer.seats.get(identifier);
+        if (seat) {
+            seat.root.setAttribute("visibility","hidden");
+            seat.front.setAttribute("visibility","hidden");
         }
-        group.append(
-            crewSvg("path", {
-                d: `M${p[0] - 10},${p[1] + 2} l2,-18 M${p[0] + 10},${p[1] + 2} l-2,-18`,
-                stroke: "#586c66",
-                "stroke-width": 2.5,
-            }),
-            crewSvg("path", {
-                d: `M${p[0] - 13},${p[1] - 19} Q${p[0]},${p[1] - 25} ${p[0] + 13},${p[1] - 18} L${p[0] + 12},${p[1] - 11} Q${p[0]},${p[1] - 6} ${p[0] - 13},${p[1] - 12}Z`,
-                fill: color,
-                stroke: "#586c66",
-                "stroke-width": 1,
-            }),
-            crewSvg("path", {
-                d: `M${p[0] - 13},${p[1] - 18} l-1,-20 q14,-8 28,0 l-1,20`,
-                fill: color,
-                stroke: "#586c66",
-                "stroke-width": 1.4,
-            }),
-        );
+        view.pairedSeat = identifier;
     }
 
-    /** 因为休息区需要软装质感，需要绘制靠背、扶手、分块座垫与抱枕。 */
-    sofa(group, obj, w, d) {
-        // 1、视觉细节遵循固定占地，不改变实际座位数量。
-        const r = this.renderer;
-        r.box(group, obj.x, obj.y, w, d, 15, "#6b8b7d", "#577463", 5);
-        r.box(group, obj.x, obj.y, w, 0.45, 42, "#a1b3a0", "#7c9787", 5);
-        for (let i = 0; i < 3; i++)
-            r.box(
-                group,
-                obj.x + 0.25 + i * 1.16,
-                obj.y + 0.6,
-                1.08,
-                1.1,
-                7,
-                "#b0bda5",
-                "#90a38c",
-                18,
-            );
-        r.box(group, obj.x, obj.y, 0.3, d, 28, "#8ca38d", "#6d8974", 5);
-        r.box(
-            group,
-            obj.x + w - 0.3,
-            obj.y,
-            0.3,
-            d,
-            28,
-            "#8ca38d",
-            "#6d8974",
-            5,
-        );
-        const p = crewProject([obj.x + 0.8, obj.y + 1]);
-        group.append(
-            crewSvg("path", {
-                d: `M${p[0] - 10},${p[1] - 33} l15,-4 l9,14 l-16,5Z`,
-                fill: "#dbbf8f",
-                stroke: "#b39667",
-                "stroke-width": 1,
-            }),
-        );
-    }
-
-    /** 因为绿植有助于空间层次，需要用细叶与花盆高光替代简单色块。 */
-    plant(group, p, obj) {
-        // 1、植物材质不会产生新的碰撞边界。
-        group.append(
-            crewSvg("path", {
-                d: `M${p[0] - 10},${p[1] - 4} l3,14 q7,4 14,0 l3,-14Z`,
-                fill: "#c9b290",
-                stroke: "#a48c6b",
-                "stroke-width": 1,
-            }),
-            crewSvg("ellipse", {
-                cx: p[0],
-                cy: p[1] - 4,
-                rx: 10,
-                ry: 4,
-                fill: "#8c7c5b",
-            }),
-            crewSvg("path", {
-                d: `M${p[0]},${p[1] - 4} q-4,-20 0,-50`,
-                stroke: "#5c7851",
-                "stroke-width": 2,
-                fill: "none",
-            }),
-        );
-        for (let i = 0; i < 7; i++) {
-            const sign = i % 2 ? 1 : -1,
-                base = p[1] - 12 - i * 5;
-            group.append(
-                crewSvg("path", {
-                    d: `M${p[0]},${base} Q${p[0] + sign * 22},${base - 25} ${p[0] + sign * 23},${base - 12} Q${p[0] + sign * 17},${base + 3} ${p[0]},${base}Z`,
-                    fill: i % 2 ? "#739564" : "#91aa74",
-                    stroke: "#5a7d52",
-                    "stroke-width": 0.5,
-                }),
-            );
+    /** 因为离座后空椅应留在被拉出的位置，需要同步确定性的座椅轨迹，不在人物消失后弹回桌下。 */
+    frameChairs() {
+        // 1、位置来自同一动画状态机；不持久化到用户布局，也不触发 Agent。
+        for(const [id,seat] of this.renderer.seats) {
+            const position=this.renderer.motion.chairs.get(id)||seat.anchor.position;
+            const p=crewProject(position),transform=`translate(${p[0]-seat.floor[0]},${p[1]-seat.floor[1]})`;
+            seat.root.setAttribute("transform",transform);seat.front.setAttribute("transform",transform);
+            seat.root.dataset.depth=position[0]+position[1]-0.2;
+            seat.front.dataset.depth=position[0]+position[1]+0.2;
         }
     }
+
+
+}
+
+/** 因为同一椅子需要前景遮挡副本，需要克隆已注册图像而不重新解码像素。 */
+function crewCloneNode(element) {
+    // 1、克隆只用于有限八向家具节点。
+    return element.cloneNode(true);
 }

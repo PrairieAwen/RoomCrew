@@ -1,5 +1,23 @@
 # RoomCrew 开发指导
 
+最新素材实现在 [ADR-0020](architecture/0020-unified-projection-assets.md)：八类设备固定投影重制、四角色配套工作/起坐、逐向源图注册和会议桌实体座点。当前为旧角色兼容预览；完整双手双脚接触、新骨架及全部动作仍按制作规范继续验收。
+
+新素材制作以 [统一规范 v1.0](assets/asset-production-standard/README.md) 与 [图解阅读版](assets/asset-production-standard/guide.html) 为准。先锁定投影与尺寸，再完成桌椅人物连续样板；正文区分地轴倾角、相机仰角、八向旋转、根点及双手双脚接触。制作端 JSON 仍是规范示例，当前导入器不支持；旧原图待重制、待验收。
+
+当前工位交互见 [ADR-0019](architecture/0019-paired-chair-interactions.md)：配套人物/椅子预设、六帧起坐、原座与目标座分离、滚椅与脚点交接。它修正 ADR-0018 的独立人物拼椅、投影距离当物理座高以及两张补页限制；用户导入仍为两页。任意自制素材的全向自然交互仍需专门美术与接触登记。
+
+当前视觉校准以 [ADR-0018](architecture/0018-coherent-office-art.md) 为准：修正各类家具的相对尺度、独立伸手工作姿态、椅背/会议桌遮挡、实际脚线阴影与窗景；视觉验收包含原生全景和放大近景，不能用功能测试数量替代。
+
+最新素材与布景以 [ADR-0017](architecture/0017-configurable-scene-assets.md) 为准：统一人物/设备合同、八方向关键帧、旋转占地与座面/脚底接触，四沙发围绕茶几；明确完整动画与自制家具导入的当前边界。它覆盖 ADR-0014—0016 的固定坐姿抬升和旧默认素材说明。
+
+本次检查与独立预览目录见 [素材验收](development/scene-assets-validation.md)。原程序未被强制关闭，新版使用独立预览数据启动。
+
+当前桌子与监管员美术接入见 [ADR-0016](architecture/0016-office-art-alignment.md)：同视角工位、直立监管员、共用接触注册与原图比例检查，覆盖旧安全台东北朝向说明。
+
+最新穿桌与接触点修正见 [ADR-0015](architecture/0015-office-contact-correction.md)：格心导航、椅子避障、桌前入座、身体座面高度、会议桌落地线与临时工作借座。它补充并修正 ADR-0014 的物理校准结论。
+
+最新办公行为见 [ADR-0014](architecture/0014-physical-office-interactions.md)：工位朝向、背向工作、转身起坐、椅背遮挡、整齐默认布局及安全台/档案柜，旧自定义布局保留。
+
 最新界面与工作区规范见 [ADR-0011](architecture/0011-coherent-studio-and-workspace-roster.md)：统一视觉注册、独立工作区与配置名单。它覆盖旧文档中隐式通用外援和深色界面的描述；档案室仅有规划入口，归档与长期记忆尚未开发。
 
 先读本页，再阅读相关 HTML。三份 HTML 是此前讨论中最后生成的版本，正文原样保留；后续已确定的选型和项目约定按本页与当前规范执行。

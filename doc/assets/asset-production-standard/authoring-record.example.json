@@ -1,0 +1,71 @@
+{
+  "format": "roomcrew.asset-authoring-record",
+  "version": 1,
+  "asset_id": "example.workstation-assistant",
+  "asset_version": "0.1.0",
+  "asset_type": "interaction_set",
+  "status": "draft",
+  "example_only": true,
+  "runtime_import_supported": false,
+  "camera_profile_id": "rc-ortho-2to1-v1",
+  "interaction_profile_id": "humanoid-desk-044-072-v1",
+  "coordinate_spaces": {
+    "landmarks": "entity_local_world_grid",
+    "source_images": "source_px",
+    "atlas_images": "atlas_px",
+    "source_pixels_per_view_unit": 8
+  },
+  "entities": [
+    {"entity_id": "actor", "root_kind": "actor_ground"},
+    {"entity_id": "chair", "root_kind": "chair_base"},
+    {"entity_id": "desk", "root_kind": "furniture_ground"}
+  ],
+  "canvas": {
+    "source_size_px": [1024, 1024],
+    "origin_px": [512, 896],
+    "density_locked_across_frames": true,
+    "note": "示例为人物画布；整套工位可用更大画布，保持同密度并另记原点。"
+  },
+  "source_files": [],
+  "required_landmarks": {
+    "actor": ["actor_ground", "pelvis", "left_sole", "right_sole", "left_hand", "right_hand", "head_center", "gaze", "bubble_mount"],
+    "chair": ["chair_base", "seat_origin", "seat_normal", "seat_forward"],
+    "desk": ["keyboard_left_hand", "keyboard_right_hand", "monitor_gaze"]
+  },
+  "direction_coverage": {
+    "e": "missing", "se": "missing", "s": "missing", "sw": "missing",
+    "w": "missing", "nw": "missing", "n": "missing", "ne": "missing"
+  },
+  "clips": [
+    {
+      "id": "sit_down.nw",
+      "status": "planned",
+      "duration_ms_target": 1000,
+      "source_frame_count_target": 12,
+      "root_motion": "navigation_driven",
+      "entry": {"posture": "standing", "direction": "nw", "contact": "feet_supported"},
+      "exit": {"posture": "seated", "direction": "nw", "contact": "seat_and_feet_supported"},
+      "includes_entities": ["actor"],
+      "frame_images": [],
+      "contact_tracks": [],
+      "presentation_events": []
+    }
+  ],
+  "delivery": {"atlas_pages": [], "frames": []},
+  "provenance": {
+    "author": null,
+    "tool": null,
+    "full_prompts": [],
+    "reference_roles": [],
+    "generation_ids": [],
+    "license": null
+  },
+  "validation": {
+    "status": "not_run",
+    "source_hashes": {},
+    "machine_report": null,
+    "visual_reviewer": null,
+    "visual_review_date": null,
+    "missing": ["原画", "逐帧接触数据", "八向覆盖", "连续播放检查", "授权信息"]
+  }
+}

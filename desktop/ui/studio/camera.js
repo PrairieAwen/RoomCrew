@@ -6,8 +6,8 @@ class CrewCamera {
     constructor(svg) {
         // 1、只绑定可见画布输入，不接触任务或数据库。
         this.svg = svg;
-        this.center = [60, 225];
-        this.zoom = 1;
+        this.center = [90, 310];
+        this.zoom = 0.9;
         this.drag = null;
         this.onMoved = null;
         this.resizeObserver = new ResizeObserver(this.resize.bind(this));

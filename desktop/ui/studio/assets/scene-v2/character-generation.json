@@ -1,0 +1,29 @@
+{
+  "mode": "builtin image_gen",
+  "jobs": [
+    {
+      "id": "bookcase",
+      "prompt": "Use case: sketch-to-render. Asset type: 8-direction transparent game furniture atlas. INPUT 1 is the exact depth-correct 3D orthographic geometry guide, not optional composition. INPUT 2 is STYLE ONLY, the cozy detailed hand-painted game office. Paint over INPUT 1 into one beautiful warm oak bookcase with realistic fine grain, muted olive and cream books, little small household details. Preserve the complete 4 columns by 2 rows atlas, each same-size square cell; keep each object centered in its same cell. All eight silhouettes, rotations and proportions should follow the guide exactly. It is the SAME bookcase rotated 45 degrees between cells, order exactly as guide. Straight verticals. Orthographic 30-degree camera elevation, quarter views with ground edges slope +/-0.5, NOT a 45-degree screen rotation. Top is a plain closed wooden cap, no books protruding through top. All books confined to open front shelves. Back is closed wood panel, side has no books. No floor, shadows, text, labels, watermark, grid or scenery. True transparent background.",
+      "refs": [
+        "E:/projects/RoomCrew/.cache/material-rebuild/bookcase-guide.png",
+        "C:/Users/阿文/AppData/Local/Temp/codex-clipboard-02a7c694-5a88-4b2e-beca-0e0dbb78162a.png"
+      ]
+    },
+    {
+      "id": "paired-chair-v2",
+      "prompt": "Use case: precise-object-edit / identity-preserve. INPUT 1 is the TARGET: a 4x4 transparent atlas of four named chibi office workers seated in their olive rolling chairs. INPUT 2 is the precise new chair design and camera geometry reference. Keep target four row identities, face, hair, suit colours, body scale, head size, foot placement and central wheel ground root stable. Keep a FOUR COLUMNS by FOUR ROWS grid, each pose wholly within its exact original cell. Row 1 green male, row 2 pink female bun, row 3 navy male glasses, row 4 tan male. Column 1 rear-left seated idle hands on lap. Columns 2 and 3 rear-left typing A/B: IMPORTANT FIX BOTH HANDS - extend upper arms FORWARD AND UP, elbows below wrists, forearms reaching horizontally toward an unseen keyboard IN FRONT of the worker, hands at chest/desk height roughly 40 source pixels ABOVE their current positions and 15 pixels forward (left). Do NOT place typing hands on knees or armrests. Fingers point to a keyboard that is NOT drawn. Column 4 front-facing idle hands on knees. Replace chair with input 2's 2:1 orthographic olive upholstered chair; preserve same seat-to-person fit, no floating bottom, legs naturally supported to ground with complete shoes. Actual chair ground axes slopes +/-0.5, 30-degree orthographic elevation, no foreshortening mismatch. Change only arm poses and chair details; keep the other identity/pose/body size invariants. All 16 sprites must remain fully visible. No desk, keyboard, floor, shadow, extra object, text, grids, watermark. True transparent background.",
+      "refs": [
+        "E:/projects/RoomCrew/desktop/ui/studio/assets/scene-v1/paired-chair-v1.png",
+        "E:/projects/RoomCrew/desktop/ui/studio/assets/scene-v2/chair.png"
+      ]
+    },
+    {
+      "id": "chair-rise-v3",
+      "prompt": "Use case: precise-object-edit / identity-preserve. INPUT 1 is target 6 columns x 4 rows progressive chair-rise animation. INPUT 2 is new olive chair geometry/camera. Keep EXACT 6 by 4 grid, all character identities, row order green male / pink female / navy male glasses / tan male, head sizes, same cell scale, frame progressive poses and root alignment. Replace every chair with the same olive upholstered rolling chair from INPUT 2 at the matching rear-left view. Crucial: chair footprint axis slopes +/-0.5 and consistent 30-degree orthographic camera, do not retain steep inconsistent old seat geometry. The chair central wheel root remains at the SAME relative location in ALL SIX cells of a row; body rises but chair does not grow/shrink or tip. Frame1 seated idle knees/lap (matching input 2 geometry), frames2-4 lean forward and rise progressively, frames5-6 fully standing just forward of chair, complete feet on floor, no floating/penetrating bottom. Preserve exact identity, head/body proportions and poses as much as possible while improving chair. Entire background must be TRANSPARENT (remove brown backplate from target), no drop shadows, floor, desk, labels, text, frame outlines, cropping or extra sprites. Each cell wholly contains its sprite.",
+      "refs": [
+        "E:/projects/RoomCrew/desktop/ui/studio/assets/scene-v1/chair-rise-v2.png",
+        "E:/projects/RoomCrew/desktop/ui/studio/assets/scene-v2/chair.png"
+      ]
+    }
+  ]
+}
