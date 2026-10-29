@@ -10,6 +10,7 @@ from roomcrew.agent_loop.engine import DeepAgentsLoop
 from roomcrew.application.mcp_settings import MCPSettings
 from roomcrew.application.options import RunOptions
 from roomcrew.contracts.agents import AgentSpec
+from roomcrew.contracts.schedules import ScheduleCommands
 from roomcrew.mcp.provider import configured_mcp_tools
 from roomcrew.middleware.delegation import ConfiguredDelegationMiddleware
 from roomcrew.middleware.stack import build_middleware
@@ -21,10 +22,17 @@ from roomcrew.tools.agents import agent_catalog_tool
 from roomcrew.tools.files import file_tools
 from roomcrew.tools.python import python_tool
 from roomcrew.tools.registry import file_backend, local_tools
+from roomcrew.tools.schedules import schedule_tools
 
 
 class AgentLoopFactory:
-    def __init__(self, paths: AppPaths, conversation_id: str, options: RunOptions) -> None:
+    def __init__(
+        self,
+        paths: AppPaths,
+        conversation_id: str,
+        options: RunOptions,
+        schedules: ScheduleCommands | None = None,
+    ) -> None:
         """因为主子 Agent 应使用同一装配规则，需要为本次执行固定文件根、策略和共享资源。
 
         每次 invoke / 人工恢复新建工厂；锁与 MCP 发现缓存不跨 Run 复用，不读取模型秘密。
@@ -42,6 +50,9 @@ class AgentLoopFactory:
         self._script_lock = asyncio.Lock()
         self._mcp_catalog: dict[str, list[Any]] = {}
         self._mcp = MCPSettings(paths)
+        self._schedules = schedules
+        self._conversation = conversation_id
+        self._schedule_write = True
 
     async def build(
         self,
@@ -55,6 +66,7 @@ class AgentLoopFactory:
         """
         # 1、统一遍历主子定义装配能力，不为员工角色复制另一套构图逻辑。
         main = AgentSpec.restore(binding["main"])
+        self._schedule_write = binding.get("source", {}).get("kind") != "schedule"
         workers = [AgentSpec.restore(item) for item in binding["workers"]]
         components = {}
         middleware = {}
@@ -97,6 +109,12 @@ class AgentLoopFactory:
         configuration = agent_configuration(spec.configuration)
         policy = self._options.capabilities
         tools = [*local_tools(policy), *file_tools(self._root), agent_catalog_tool(workers)]
+        if self._schedules is not None:
+            tools.extend(
+                schedule_tools(
+                    self._schedules, spec.actor.member_id, self._conversation, self._schedule_write
+                )
+            )
         if configuration["python_enabled"] and policy.code_execution:
             tools.append(python_tool(self._root, self._cache, self._script_lock))
         # 2、缓存仅限本次工厂；保留顺序发现、工具重名拒绝及显式配置语义。

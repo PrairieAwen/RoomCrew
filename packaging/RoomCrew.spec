@@ -15,13 +15,15 @@ datas += [(str(project / '.cache/python-runtime'), 'python-runtime')]
 datas += [(str(project / 'doc/assets/crew-avatar-example'), 'materials/crew-avatar-example')]
 for package in ('deepagents', 'langchain', 'langchain_core', 'langchain_openai',
                 'langgraph', 'langgraph_checkpoint', 'langgraph_checkpoint_sqlite',
-                'langgraph_prebuilt', 'tiktoken', 'pywebview'):
+                'langgraph_prebuilt', 'tiktoken', 'pywebview', 'apscheduler', 'tzdata', 'tzlocal'):
     datas += copy_metadata(package)
 datas += collect_data_files('deepagents')
 datas += collect_data_files('webview')
+datas += collect_data_files('tzdata')
 hidden = collect_submodules('langgraph') + collect_submodules('deepagents')
 hidden += ['tiktoken_ext.openai_public', 'webview.platforms.edgechromium', 'aiosqlite']
 hidden += collect_submodules('langchain_mcp_adapters')
+hidden += collect_submodules('tzdata')
 
 analysis = Analysis([str(project / 'packaging/desktop_entry.py')],
     pathex=[str(project / 'backend/src'), str(project / 'desktop/src')], binaries=[], datas=datas,

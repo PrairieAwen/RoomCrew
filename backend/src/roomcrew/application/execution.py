@@ -11,6 +11,7 @@ from roomcrew.config.schema import ModelProfile
 from roomcrew.config.store import ConfigStore
 from roomcrew.contracts.agents import AgentSpec
 from roomcrew.contracts.errors import ERROR_MESSAGES, ExecutionError
+from roomcrew.contracts.schedules import ScheduleCommands
 from roomcrew.middleware.limits import ModelCallBudget
 from roomcrew.models.factory import create_model
 from roomcrew.platform.paths import AppPaths
@@ -37,9 +38,16 @@ class ExecutionService:
         self.accounts = accounts
         self.state = RunStateStore(store)
         self.active: dict[str, asyncio.Task[None]] = {}
+        self.schedules: ScheduleCommands | None = None
 
     async def submit(
-        self, conversation_id: str, text: str, request_id: str, member_id: str = "assistant"
+        self,
+        conversation_id: str,
+        text: str,
+        request_id: str,
+        member_id: str = "assistant",
+        *,
+        source: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """因为重复点击或线程并发会重复执行工具，需要检查幂等和固定模型绑定后受理任务。"""
         # 1、请求幂等优先于新配置读取，历史请求重发只返回已有状态。
@@ -68,6 +76,7 @@ class ExecutionService:
         if self.store.latest_status(conversation_id) in {"failed", "cancelled", "interrupted"}:
             raise ValueError("本会话上轮已中断或失败，请新建会话继续；历史仍可查看")
         binding = self.accounts.binding(member_id)
+        binding["source"] = source or {"kind": "user"}
         main = AgentSpec.restore(binding["main"])
         run_id = self.store.begin(
             conversation_id,
@@ -76,8 +85,8 @@ class ExecutionService:
             main.actor.name,
             main.actor.agent_id,
             main.actor.member_id,
+            binding=binding,
         )
-        self.state.capture(run_id, binding)
         # 3、先持久化请求，再建立协程；界面通过独立查询读取进展。
         self.active[run_id] = asyncio.create_task(
             self._execute(conversation_id, run_id, text, profile)
@@ -100,7 +109,7 @@ class ExecutionService:
         started = time.monotonic()
         waiting = False
         try:
-            factory = AgentLoopFactory(self.paths, conversation_id, self.options)
+            factory = AgentLoopFactory(self.paths, conversation_id, self.options, self.schedules)
             model = create_model(profile, budget)
             loop = await factory.build(saved["binding"], model, self.checkpoints)
             # 2、应用层只消费普通轨迹合同，Loop 不直接操作产品数据库。

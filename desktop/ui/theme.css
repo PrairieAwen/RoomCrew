@@ -428,6 +428,40 @@ code {
 .checkbox-label input {
     width: auto;
 }
+#schedules-dialog {
+    width: min(820px, 94vw);
+}
+.schedule-card {
+    border: 1px solid var(--line);
+    background: var(--panel);
+    border-radius: 12px;
+    padding: 18px;
+    margin-top: 14px;
+}
+.schedule-card h3 {
+    font-size: 15px;
+    margin-bottom: 8px;
+}
+.schedule-card p {
+    font-size: 12px;
+    line-height: 1.8;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+.schedule-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.schedule-history-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    padding-top: 10px;
+    color: var(--muted);
+}
 /* 表单状态共用同一组颜色；禁用只表达不可编辑，不以整体透明度降低可读性。 */
 .settings-form label,
 .move-label {

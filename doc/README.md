@@ -13,6 +13,7 @@
 | 官方执行记录 | [ADR-0008](architecture/0008-native-agent-tracing.md) | 消息、Runnable v2 事件、checkpoint 与产品 Run 分开 |
 | 成员配置与默认工具 | [ADR-0010](architecture/0010-member-materials-and-default-tools.md) | Agent 定义与素材分离，文件工具、Python、主子能力装配 |
 | MCP 可视化与鉴权 | [ADR-0022](architecture/0022-authenticated-mcp.md) | Bearer 保护引用、百炼搜索预设、当前表单连接测试与模型前脱敏 |
+| 持久定时任务 | [ADR-0023](architecture/0023-scheduled-agent-tasks.md) | 空间与 Agent 绑定、通用时间检查器、专用 CRUD 工具、取消和独立会话 |
 | 空间与协作名单 | [ADR-0007](architecture/0007-workspace-rooms.md)、[ADR-0011](architecture/0011-coherent-studio-and-workspace-roster.md) | 一空间一会议室，上下文隔离，仅委派本空间显式配置名单 |
 | 泡泡与人工交互 | [ADR-0013](architecture/0013-bubble-pointer-and-read-receipts.md) | 主 Agent 转达、局部挂点、真实点击及持久已读 |
 | Markdown | [ADR-0012](architecture/0012-message-markdown.md) | 展示层安全解析，原轨迹保留原文 |
@@ -23,6 +24,8 @@
 后端不包含人物动作或泡泡协议，桌面单向消费已提交轨迹。主子 Agent 的消息、产物和 checkpoint 按任务隔离，不能用共享 agent_id 作为可变上下文。
 
 ## 验证入口
+
+- 定时任务 CRUD、目标 MCP、空间隔离、原生管理和真实五分钟创建/执行/取消：[定时任务验收](development/scheduler-validation.md)。
 
 - 当前整理与兼容检查：[ADR-0021 验证记录](architecture/0021-runtime-refactoring.md#5-验证记录)。
 - Agent / Skills / MCP / Python / 人工恢复：[底座验收](development/agent-foundation-validation.md)。
@@ -56,7 +59,7 @@
 
 ## 当前边界
 
-Windows 本地原型已支持用户模型配置、真实 Deep Agents、同会话主子轨迹、Skills、无认证/Bearer HTTP MCP、标准库隔离 Python、文件产物、人工恢复和多个工作空间。SQLite 产品状态与官方 checkpoint 分开，配置由可信入口保护和加载。
+Windows 本地原型已支持用户模型配置、真实 Deep Agents、同会话主子轨迹、Skills、无认证/Bearer HTTP MCP、标准库隔离 Python、文件产物、人工恢复、多个工作空间和应用运行期间的持久定时任务。SQLite 产品状态与官方 checkpoint 分开，配置由可信入口保护和加载。
 
 安全 VM、浏览器、Shell、Computer Use、MCP OAuth/stdio/自定义 Header、云账号、档案室归档及长期记忆、外部家具/骨骼导入尚未实现。Python AppContainer 不是凭据 VM；人物动画不能授予权限。当前素材仍为兼容预览，功能测试通过不等于专业美术或全部动作验收。
 

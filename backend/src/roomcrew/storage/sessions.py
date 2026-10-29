@@ -64,14 +64,23 @@ class SessionStore:
         for run in interrupted:
             self.finish(run["id"], "interrupted", {"code": "APP_RESTARTED"})
 
-    def create_conversation(self, profile_ref: str) -> dict[str, Any]:
-        """因为多个会话不能共享可变上下文，需要为新会话生成独立线程和配置绑定。"""
-        # 1、固定本次模型配置引用，产品表不保存真实模型参数。
-        identifier, timestamp = uuid4().hex, now_iso()
+    def create_conversation(
+        self, profile_ref: str, identifier: str | None = None
+    ) -> dict[str, Any]:
+        """因为多个会话不能共享上下文且定时重放不能重复建会话，需要支持可信幂等线程标识。"""
+        # 1、默认仍生成独立标识；内部指定标识只接受与已有合同相同的十六进制格式。
+        identifier, timestamp = identifier or uuid4().hex, now_iso()
+        if len(identifier) != 32 or any(char not in "0123456789abcdef" for char in identifier):
+            raise ValueError("会话标识无效")
         with self.connection:
             self.connection.execute(
-                "INSERT INTO conversations VALUES(?,?,?,?,?)",
+                "INSERT OR IGNORE INTO conversations VALUES(?,?,?,?,?)",
                 (identifier, "新会话", profile_ref, timestamp, timestamp),
+            )
+            self.connection.execute(
+                "UPDATE conversations SET profile_ref=? WHERE id=? "
+                "AND NOT EXISTS(SELECT 1 FROM runs WHERE conversation_id=?)",
+                (profile_ref, identifier, identifier),
             )
         return self.conversation(identifier)
 
@@ -120,6 +129,8 @@ class SessionStore:
         actor: str = "助手",
         agent_id: str = "agent_assistant",
         member_id: str = "assistant",
+        *,
+        binding: dict[str, Any] | None = None,
     ) -> str:
         """因为执行前必须留下用户请求，需要在同一事务中建立 Run 并写入首个轨迹事件。"""
         # 1、独立 Run 对应本轮执行，同一会话继续使用独立于其他会话的框架线程。
@@ -135,11 +146,33 @@ class SessionStore:
                 (text[:36], timestamp, conversation_id),
             )
             self._insert(
-                conversation_id, run_id, "user.message", "你", "main", {"text": text}, None, "boss"
+                conversation_id,
+                run_id,
+                "user.message",
+                "定时任务"
+                if binding and binding.get("source", {}).get("kind") == "schedule"
+                else "你",
+                "main",
+                {"text": text, "source": (binding or {}).get("source", {"kind": "user"})},
+                None,
+                "boss",
             )
             self._insert(
-                conversation_id, run_id, "run.started", actor, "main", {}, agent_id, member_id
+                conversation_id,
+                run_id,
+                "run.started",
+                actor,
+                "main",
+                {"source": (binding or {}).get("source", {"kind": "user"})},
+                agent_id,
+                member_id,
             )
+            # 2、Run、首事件和身份快照一起提交，崩溃不能留下已受理却缺绑定的执行。
+            if binding is not None:
+                self.connection.execute(
+                    "INSERT INTO run_bindings(run_id,binding) VALUES(?,?)",
+                    (run_id, json.dumps(binding, ensure_ascii=False)),
+                )
         return run_id
 
     def _insert(

@@ -2,10 +2,16 @@
 
 import asyncio
 from collections.abc import Callable
+from functools import partial
 from typing import Any
 
+from roomcrew.application.dispatcher import TaskDispatcher
 from roomcrew.application.runtime import Runtime
+from roomcrew.application.scheduled_execution import ScheduleCoordinator
+from roomcrew.application.schedules import WorkspaceSchedules
 from roomcrew.platform.paths import AppPaths
+from roomcrew.scheduling.timer import SchedulerTimer
+from roomcrew.storage.schedules import ScheduleStore
 from roomcrew.storage.workspaces import WorkspaceRepository, offline_workspace_status
 
 WORKSPACE_METHODS = frozenset(
@@ -29,6 +35,11 @@ WORKSPACE_METHODS = frozenset(
         "questions",
         "respond",
         "stop",
+        "list_schedules",
+        "get_schedule",
+        "create_schedule",
+        "update_schedule",
+        "set_schedule_state",
     }
 )
 
@@ -49,11 +60,18 @@ class WorkspaceHub:
         self.runtimes: dict[str, Runtime] = {}
         self.active_id = self.repository.active()
         self._opening = asyncio.Lock()
+        self._schedule_store = ScheduleStore(paths.data / "schedules.sqlite")
+        self._dispatcher = TaskDispatcher(self.runtime_for, self.runtimes)
+        self._schedule_coordinator = ScheduleCoordinator(
+            self._schedule_store, self._dispatcher, self.runtime_for
+        )
+        self._schedule_timer = SchedulerTimer(self._schedule_coordinator.poll)
 
     async def start(self) -> None:
         """因为首次窗口需要已有房间，需要只打开上次选择的空间而非遍历全部数据。"""
         # 1、其他房间按需启动；不自动重新执行历史 Run。
         await self.runtime_for(self.active_id)
+        self._schedule_timer.start()
 
     @property
     def current(self) -> Runtime:
@@ -68,9 +86,23 @@ class WorkspaceHub:
         async with self._opening:
             if identifier not in self.runtimes:
                 runtime = self._runtime_factory(self.paths.for_workspace(identifier))
+                runtime.attach_schedules(
+                    WorkspaceSchedules(
+                        identifier, self._schedule_store, partial(self._schedule_target, identifier)
+                    )
+                )
                 await runtime.start()
                 self.runtimes[identifier] = runtime
             return self.runtimes[identifier]
+
+    async def _schedule_target(self, workspace_id: str, member_id: str) -> dict[str, Any]:
+        """因为成员 ID 在不同会议室可能相同，需要按计划所属空间查验真实可执行定义。"""
+        # 1、只允许该空间已经配置、启用且未归档的 Agent；不会回退到默认助手。
+        runtime = await self.runtime_for(workspace_id)
+        member = runtime.accounts.get(member_id)
+        if not member["agent_id"] or not member["enabled"] or member.get("archived"):
+            raise ValueError("目标必须是本工作空间已启用且未归档的 Agent 成员")
+        return member
 
     async def state(self) -> dict[str, Any]:
         """因为左侧要区分后台工作与人工待办，需要汇总最小计数而不混入其他空间的内容。"""
@@ -125,20 +157,18 @@ class WorkspaceHub:
         runtime = await self.runtime_for(identifier)
         if method == "save_configuration" and await self._global_busy():
             raise ValueError("请先完成所有工作空间中的任务或待答复，再修改共享模型配置")
-        if (
-            method in {"submit", "respond"}
-            and not runtime.active
-            and sum(bool(item.active) for item in self.runtimes.values()) >= 4
-            and not runtime.execution_replay(method, args)
-        ):
-            raise ValueError("当前最多四个工作空间同时执行任务")
-        result = await getattr(runtime, method)(*args)
+        result = (
+            await self._dispatcher.invoke(identifier, method, args)
+            if method in {"submit", "respond"}
+            else await getattr(runtime, method)(*args)
+        )
         # 2、只给画布和概览添加普通空间身份；业务事件和产物依旧保存在各自目录。
         if method == "overview":
             result = {
                 **result,
                 "workspace": self.repository.get(identifier),
                 "workspaces": (await self.state())["workspaces"],
+                "scheduler": {"available": True, "healthy": not self._schedule_timer.failed},
             }
         return result
 
@@ -155,6 +185,7 @@ class WorkspaceHub:
         """因为关闭桌面要停止全部后台会议室，需要逐个释放执行、检查点与产品连接。"""
         # 1、继续使用各 Runtime 的安全退出顺序，不遗漏未显示房间的任务。
         errors = []
+        await self._schedule_timer.close()
         for runtime in self.runtimes.values():
             try:
                 await runtime.close()
@@ -162,5 +193,6 @@ class WorkspaceHub:
                 errors.append(error)
         # 2、一个房间关闭失败仍继续释放其余房间，最终向宿主报告异常。
         self.repository.close()
+        self._schedule_store.close()
         if errors:
             raise ExceptionGroup("部分工作空间关闭失败", errors)

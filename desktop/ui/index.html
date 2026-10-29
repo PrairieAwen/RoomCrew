@@ -15,6 +15,7 @@
         <link rel="stylesheet" href="message-markdown.css" />
         <script src="vendor/markdown-it/markdown-it.min.js" defer></script>
         <script src="message-markdown.js" defer></script>
+        <script src="schedules.js" defer></script>
         <script src="studio/protocol.js" defer></script>
         <script src="studio/navigation.js" defer></script>
         <script src="studio/motion.js" defer></script>
@@ -112,6 +113,13 @@
                                 aria-expanded="false"
                             >
                                 ♧ 我的团队
+                            </button>
+                            <button
+                                id="open-schedules"
+                                class="drawer-toggle"
+                                type="button"
+                            >
+                                定时任务
                             </button>
                         </div>
                     </details>
@@ -363,6 +371,35 @@
                 </aside>
             </div>
         </main>
+        <dialog id="schedules-dialog" aria-labelledby="schedules-title">
+            <div class="modal-heading">
+                <h2 id="schedules-title">定时任务</h2>
+                <button
+                    id="close-schedules"
+                    class="close-button"
+                    aria-label="关闭定时任务"
+                >
+                    ×
+                </button>
+            </div>
+            <p id="schedules-space" class="modal-intro"></p>
+            <p class="scope-note">
+                可以在与 Agent
+                的对话中新增或修改安排。这里可直接暂停、恢复、取消和查看执行记录，不消耗模型额度。每次执行使用独立会话；取消后续安排不会停止已经开始的任务。
+            </p>
+            <p class="scope-note">
+                当前在应用运行期间检查到期任务；彻底退出或电脑休眠时不执行。恢复后超过允许延后窗口的任务会记为错过。
+            </p>
+            <button
+                id="refresh-schedules"
+                class="secondary-button"
+                type="button"
+            >
+                刷新列表
+            </button>
+            <p id="schedules-result" role="status" class="muted"></p>
+            <div id="schedules-list"></div>
+        </dialog>
         <dialog id="archive-dialog" aria-labelledby="archive-title">
             <div class="modal-heading">
                 <div>

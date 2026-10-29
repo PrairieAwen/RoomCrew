@@ -74,6 +74,7 @@
 - tools/：真实本地工具和文件后端注册；不要把工具实现写进应用 Runtime 或 Loop。
 - mcp/：按 Agent 定义装配官方 Streamable HTTP MCP 工具，支持无认证或可信连接层注入 Bearer；公开定义仅保存 auth_ref，不含 Key 或认证 Header。config/mcp_credentials 负责 DPAPI，application/mcp_settings 负责空间/端点绑定与装配，结果进入模型前过滤凭据回显；不支持 stdio、OAuth，不将凭据放入 URL。
 - skills/：将用户显式配置的技能发布为只读版本目录，由 SDK 渐进加载；默认不自动扫描磁盘，不因 Skill 指令扩权。
+- scheduling/：只维护通用检查器与时间规则，不导入 Agent、空间、存储和桌面；application 的计划服务绑定 workspace_id + member_id + agent_id，协调器到期复用统一准入与现有 Loop。管理工具位于 tools/schedules.py，不能在模型内 sleep 或通过脚本另起定时循环。详见 ADR-0023。
 - desktop/src/roomcrew_desktop/assets/ 与 presentation/：分别维护素材校验、轨迹归约与动作提示；后端不得导入这些模块。素材或动画不能更改 Run、权限和人工答复。
 - ADR-0010：人物属性分 Agent 配置和员工素材配置；动作帧与泡泡按 member_id 保存，不进入 Agent 快照。主子 Agent 默认文件工具统一在 application/components 装配，不在角色或 UI 中另写一套执行。
 - 对用户的完成与人工问题统一由该 Run 的入口主人物展示，身份取自 run.started；子任务完成不产生结果泡泡。子任务人工问题保留原 request_id 和执行者，仅由主人物转达，答复仍恢复原子任务；不得改写后端身份或将共享 agent_id 作为归属依据。
@@ -120,6 +121,7 @@
 - 共享上下文按 workspace / task 分区；摘要继承来源的访问限制。
 - 未知外部效果不能自动盲重试；授权、执行记录和业务验收分别建模。
 - 默认不外发 tracing；.env 与本地数据不能提交。
+- 定时计划仅存公开正文和身份引用，独立 occurrence / conversation / Run；不得持久化 Key 或复制可变对话。自动触发的主子 Agent 仅有计划查询能力，不装配持久计划写工具；用户正常对话和可信人工入口可增改取消。取消清除未来时间和 pending，不自动终止已受理 Run；不因未知受理结果盲目重发。当前只在应用运行期间检查，退出或休眠不执行。
 
 ## 6. 环境与协作
 

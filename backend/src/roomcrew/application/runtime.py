@@ -2,6 +2,7 @@
 
 import asyncio
 from collections.abc import Callable
+from datetime import UTC, datetime
 from typing import Any
 
 from roomcrew.accounts.configuration import agent_configuration
@@ -11,6 +12,7 @@ from roomcrew.application.execution import ExecutionService
 from roomcrew.application.mcp_settings import MCPSettings
 from roomcrew.application.options import RunOptions
 from roomcrew.config.store import ConfigStore
+from roomcrew.contracts.schedules import ScheduleCommands
 from roomcrew.models.connection import test_model_connection, test_presentation_connection
 from roomcrew.platform.paths import AppPaths
 from roomcrew.storage.accounts import SqliteAccountRepository
@@ -39,6 +41,88 @@ class Runtime:
             options=options or RunOptions(),
             accounts=self.accounts,
         )
+        self._schedules: ScheduleCommands | None = None
+
+    def attach_schedules(self, service: ScheduleCommands) -> None:
+        """因为工作空间身份由宿主确定，需要在可信装配时接入该空间专属管理服务。"""
+        # 1、门面和执行工厂共用合同，不让 Agent 取得调度器或其他空间入口。
+        self._schedules = service
+        self._execution.schedules = service
+
+    def _schedule_service(self) -> ScheduleCommands:
+        """因为独立嵌入 Runtime 可能没有宿主调度，需要明确拒绝未配置能力而不假称安排成功。"""
+        # 1、只有 WorkspaceHub 装配的服务能够产生持久自动安排。
+        if self._schedules is None:
+            raise ValueError("当前运行时未接入定时任务服务")
+        return self._schedules
+
+    async def list_schedules(
+        self, query: str = "", include_inactive: bool = False
+    ) -> list[dict[str, Any]]:
+        """因为用户需要不消耗模型就能管理日程，需要通过可信入口查询当前空间。"""
+        # 1、直接复用 Agent 工具使用的同一用例，不另写 UI 存储路径。
+        return await self._schedule_service().list_schedules(query, include_inactive)
+
+    async def get_schedule(self, schedule_id: str) -> dict[str, Any]:
+        """因为执行历史属于特定空间，需要通过同一校验服务读取准确计划。"""
+        # 1、不向桌面返回框架对象或凭据。
+        return await self._schedule_service().get_schedule(schedule_id)
+
+    async def create_schedule(self, values: dict[str, Any], command_id: str) -> dict[str, Any]:
+        """因为人工入口也应支持新增安排，需要把结构化参数交给统一服务。"""
+        # 1、工作空间由已绑定服务确定，不接受额外空间参数。
+        return await self._schedule_service().create_schedule(values, command_id)
+
+    async def update_schedule(
+        self, schedule_id: str, changes: dict[str, Any], revision: int, command_id: str
+    ) -> dict[str, Any]:
+        """因为人工编辑和模型工具不能有不同规则，需要复用版本与幂等校验。"""
+        # 1、忙碌时可编辑未来计划，但不修改已经受理的 Run。
+        return await self._schedule_service().update_schedule(
+            schedule_id, changes, revision, command_id
+        )
+
+    async def set_schedule_state(
+        self, schedule_id: str, state: str, revision: int, command_id: str
+    ) -> dict[str, Any]:
+        """因为模型不可用时用户仍要取消任务，需要提供不调用模型的暂停、恢复和取消入口。"""
+        # 1、取消由服务原子清理排队项，不擅自停止当前运行。
+        return await self._schedule_service().set_schedule_state(
+            schedule_id, state, revision, command_id
+        )
+
+    async def _submit_scheduled(self, occurrence: dict[str, Any]) -> dict[str, Any]:
+        """因为计划必须使用其绑定 Agent 的能力，需要校验成员与定义引用并创建独立会话。"""
+        # 1、请求标识与会话标识来自已持久化触发，恢复不会重新生成身份或任务正文。
+        identifier = occurrence["id"]
+        request = "schedule:" + identifier
+        existing = self.store.run_by_request(request)
+        if existing:
+            return {"run_id": existing["id"], "status": existing["status"]}
+        member = self.accounts.get(occurrence["target_member_id"])
+        if (
+            not member["enabled"]
+            or member.get("archived")
+            or not member["agent_id"]
+            or member["agent_id"] != occurrence["target_agent_id"]
+        ):
+            raise ValueError("定时任务绑定的成员已停用或 Agent 定义已变化")
+        self.store.create_conversation(self.config.require_profile().reference, identifier)
+        # 2、提示仅含普通任务和计划时间，实际信息由工具获取；最新配置在受理时拍独立快照。
+        planned = datetime.fromtimestamp(occurrence["scheduled_for"], UTC).isoformat()
+        text = (
+            f"[定时任务：{occurrence['title']}]\n计划时间（UTC）：{planned}\n"
+            "计划时间不是当前数据；需要当前时间或信息时请实际使用工具。\n\n"
+            + occurrence["instruction"]
+        )
+        source = {
+            "kind": "schedule",
+            "workspace_id": occurrence["workspace_id"],
+            "schedule_id": occurrence["schedule_id"],
+            "occurrence_id": identifier,
+            "scheduled_for": planned,
+        }
+        return await self._execution.submit(identifier, text, request, member["id"], source=source)
 
     @property
     def active(self) -> dict[str, asyncio.Task[None]]:

@@ -21,6 +21,7 @@ const state = {
 };
 let studio = null;
 let workspacePanel = null;
+let schedulePanel = null;
 
 /** 因为界面需要频繁定位固定元素，需要用具名入口统一取得节点。 */
 function el(id) {
@@ -733,6 +734,7 @@ function keyboardShortcut(event) {
 async function boot() {
     // 1、先绑定用户操作；所有业务均通过具名桌面接口。
     studio = new CrewStudio();
+    schedulePanel = new CrewSchedules();
     el("participants").replaceChildren();
     updateStats();
     el("new-chat").addEventListener("click", newConversation);

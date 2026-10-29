@@ -25,6 +25,7 @@ LAYERS = {
     "storage": {"storage"},
     "accounts": {"accounts", "contracts"},
     "platform": {"platform"},
+    "scheduling": {"scheduling","contracts"},
 }
 LAYERS["application"] = set(LAYERS) | {"application"}
 

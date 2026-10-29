@@ -46,11 +46,11 @@ class RuntimeThread:
         try:
             self.loop.run_forever()
         finally:
+            self.loop.run_until_complete(self.hub.close())
             pending = asyncio.all_tasks(self.loop)
             for task in pending:
                 task.cancel()
             self.loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
-            self.loop.run_until_complete(self.hub.close())
             self.loop.run_until_complete(self.loop.shutdown_asyncgens())
             self.loop.run_until_complete(self.loop.shutdown_default_executor())
             self.loop.close()
