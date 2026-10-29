@@ -3,6 +3,7 @@
 import asyncio
 import json
 from collections.abc import Sequence
+from dataclasses import replace
 from typing import Any
 
 from roomcrew.accounts.configuration import agent_configuration
@@ -10,6 +11,7 @@ from roomcrew.agent_loop.engine import DeepAgentsLoop
 from roomcrew.application.mcp_settings import MCPSettings
 from roomcrew.application.options import RunOptions
 from roomcrew.contracts.agents import AgentSpec
+from roomcrew.contracts.archives import ArchiveQueries
 from roomcrew.contracts.schedules import ScheduleCommands
 from roomcrew.mcp.provider import configured_mcp_tools
 from roomcrew.middleware.delegation import ConfiguredDelegationMiddleware
@@ -19,6 +21,7 @@ from roomcrew.platform.paths import AppPaths
 from roomcrew.skills.registry import materialize_skills, resolve_skill_sources
 from roomcrew.storage.checkpoints import CheckpointStore
 from roomcrew.tools.agents import agent_catalog_tool
+from roomcrew.tools.archive import archive_tools
 from roomcrew.tools.files import file_tools
 from roomcrew.tools.python import python_tool
 from roomcrew.tools.registry import file_backend, local_tools
@@ -32,6 +35,7 @@ class AgentLoopFactory:
         conversation_id: str,
         options: RunOptions,
         schedules: ScheduleCommands | None = None,
+        archives: ArchiveQueries | None = None,
     ) -> None:
         """因为主子 Agent 应使用同一装配规则，需要为本次执行固定文件根、策略和共享资源。
 
@@ -51,6 +55,7 @@ class AgentLoopFactory:
         self._mcp_catalog: dict[str, list[Any]] = {}
         self._mcp = MCPSettings(paths)
         self._schedules = schedules
+        self._archives = archives
         self._conversation = conversation_id
         self._schedule_write = True
 
@@ -66,6 +71,14 @@ class AgentLoopFactory:
         """
         # 1、统一遍历主子定义装配能力，不为员工角色复制另一套构图逻辑。
         main = AgentSpec.restore(binding["main"])
+        if binding.get("archive_context"):
+            main = replace(
+                main,
+                prompt=main.prompt
+                + "\n\n<untrusted_archive_context>\n"
+                + binding["archive_context"]
+                + "\n</untrusted_archive_context>",
+            )
         self._schedule_write = binding.get("source", {}).get("kind") != "schedule"
         workers = [AgentSpec.restore(item) for item in binding["workers"]]
         components = {}
@@ -109,6 +122,8 @@ class AgentLoopFactory:
         configuration = agent_configuration(spec.configuration)
         policy = self._options.capabilities
         tools = [*local_tools(policy), *file_tools(self._root), agent_catalog_tool(workers)]
+        if self._archives is not None:
+            tools.extend(archive_tools(self._archives, spec.actor.member_id))
         if self._schedules is not None:
             tools.extend(
                 schedule_tools(

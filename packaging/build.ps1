@@ -9,6 +9,10 @@ Push-Location -LiteralPath $roomcrewRoot
 try {
     & $roomcrewPython -X utf8 packaging/prepare_python_runtime.py
     if ($LASTEXITCODE -ne 0) { throw '随包 Python 运行时准备失败' }
+    if (-not (Test-Path -LiteralPath '.cache/archive-model/roomcrew-model.json')) {
+        & $roomcrewPython -X utf8 packaging/prepare_archive_model.py
+        if ($LASTEXITCODE -ne 0) { throw '本地语义模型准备失败，未修改现有发行' }
+    }
     & $roomcrewPython -m PyInstaller packaging/RoomCrew.spec --distpath $roomcrewStage --workpath .cache/pyinstaller --noconfirm
     if ($LASTEXITCODE -ne 0) { throw 'Windows 程序构建失败，原发行目录未改动' }
     # 2、完整候选交给统一发布入口，运行中拒绝替换并保留候选，不结束用户任务。

@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from roomcrew.storage.conversation_memory import ConversationMemory
+
 
 def now_iso() -> str:
     """因为事件排序需要一致的时间表示，需要记录带时区的 UTC 时间并让界面本地化显示。"""
@@ -57,6 +59,7 @@ class SessionStore:
             if column not in columns:
                 self.connection.execute(f"ALTER TABLE events ADD COLUMN {column} TEXT")
         self.connection.commit()
+        self.memory = ConversationMemory(self.connection)
         # 3、进程重启不能把旧运行显示成仍在执行，也不自动重做可能产生副作用的工具。
         interrupted = self.connection.execute(
             "SELECT * FROM runs WHERE status='running'"
@@ -77,6 +80,7 @@ class SessionStore:
                 "INSERT OR IGNORE INTO conversations VALUES(?,?,?,?,?)",
                 (identifier, "新会话", profile_ref, timestamp, timestamp),
             )
+            self.memory.register(identifier)
             self.connection.execute(
                 "UPDATE conversations SET profile_ref=? WHERE id=? "
                 "AND NOT EXISTS(SELECT 1 FROM runs WHERE conversation_id=?)",
@@ -136,6 +140,10 @@ class SessionStore:
         # 1、独立 Run 对应本轮执行，同一会话继续使用独立于其他会话的框架线程。
         run_id, timestamp = uuid4().hex, now_iso()
         with self.connection:
+            self.memory.bind(
+                conversation_id, member_id, agent_id,
+                channel=not (binding and binding.get("source", {}).get("kind") == "schedule"),
+            )
             self.connection.execute(
                 "INSERT INTO runs VALUES(?,?,?,?,?,?)",
                 (run_id, conversation_id, request_id, text, "running", timestamp),
@@ -203,6 +211,7 @@ class SessionStore:
                 member_id,
             ),
         )
+        self.memory.touch(conversation_id)
         return int(cursor.lastrowid or 0)
 
     def append(
@@ -236,6 +245,7 @@ class SessionStore:
                         now_iso(),
                     ),
                 )
+                self.memory.touch(conversation_id)
             return int(cursor.lastrowid or 0)
         with self.connection:
             return self._insert(

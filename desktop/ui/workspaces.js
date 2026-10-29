@@ -181,7 +181,7 @@ class CrewWorkspaces {
     /** 因为档案室尚无归档执行能力，需要只打开说明，不触发模型、读取或迁移资料。 */
     openArchive() {
         // 1、基础设施入口独立于员工名单，也不改变当前会议室。
-        el("archive-dialog").showModal();
+        archivePanel.open();
     }
 
     /** 因为查看规划入口不应保留模态状态，需要提供明确的关闭操作。 */

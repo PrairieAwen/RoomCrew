@@ -7,7 +7,9 @@ from typing import Any
 
 from roomcrew.accounts.configuration import agent_configuration
 from roomcrew.accounts.service import AccountService
+from roomcrew.application.archive_access import ArchiveAccess
 from roomcrew.application.artifacts import ArtifactService
+from roomcrew.application.conversations import ConversationService
 from roomcrew.application.execution import ExecutionService
 from roomcrew.application.mcp_settings import MCPSettings
 from roomcrew.application.options import RunOptions
@@ -42,6 +44,87 @@ class Runtime:
             accounts=self.accounts,
         )
         self._schedules: ScheduleCommands | None = None
+        self._archives: ArchiveAccess | None = None
+        self._conversations = ConversationService(self.store, self.accounts, self.config)
+
+    def attach_archives(self, service: ArchiveAccess) -> None:
+        """因为档案权限由工作空间宿主控制，需要在可信装配时接入只读检索及人工管理门面。"""
+        # 1、Loop 只获得查询端口，不获得共享设置或原始保护文件。
+        self._archives = service
+        self._execution.archives = service
+
+    def _archive_service(self) -> ArchiveAccess:
+        """因为独立嵌入 Runtime 可能尚未装配档案，需要明确说明能力不可用而不伪造历史。"""
+        # 1、仅宿主装配的门面可以读取档案。
+        if self._archives is None:
+            raise ValueError("档案服务尚未装配")
+        return self._archives
+
+    async def archive_search(self, values: dict[str, Any]) -> dict[str, Any]:
+        """因为人工查询应能检索当前空间所有公开档案，需要复用受限门面和相同检索规则。"""
+        # 1、人工默认所有成员，Agent 工具仍默认其实际身份。
+        return await self._archive_service().search("", {"all_members": True, **values})
+
+    async def archive_read(
+        self,
+        identifier: str,
+        offset: int = 0,
+        limit: int = 10,
+    ) -> dict[str, Any]:
+        """因为用户需查看摘要对应的完整历史，需要按来源分页读取真实公开消息。"""
+        # 1、不返回磁盘路径或可执行文件入口。
+        return await self._archive_service().read(identifier, offset, limit)
+
+    async def archive_settings(self) -> dict[str, Any]:
+        """因为档案室需要显示共享与本地模型状态，需要提供纯人工配置概况。"""
+        # 1、读取不触发摘要模型或向量推理。
+        return self._archive_service().settings()
+
+    async def archive_share(self, sources: list[str]) -> dict[str, Any]:
+        """因为跨空间授权必须由用户控制，需要暴露不注册为工具的人工保存入口。"""
+        # 1、来源目录和授权实时校验。
+        return self._archive_service().share(sources)
+
+    async def archive_retry(self, identifier: str) -> dict[str, Any]:
+        """因为模型暂不可用可能留下待处理档案，需要允许用户恢复同一作业而不重做用户任务。"""
+        # 1、已成功的分块摘要和完整原文均保留。
+        return self._archive_service().retry(identifier)
+
+    async def archive_reindex(self, identifier: str) -> dict[str, Any]:
+        """因为模型升级不应强制重做归档，需要提供只重建本地检索索引的人工入口。"""
+        # 1、不调用远程摘要模型，原消息和摘要保留。
+        return self._archive_service().reindex(identifier)
+
+    async def member_chat(self, member_id: str) -> dict[str, Any] | None:
+        """因为人物点击应跨重启恢复聊天，需要读取持久默认会话且不创建空会话。"""
+        # 1、实际发送时才决定是否从归档线程建立延续。
+        return self._conversations.preferred(member_id)
+
+    async def submit_chat(
+        self,
+        member_id: str,
+        text: str,
+        request_id: str,
+        reference: str = "",
+    ) -> dict[str, Any]:
+        """因为用户续聊无需处理内部会话轮换，需要解析当前人物线程后复用原始受理逻辑。"""
+        # 1、重放保持原线程，不因首次发送已经产生默认指针而误建另一条会话。
+        existing = self.store.run_by_request(request_id)
+        if existing:
+            binding = self._execution.state.context(existing["id"])["binding"]
+            if binding.get("source", {}).get("chat_reference", "") != reference:
+                raise ValueError("请求标识已用于其他会话选择")
+            conversation = self.store.conversation(existing["conversation_id"])
+        else:
+            conversation = self._conversations.prepare(member_id, reference)
+        result = await self._execution.submit(
+            conversation["id"],
+            text,
+            request_id,
+            member_id,
+            source={"kind": "user", "chat_reference": reference},
+        )
+        return {**result, "conversation": conversation}
 
     def attach_schedules(self, service: ScheduleCommands) -> None:
         """因为工作空间身份由宿主确定，需要在可信装配时接入该空间专属管理服务。"""
@@ -171,10 +254,15 @@ class Runtime:
             return self._aux_config
         raise ValueError("未知模型配置用途")
 
-    async def new_conversation(self) -> dict[str, Any]:
+    async def new_conversation(self, member_id: str = "") -> dict[str, Any]:
         """因为新会话需要固定配置引用，需要组合配置读取和产品会话创建。"""
         # 1、只把引用写进产品状态，不写入真实模型参数。
-        return self.store.create_conversation(self.config.require_profile().reference)
+        created = self.store.create_conversation(self.config.require_profile().reference)
+        if member_id:
+            member = self._conversations.member(member_id)
+            with self.store.connection:
+                self.store.memory.bind(created["id"], member_id, member["agent_id"])
+        return created
 
     async def agent_configurations(self) -> list[dict[str, Any]]:
         """因为通用执行框架需要不依赖人物编辑器的入口，需要返回本空间 Agent 定义。"""
@@ -239,7 +327,7 @@ class Runtime:
         # 1、此内部查询不暴露为桌面业务入口，也不受理或恢复新任务。
         if len(args) < 3 or not all(isinstance(value, str) for value in args[:3]):
             return False
-        if method == "submit":
+        if method in {"submit", "submit_chat"}:
             return self.store.run_by_request(args[2]) is not None
         if method == "respond":
             return self._execution.state.duplicate(args[2], args[0], args[1].strip()) is not None
@@ -252,6 +340,12 @@ class Runtime:
             "configured": self.config.path.exists(),
             "conversations": self.store.conversations(),
             "active_run": next(iter(self.active), None),
+            "active_runs": [
+                dict(row)
+                for row in self.store.connection.execute(
+                    "SELECT id,conversation_id FROM runs WHERE status='running'"
+                )
+            ],
             "pending_count": len(self._execution.state.questions()),
             "capabilities": [
                 "文件读写与检索",

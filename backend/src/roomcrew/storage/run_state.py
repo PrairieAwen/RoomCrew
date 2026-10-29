@@ -40,6 +40,17 @@ class RunStateStore:
             raise ValueError("运行缺少可恢复的身份快照")
         return {**dict(row), "binding": json.loads(row["binding"])}
 
+    def initial_archive_context(self, conversation_id: str, member_id: str) -> str:
+        """因为同一新线程后续轮次仍需保留历史背景，需要复用该成员首次接单时固定的档案上下文。"""
+        # 1、旧多入口会话按成员过滤，不能把另一个成员的自动背景拼到当前线程。
+        row = self.db.execute(
+            "SELECT b.binding FROM run_bindings b JOIN runs r ON r.id=b.run_id "
+            "JOIN events e ON e.run_id=r.id AND e.kind='run.started' "
+            "WHERE r.conversation_id=? AND e.member_id=? ORDER BY r.rowid LIMIT 1",
+            (conversation_id, member_id),
+        ).fetchone()
+        return str(json.loads(row[0]).get("archive_context", "")) if row else ""
+
     def usage(self, run_id: str, calls: int, seconds: float) -> None:
         """因为等待用户不能重置总额度，需要保存模型累计次数和实际执行时长。"""
         # 1、人工离线等待不计入活动执行时间，但恢复后的请求继续扣同一额度。

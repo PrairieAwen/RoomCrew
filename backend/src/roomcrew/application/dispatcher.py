@@ -31,7 +31,10 @@ class TaskDispatcher:
             runtime = await self._runtime_for(workspace_id)
             if validate is not None:
                 validate()
-            if method in {"submit", "respond", "_submit_scheduled"}:
+            if method in {"submit", "submit_chat", "respond", "_submit_scheduled"}:
+                if (sum(len(item.active) for item in self._runtimes.values()) >= 8
+                    and not runtime.execution_replay(method, args)):
+                    raise DispatchBusy("当前最多八个会话同时执行任务")
                 if (
                     not runtime.active
                     and sum(bool(item.active) for item in self._runtimes.values()) >= 4

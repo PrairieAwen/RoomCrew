@@ -16,7 +16,6 @@ class CrewStudio {
         this.traceMember = null;
         this.memberRevision = 0;
         this.initialized = false;
-        this.directConversations = new Map();
         this.talkGeneration = 0;
         this.renderer = new CrewRenderer(
             el("room-canvas"),
@@ -349,12 +348,11 @@ class CrewStudio {
         this.selectMember(identifier, false);
         el("workspace-options").open = false;
         el("task-member").value = identifier;
-        const conversation =
-            this.directConversations.get(`${state.workspace.id}:${identifier}`) || null;
-        if (state.conversation?.id !== conversation?.id)
-            resetConversation(conversation);
-        if (!conversation) el("chat-title").textContent = `与 ${member.name} 对话`;
         try {
+            const conversation = await api("member_chat", identifier);
+            if (generation !== this.talkGeneration || epoch !== state.workspaceEpoch) return false;
+            if (state.conversation?.id !== conversation?.id) resetConversation(conversation);
+            if (!conversation) el("chat-title").textContent = `与 ${member.name} 对话`;
             await this.chatMode(true);
             // 3、点击本身不落库空会话；发送时才创建，迟到回调不能抢新人物或新空间焦点。
             if (
@@ -368,16 +366,6 @@ class CrewStudio {
             showError(error);
             return false;
         }
-    }
-
-    /** 因为再次点击同一角色应能回到已发送的对话，需要仅缓存真实受理后的空间与成员关联。 */
-    rememberConversation(identifier, conversation) {
-        // 1、只保留本窗口的普通会话引用；历史持久化仍由原有后端负责。
-        if (state.workspace && conversation?.id)
-            this.directConversations.set(`${state.workspace.id}:${identifier}`, {
-                id: conversation.id,
-                title: conversation.title,
-            });
     }
 
     /** 因为人物事项和执行轨迹不同，需要分别展示状态摘要和显式展开的事件列表。 */
@@ -601,7 +589,7 @@ class CrewStudio {
             return;
         }
         if (this.data.scene.room.objects.find(crewArchiveObject, identifier)) {
-            el("archive-dialog").showModal();
+            workspacePanel.openArchive();
             return;
         }
         const anchor = this.data.scene.anchors.find(

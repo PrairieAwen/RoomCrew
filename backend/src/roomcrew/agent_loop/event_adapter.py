@@ -7,6 +7,7 @@ from typing import Any
 from langgraph.errors import GraphInterrupt
 
 from roomcrew.agent_loop.messages import message_text
+from roomcrew.agent_loop.native_events import public_value
 from roomcrew.contracts.agents import ActorRef
 from roomcrew.tracing.events import TraceEvent
 
@@ -138,7 +139,8 @@ class EventAdapter:
             for call in getattr(message, "tool_calls", []):
                 self._tool_actors[call["id"]] = (identity, scope)
             product_kind = "model.completed"
-            payload = {"usage": getattr(message, "usage_metadata", None)}
+            payload = {"usage": getattr(message, "usage_metadata", None),
+                       "message": public_value(message)}
             text = message_text(message)
             if text:
                 projected.append(

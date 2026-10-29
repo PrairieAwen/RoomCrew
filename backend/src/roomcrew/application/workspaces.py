@@ -5,12 +5,16 @@ from collections.abc import Callable
 from functools import partial
 from typing import Any
 
+from roomcrew.application.archive_access import ArchiveAccess
+from roomcrew.application.archive_worker import ArchiveWorker
 from roomcrew.application.dispatcher import TaskDispatcher
 from roomcrew.application.runtime import Runtime
 from roomcrew.application.scheduled_execution import ScheduleCoordinator
 from roomcrew.application.schedules import WorkspaceSchedules
+from roomcrew.archive.embeddings import LocalEmbeddings
 from roomcrew.platform.paths import AppPaths
 from roomcrew.scheduling.timer import SchedulerTimer
+from roomcrew.storage.archives import ArchiveRepository
 from roomcrew.storage.schedules import ScheduleStore
 from roomcrew.storage.workspaces import WorkspaceRepository, offline_workspace_status
 
@@ -40,6 +44,15 @@ WORKSPACE_METHODS = frozenset(
         "create_schedule",
         "update_schedule",
         "set_schedule_state",
+        "member_chat",
+        "submit_chat",
+        "archive_search",
+        "archive_read",
+        "archive_settings",
+        "archive_share",
+        "archive_retry",
+        "archive_reindex",
+        "archive_now",
     }
 )
 
@@ -66,12 +79,29 @@ class WorkspaceHub:
             self._schedule_store, self._dispatcher, self.runtime_for
         )
         self._schedule_timer = SchedulerTimer(self._schedule_coordinator.poll)
+        self._archive_store = ArchiveRepository(paths.data / "archives.sqlite")
+        self._embeddings = LocalEmbeddings(paths.resources)
+        self._archive_worker = ArchiveWorker(
+            self._archive_store,
+            self._embeddings,
+            paths.data / "archive-blobs",
+            self.runtime_for,
+            self.repository.list,
+            self._foreground_busy,
+        )
+        self._archive_timer = SchedulerTimer(self._archive_worker.poll, interval=30)
+
+    def _foreground_busy(self) -> bool:
+        """因为后台摘要不能抢占前台执行，需要在每段调用前查询当前宿主的真实活动任务。"""
+        # 1、等待人工的会话不归档，但不阻止其他已经完成会话的压缩。
+        return any(runtime.active for runtime in self.runtimes.values())
 
     async def start(self) -> None:
         """因为首次窗口需要已有房间，需要只打开上次选择的空间而非遍历全部数据。"""
         # 1、其他房间按需启动；不自动重新执行历史 Run。
         await self.runtime_for(self.active_id)
         self._schedule_timer.start()
+        self._archive_timer.start()
 
     @property
     def current(self) -> Runtime:
@@ -86,6 +116,11 @@ class WorkspaceHub:
         async with self._opening:
             if identifier not in self.runtimes:
                 runtime = self._runtime_factory(self.paths.for_workspace(identifier))
+                runtime.attach_archives(
+                    ArchiveAccess(
+                        identifier, self._archive_store, self._embeddings, self.repository.list
+                    )
+                )
                 runtime.attach_schedules(
                     WorkspaceSchedules(
                         identifier, self._schedule_store, partial(self._schedule_target, identifier)
@@ -155,11 +190,16 @@ class WorkspaceHub:
         if method not in self._methods or not isinstance(args, list) or len(args) > 8:
             raise ValueError("不支持的工作空间请求")
         runtime = await self.runtime_for(identifier)
+        if method == "archive_now":
+            if len(args) != 1 or not isinstance(args[0], str):
+                raise ValueError("请选择要归档的会话")
+            record = await self._archive_worker.request(identifier, args[0])
+            return {key: value for key, value in record.items() if key != "manifest"}
         if method == "save_configuration" and await self._global_busy():
             raise ValueError("请先完成所有工作空间中的任务或待答复，再修改共享模型配置")
         result = (
             await self._dispatcher.invoke(identifier, method, args)
-            if method in {"submit", "respond"}
+            if method in {"submit", "submit_chat", "respond"}
             else await getattr(runtime, method)(*args)
         )
         # 2、只给画布和概览添加普通空间身份；业务事件和产物依旧保存在各自目录。
@@ -169,6 +209,13 @@ class WorkspaceHub:
                 "workspace": self.repository.get(identifier),
                 "workspaces": (await self.state())["workspaces"],
                 "scheduler": {"available": True, "healthy": not self._schedule_timer.failed},
+                "archive": {
+                    "healthy": not self._archive_timer.failed
+                    and not self._archive_worker.failed_spaces,
+                    "processing": bool(
+                        self._archive_worker.task and not self._archive_worker.task.done()
+                    ),
+                },
             }
         return result
 
@@ -186,6 +233,9 @@ class WorkspaceHub:
         # 1、继续使用各 Runtime 的安全退出顺序，不遗漏未显示房间的任务。
         errors = []
         await self._schedule_timer.close()
+        await self._archive_timer.close()
+        await self._archive_worker.close()
+        self._embeddings.close()
         for runtime in self.runtimes.values():
             try:
                 await runtime.close()
@@ -194,5 +244,6 @@ class WorkspaceHub:
         # 2、一个房间关闭失败仍继续释放其余房间，最终向宿主报告异常。
         self.repository.close()
         self._schedule_store.close()
+        self._archive_store.close()
         if errors:
             raise ExceptionGroup("部分工作空间关闭失败", errors)

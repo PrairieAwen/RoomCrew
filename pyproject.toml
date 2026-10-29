@@ -13,6 +13,7 @@ dependencies = [
     "pillow>=13,<14",
     "apscheduler>=3.11,<4",
     "tzdata>=2025.2",
+    "fastembed>=0.7,<1",
 ]
 
 [dependency-groups]

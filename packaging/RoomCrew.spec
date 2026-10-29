@@ -12,6 +12,9 @@ datas = [(str(path), str(Path('desktop/ui') / path.relative_to(ui_root).parent))
          for path in ui_root.rglob('*') if path.is_file()
          and path.parent != ui_root / 'studio/assets/scene-v2/source']
 datas += [(str(project / '.cache/python-runtime'), 'python-runtime')]
+if not (project / '.cache/archive-model/model_optimized.onnx').is_file():
+    raise RuntimeError('请先运行 packaging/prepare_archive_model.py 准备本地语义模型')
+datas += [(str(project / '.cache/archive-model'), 'archive-model')]
 datas += [(str(project / 'doc/assets/crew-avatar-example'), 'materials/crew-avatar-example')]
 for package in ('deepagents', 'langchain', 'langchain_core', 'langchain_openai',
                 'langgraph', 'langgraph_checkpoint', 'langgraph_checkpoint_sqlite',
@@ -20,10 +23,14 @@ for package in ('deepagents', 'langchain', 'langchain_core', 'langchain_openai',
 datas += collect_data_files('deepagents')
 datas += collect_data_files('webview')
 datas += collect_data_files('tzdata')
+datas += copy_metadata('fastembed', recursive=True)
+datas += collect_data_files('fastembed')
+datas += collect_data_files('onnxruntime')
 hidden = collect_submodules('langgraph') + collect_submodules('deepagents')
 hidden += ['tiktoken_ext.openai_public', 'webview.platforms.edgechromium', 'aiosqlite']
 hidden += collect_submodules('langchain_mcp_adapters')
 hidden += collect_submodules('tzdata')
+hidden += collect_submodules('fastembed')
 
 analysis = Analysis([str(project / 'packaging/desktop_entry.py')],
     pathex=[str(project / 'backend/src'), str(project / 'desktop/src')], binaries=[], datas=datas,

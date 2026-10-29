@@ -22,6 +22,7 @@ const state = {
 let studio = null;
 let workspacePanel = null;
 let schedulePanel = null;
+let archivePanel = null;
 
 /** 因为界面需要频繁定位固定元素，需要用具名入口统一取得节点。 */
 function el(id) {
@@ -79,6 +80,7 @@ function node(tag, className, text = "") {
 function resetConversation(conversation) {
     // 1、先更换身份再清空展示，迟到请求会通过身份比较丢弃。
     state.conversation = conversation;
+    state.run = null;
     state.cursor = 0;
     state.models = 0;
     state.tools = 0;
@@ -284,7 +286,9 @@ async function loadEvents() {
 function renderOverview(data) {
     // 1、只从后端权威状态决定是否可发送和是否展示停止按钮。
     if (workspacePanel) workspacePanel.render(data.workspaces || []);
-    state.run = data.active_run;
+    state.run = Array.isArray(data.active_runs)
+        ? data.active_runs.find(activeConversation, state.conversation?.id)?.id || null
+        : data.active_run;
     el("pending-count").textContent = data.pending_count || 0;
     el("config-state").textContent = data.configured ? "已配置" : "未配置";
     el("session-count").textContent = data.conversations.length;
@@ -350,7 +354,7 @@ async function selectConversation(event) {
 async function newConversation() {
     // 1、未配置时由后端返回明确提示，不启动默认厂商模型。
     try {
-        resetConversation(await api("new_conversation"));
+        resetConversation(await api("new_conversation", el("task-member").value || "assistant"));
         renderOverview(await api("overview"));
         el("prompt").focus();
     } catch (error) {
@@ -368,8 +372,6 @@ async function sendTask(event) {
     state.sending = true;
     el("send").disabled = true;
     try {
-        if (!state.conversation)
-            resetConversation(await api("new_conversation"));
         // 2、只发送用户输入和产品 ID，不附带模型配置或 Key。
         let member = el("task-member").value || "assistant";
         // 3、@名字只选择真实已配置成员；同名或多个指派交由用户明确选择。
@@ -393,16 +395,16 @@ async function sendTask(event) {
                 );
             member = matches[0].id;
         }
-        const conversation = state.conversation;
         const result = await api(
-            "submit",
-            conversation.id,
+            "submit_chat",
+            member,
             text,
             crypto.randomUUID(),
-            member,
+            state.conversation?.id || "",
         );
-        // 4、只缓存真实受理的对话与最终接单人，历史切换不能改写这次发送的关联。
-        studio.rememberConversation(member, conversation);
+        const conversation = result.conversation;
+        if (state.conversation?.id !== conversation.id) resetConversation(conversation);
+        // 4、人物默认对话由后台与受理事务一同持久化，界面只展示真实回执。
         state.run = result.run_id;
         el("prompt").value = "";
         await loadEvents();
@@ -735,6 +737,7 @@ async function boot() {
     // 1、先绑定用户操作；所有业务均通过具名桌面接口。
     studio = new CrewStudio();
     schedulePanel = new CrewSchedules();
+    archivePanel = new CrewArchive();
     el("participants").replaceChildren();
     updateStats();
     el("new-chat").addEventListener("click", newConversation);
@@ -786,3 +789,9 @@ async function refreshFilesClick() {
 
 if (window.pywebview?.api) boot();
 else window.addEventListener("pywebviewready", boot, { once: true });
+
+/** 因为多个会话可同时工作，需要只选择当前正在查看会话的停止与输入状态。 */
+function activeConversation(run) {
+    // 1、当前人物的其他独立任务不会禁用本会话的输入框。
+    return run.conversation_id === String(this);
+}

@@ -10,6 +10,7 @@ from roomcrew.application.options import RunOptions
 from roomcrew.config.schema import ModelProfile
 from roomcrew.config.store import ConfigStore
 from roomcrew.contracts.agents import AgentSpec
+from roomcrew.contracts.archives import ArchiveQueries
 from roomcrew.contracts.errors import ERROR_MESSAGES, ExecutionError
 from roomcrew.contracts.schedules import ScheduleCommands
 from roomcrew.middleware.limits import ModelCallBudget
@@ -39,6 +40,18 @@ class ExecutionService:
         self.state = RunStateStore(store)
         self.active: dict[str, asyncio.Task[None]] = {}
         self.schedules: ScheduleCommands | None = None
+        self.archives: ArchiveQueries | None = None
+
+    def capacity(self, conversation_id: str) -> None:
+        """因为同一 Agent 可处理独立并行任务，需要仅阻止同线程重入并限制每空间活动数。"""
+        # 1、不同会话各有模型、文件和 checkpoint，四个活动 Run 是当前空间的上限。
+        if len(self.active) >= 4:
+            raise ValueError("当前工作空间最多同时执行四个会话")
+        if self.store.connection.execute(
+            "SELECT 1 FROM runs WHERE conversation_id=? AND status='running' LIMIT 1",
+            (conversation_id,),
+        ).fetchone():
+            raise ValueError("此会话仍在执行，请等待完成或新建独立会话")
 
     async def submit(
         self,
@@ -64,8 +77,7 @@ class ExecutionService:
             ):
                 raise ValueError("请求标识已用于其他接单成员")
             return {"run_id": existing["id"], "status": existing["status"]}
-        if self.active:
-            raise ValueError("首版同时执行一个会话，请先完成或停止当前任务")
+        self.capacity(conversation_id)
         # 2、继续会话需要同一配置引用且上一轮成功，不能自动重放未知副作用。
         conversation = self.store.conversation(conversation_id)
         profile = self.config.require_profile()
@@ -77,6 +89,17 @@ class ExecutionService:
             raise ValueError("本会话上轮已中断或失败，请新建会话继续；历史仍可查看")
         binding = self.accounts.binding(member_id)
         binding["source"] = source or {"kind": "user"}
+        if (
+            self.archives is not None
+            and self.store.latest_status(conversation_id) is None
+            and self.store.memory.get(conversation_id)["inherit_memory"]
+            and binding["source"]["kind"] != "schedule"
+        ):
+            binding["archive_context"] = await self.archives.recent(member_id)
+        elif self.archives is not None and binding["source"]["kind"] != "schedule":
+            binding["archive_context"] = self.state.initial_archive_context(
+                conversation_id, member_id
+            )
         main = AgentSpec.restore(binding["main"])
         run_id = self.store.begin(
             conversation_id,
@@ -109,7 +132,9 @@ class ExecutionService:
         started = time.monotonic()
         waiting = False
         try:
-            factory = AgentLoopFactory(self.paths, conversation_id, self.options, self.schedules)
+            factory = AgentLoopFactory(
+                self.paths, conversation_id, self.options, self.schedules, self.archives
+            )
             model = create_model(profile, budget)
             loop = await factory.build(saved["binding"], model, self.checkpoints)
             # 2、应用层只消费普通轨迹合同，Loop 不直接操作产品数据库。
@@ -202,8 +227,6 @@ class ExecutionService:
         duplicate = self.state.duplicate(command_id, request_id, answer)
         if duplicate:
             return {"run_id": duplicate["run_id"], "accepted": True}
-        if self.active:
-            raise ValueError("其他任务正在执行，请稍后提交回答")
         profile = self.config.require_profile()
         candidate = self.store.connection.execute(
             "SELECT h.conversation_id FROM human_requests h WHERE h.id=?", (request_id,)
@@ -213,6 +236,7 @@ class ExecutionService:
             or self.store.conversation(candidate[0])["profile_ref"] != profile.reference
         ):
             raise ValueError("问题不存在或原模型绑定已经变化")
+        self.capacity(candidate["conversation_id"])
         # 2、领取回答后恢复同一 Run，不创建新用户消息或重新执行整段任务。
         question = self.state.answer(request_id, answer, command_id)
         run_id, conversation_id = question["run_id"], question["conversation_id"]

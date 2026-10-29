@@ -68,7 +68,7 @@ class CrewFurniture {
             group.append(crewSvg("text", { x: px + pw * 0.5, y: py - 9,
                 "text-anchor": "middle", "font-size": 9, fill: "#526174", stroke: "#fff",
                 "paint-order": "stroke", "stroke-width": 3 },
-                obj.type === "archive" ? "档案室 · 规划中" : "安全服务台 · 未接入"));
+                obj.type === "archive" ? "档案库" : "安全服务台 · 未接入"));
         r.depth.append(group);
         // 4、工作椅和会议椅也是同一个八向素材，不使用另一套前后朝向图片规则。
         if (["desk", "security", "meeting"].includes(obj.type))
