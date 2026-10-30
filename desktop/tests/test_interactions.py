@@ -14,9 +14,9 @@ from roomcrew_desktop.runtime import DesktopRuntime
 def test_tool_categories_map_to_client_animations_only() -> None:
     """因为后端不能决定素材动作，需要在桌面适配器验证 MCP、技能与普通工具的独立映射。"""
     # 1、同一执行状态按可信工具分类显示不同动作，不分析模型自然语言。
-    assert animation_hint("executing", ["any_name"], 0, 0, ["mcp"])["gesture"] == "phone"
-    assert animation_hint("executing", ["read_file"], 0, 0, ["skill"])["gesture"] == "read"
-    assert animation_hint("executing", ["execute_python"], 0, 0, ["python"])["gesture"] == "work"
+    assert animation_hint("executing", ["any_name"], 0, 0, ["mcp"])["gesture"] == "type"
+    assert animation_hint("executing", ["read_file"], 0, 0, ["skill"])["gesture"] == "type"
+    assert animation_hint("executing", ["execute_python"], 0, 0, ["python"])["gesture"] == "type"
     cue = visual_cue(
         {
             "seq": 1,
@@ -27,7 +27,7 @@ def test_tool_categories_map_to_client_animations_only() -> None:
             "payload": {"name": "arbitrary", "tool_kind": "mcp"},
         }
     )
-    assert cue and cue["action"] == "phone"
+    assert cue is None
 
 
 async def test_bubbles_persist_on_member_without_entering_agent_snapshot(tmp_path: Path) -> None:

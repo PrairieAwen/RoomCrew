@@ -17,6 +17,8 @@
 | 档案库与无感续聊 | [ADR-0024](architecture/0024-archive-memory.md) | 完整历史、异步摘要、文本/本地语义/日期检索、用户共享来源和独立并行线程 |
 | 空间与协作名单 | [ADR-0007](architecture/0007-workspace-rooms.md)、[ADR-0011](architecture/0011-coherent-studio-and-workspace-roster.md) | 一空间一会议室，上下文隔离，仅委派本空间显式配置名单 |
 | 泡泡与人工交互 | [ADR-0013](architecture/0013-bubble-pointer-and-read-receipts.md) | 主 Agent 转达、局部挂点、真实点击及持久已读 |
+| 统一工作与顺序演出 | [ADR-0025](architecture/0025-queued-agent-performances.md) | 常态打字、MCP 通话、逐人递文件、查档往返；独立持久队列与新吉祥物 |
+| 重复动作合并 | [ADR-0026](architecture/0026-coalesced-desktop-actions.md) | MCP、查档按人物六十秒合并，已播冷却持久化；原始调用、委派与审核不变 |
 | Markdown | [ADR-0012](architecture/0012-message-markdown.md) | 展示层安全解析，原轨迹保留原文 |
 | 素材与人物接触 | [ADR-0020](architecture/0020-unified-projection-assets.md)、[ADR-0019](architecture/0019-paired-chair-interactions.md) | 固定投影兼容预览，四角色配套工作/起坐；完整动作及骨点仍待验收 |
 | 素材制作规范 | [规范 v1.0](assets/asset-production-standard/README.md)、[图解版](assets/asset-production-standard/guide.html) | 相机、尺寸、八向、接触、导出及验收；制作端 JSON 尚非导入合同 |
@@ -35,6 +37,8 @@
 - 模型表单：[配置验收](development/model-settings-validation.md)；空间隔离：[工作区验收](development/workspace-validation.md)。
 - 角色点击开启对话、右上角团队配置及简化画布入口：[当前交互验收](development/studio-validation.md#2026-10-28角色对话与简化画布入口)。
 - 场景、素材与原生截图：[素材验收](development/scene-assets-validation.md)；其他历史记录保留在 development/。
+- 通话、人工恢复、新角色及并行派发后逐个演示：[ADR-0025 验证记录](architecture/0025-queued-agent-performances.md#6-本次验收记录)。
+- 人物选择即预览、加载准入与实际保存：[素材选择验收](development/material-selection-validation.md)。
 - 常用检查、源码运行和打包命令统一见根 README.md，不在每篇文档复制一套。
 
 ## 产品与长期设计

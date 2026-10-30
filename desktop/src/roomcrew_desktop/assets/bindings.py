@@ -5,7 +5,18 @@ from typing import Any
 from roomcrew_desktop.presentation.contracts import GESTURES
 
 CATEGORIES = frozenset(
-    {"tool", "python", "mcp", "skill", "human", "completed", "security", "directory"}
+    {
+        "tool",
+        "python",
+        "mcp",
+        "skill",
+        "human",
+        "completed",
+        "security",
+        "directory",
+        "archive",
+        "delegation",
+    }
 )
 
 

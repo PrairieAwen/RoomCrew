@@ -22,12 +22,14 @@
         <script src="studio/motion.js" defer></script>
         <script src="studio/animation.js" defer></script>
         <script src="studio/leisure.js" defer></script>
-        <script src="studio/collaboration.js" defer></script>
+        <script src="studio/performance.js" defer></script>
+        <script src="studio/performance-effects.js" defer></script>
         <script src="studio/rig.js" defer></script>
         <script src="studio/skins.js" defer></script>
         <script src="studio/camera.js" defer></script>
         <script src="studio/assets/library-v1/catalog.js" defer></script>
         <script src="studio/assets/scene-v1/catalog.js" defer></script>
+        <script src="studio/assets/library-v1/characters/hippo/display.js" defer></script>
         <script src="studio/scene-assets.js" defer></script>
         <script src="studio/office-behavior.js" defer></script>
         <script src="studio/environment.js" defer></script>
@@ -725,7 +727,7 @@
                         </div>
                         <div class="material-controls">
                             <label
-                                >人物素材<select id="member-avatar">
+                                >当前人物素材（已导入）<select id="member-avatar">
                                     <option value="builtin:crew-v1">
                                         RoomCrew · 精细骨架
                                     </option>
@@ -758,15 +760,17 @@
                                     重新载入
                                 </button>
                             </div>
+                            <p class="scope-note">随附角色：选择后自动加载预览，保存后应用到会议室人物。</p>
                             <div class="material-actions">
                                 <select
                                     id="bundle-character"
-                                    aria-label="完整人物素材"
+                                    aria-label="随附角色，选择后自动加载预览"
                                 >
+                                    <option value="" selected>选择随附角色 · 立即预览</option>
                                     <option value="owner">
                                         阿晨 · 暖木色成员
                                     </option>
-                                    <option value="assistant" selected>
+                                    <option value="assistant">
                                         小禾 · 助手
                                     </option>
                                     <option value="employee">
@@ -775,13 +779,16 @@
                                     <option value="guardian">
                                         守望 · 监管员形象
                                     </option>
+                                    <option value="hippo">
+                                        小橘 · 男性吉祥物（关键帧预览）
+                                    </option>
                                 </select>
                                 <button
                                     id="bundle-avatar"
                                     type="button"
                                     class="secondary-button"
                                 >
-                                    导入完整角色
+                                    重新加载所选角色
                                 </button>
                             </div>
                             <div class="preview-controls">

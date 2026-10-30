@@ -34,10 +34,16 @@ async def test_four_bundles_import_and_bind_outside_agent_context(tmp_path: Path
             asset = await runtime.avatar_asset(imported["id"])
             value = asset["manifest"]
             assert value["version"] == 3 and len(asset["image_pages"]) == 2
-            assert {clip["action"] for clip in value["clips"]} == GESTURES
-            assert {
-                clip["expression"] for clip in value["clips"] if clip["action"] == "idle"
-            } == EXPRESSIONS
+            if entry["id"] != "hippo":
+                assert {clip["action"] for clip in value["clips"]} == GESTURES
+                assert {
+                    clip["expression"] for clip in value["clips"] if clip["action"] == "idle"
+                } == EXPRESSIONS
+            else:
+                assert entry["coverage_level"] == "keyframe-preview"
+                assert {"walk", "type", "phone", "ask", "report"} <= {
+                    clip["action"] for clip in value["clips"]
+                }
             assert len(value["frame_rects"]) == entry["frame_count"]
             assert {frame["page"] for frame in value["frame_rects"]} == {0, 1}
             member = await runtime.save_member(
@@ -102,13 +108,13 @@ def test_catalog_matches_real_images_and_object_regions() -> None:
     # 1、目录统计与真实记录一致，所有帧均有实际图像内容。
     catalog = material_catalog()
     assert catalog["summary"] == {
-        "characters": 4,
-        "character_frames": 496,
+        "characters": 5,
+        "character_frames": 528,
         "furniture": 12,
         "decor": 16,
         "effects": 8,
     }
-    assert sum(entry["frame_count"] for entry in catalog["characters"]) == 496
+    assert sum(entry["frame_count"] for entry in catalog["characters"]) == 528
     for entry in catalog["characters"]:
         folder = LIBRARY / "characters" / entry["id"]
         value = json.loads((folder / "avatar.json").read_text("utf-8"))

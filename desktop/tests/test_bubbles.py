@@ -86,6 +86,9 @@ async def test_unread_result_survives_new_tasks_restart_and_projection_rebuild(
         next_run = runtime.store.begin(second["id"], "第二轮", "second-bubble-request")
         actor = (await runtime.studio_feed())["actors"][0]
         assert actor["activity"] != "reporting"
+        assert actor["bubble_is_history"]
+        assert "当前任务仍在进行" in actor["bubble"]
+        assert "干完" not in actor["bubble"]
         assert actor["bubble_notice"] == initial
         assert actor["bubble_notice"]["conversation_id"] == first["id"]
         runtime.store.finish(next_run, "completed", {})

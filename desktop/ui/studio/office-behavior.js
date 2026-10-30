@@ -4,6 +4,7 @@
 /** 因为工作、休闲和面对用户有不同朝向，需要以座位用途与当前动作决定目标方向。 */
 function crewOfficeFacing(actor, action, fact, layer) {
     // 1、工作与电脑游戏都面向显示器；会议沿实际座位朝向，不能全员面对镜头。
+    if (layer?.kind === "performance" && layer.direction) return layer.direction;
     if (actor.target?.purpose === "workstation") {
         if (
             fact?.requires_input ||

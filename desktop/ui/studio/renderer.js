@@ -35,10 +35,11 @@ class CrewRenderer {
         this.navigator = new CrewNavigator();
         this.idle = new CrewIdleDirector(this.motion, this.navigator);
         this.workstations = new CrewWorkstationDirector(this.motion, this.navigator);
-        this.collaboration = new CrewCollaborationDirector(
+        this.collaboration = new CrewActionDirector(
             this.motion,
             this.navigator,
         );
+        this.performanceEffects = new CrewPerformanceEffects();
         this.interactions = [];
         this.animator = new CrewAnimator();
         this.rig = new CrewRig();
@@ -80,9 +81,7 @@ class CrewRenderer {
         // 1、先释放临时走动，再清空事实与显示节点；不操作任何执行器。
         this.idle.clear();
         this.idle.blocked.clear();
-        this.collaboration.clear();
-        this.collaboration.blocked.clear();
-        this.collaboration.retryAt.clear();
+        this.collaboration.reset();
         this.motion.actors.clear();
         this.motion.chairs.clear();
         this.motion.presetMembers.clear();
@@ -107,6 +106,7 @@ class CrewRenderer {
         // 1、布局变化才重建静态家具；相同布局只更新人物与语义状态。
         if (data.scene.room.revision < this.revision) return;
         this.scene = data.scene;
+        this.collaboration.offer(data.actions);
         const navigationHealthy = this.navigator.update(data.scene.navigation);
         this.interactions = data.interactions || [];
         this.factsHealthy =
@@ -120,6 +120,7 @@ class CrewRenderer {
             this.depth = crewSvg("g");
             this.bubbles = crewSvg("g", { class: "crew-bubble-layer" });
             this.drawRoom(data.scene.room);
+            this.world.append(this.performanceEffects.group);
         }
         const members = data.members.filter(crewVisibleMember);
         this.skins.active = new Set(members.map(crewMemberSkin));
@@ -503,12 +504,13 @@ class CrewRenderer {
                 timestamp - this.feedTime < 4000 &&
                 !this.reducedMotion;
             this.collaboration.tick(
-                this.interactions,
                 this.scene,
                 this.views,
                 this.facts,
                 healthy,
                 timestamp,
+                dt,
+                this.reducedMotion,
             );
             this.idle.tick(
                 this.views,
@@ -550,7 +552,7 @@ class CrewRenderer {
                 const p = crewProject(actor.position);
                 const binding =
                     view.member.material_profile?.bindings?.[
-                        fact?.material_category
+                        sample.material_category || fact?.material_category
                     ];
                 if (
                     binding &&
@@ -591,6 +593,7 @@ class CrewRenderer {
                 view.group.dataset.idleActivity = sample.idleActivity || "";
                 view.group.dataset.meeting = String(sample.meeting);
                 view.group.dataset.externalCall = String(sample.externalCall);
+                view.group.dataset.aggregationCount = String(sample.aggregation_count);
                 view.leisureLabel.textContent =
                     sample.caption ||
                     (sample.leisure
@@ -625,7 +628,7 @@ class CrewRenderer {
                     ? "?"
                     : fact?.warning_count
                       ? "!"
-                      : sample.externalCall
+                      : sample.performance_kind === "mcp" || sample.externalCall
                         ? "☎"
                         : {
                               think: "···",
@@ -633,7 +636,10 @@ class CrewRenderer {
                               ask: "?",
                               alert: "!",
                           }[sample.action] || "";
+                // 图集通过实际姿势、道具和泡泡表达状态；旧骨架固定高度图标会悬到头顶远处。
+                view.badge.setAttribute("visibility", custom ? "hidden" : "visible");
             }
+            this.performanceEffects.paint(this.collaboration, this);
             // 4、按脚底深度排序，仅在顺序变化时移动节点，避免人物穿过前景家具。
             const ordered = [...this.depth.children].sort(crewEntityDepth),
                 signature = ordered.map(crewEntityId).join("|");

@@ -271,7 +271,7 @@ class CrewMotion {
         if (
             !actor ||
             !route.length ||
-            !["leisure", "meeting", "work", "return"].includes(kind)
+            !["leisure", "meeting", "work", "return", "performance"].includes(kind)
         )
             return false;
         const seated = actor.posture === "seated" || actor.phase === "sit_down";

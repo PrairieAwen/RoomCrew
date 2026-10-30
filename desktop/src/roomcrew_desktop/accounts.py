@@ -6,15 +6,14 @@ from typing import Any
 
 from roomcrew.accounts.repository import AccountRepository
 from roomcrew.accounts.service import AccountService
-from roomcrew_desktop.assets.bindings import material_profile
+from roomcrew_desktop.assets.bindings import CATEGORIES, material_profile
 from roomcrew_desktop.presentation.contracts import GESTURES, leisure_profile
 
 INTERACTION_DEFAULTS = {
     "question_bubble": "老板，我有问题想问你。",
-    "completed_bubble": "老板，我干完了，你看看。",
+    "completed_bubble": "老板，本轮回复已就绪，请查看。",
     "action_overrides": {},
 }
-TOOL_KINDS = {"tool", "mcp", "skill", "security", "human", "directory", "python", "completed"}
 
 
 def interaction_profile(value: Any) -> dict[str, Any]:
@@ -23,13 +22,16 @@ def interaction_profile(value: Any) -> dict[str, Any]:
     if not isinstance(value, dict) or set(value) - set(INTERACTION_DEFAULTS):
         raise ValueError("人物交互配置字段无效")
     profile = {**INTERACTION_DEFAULTS, **value}
+    # 旧默认文案把框架结束误写成业务成功；只兼容这一精确旧值，保留其他用户文案。
+    if profile["completed_bubble"] == "老板，我干完了，你看看。":
+        profile["completed_bubble"] = INTERACTION_DEFAULTS["completed_bubble"]
     for key in ("question_bubble", "completed_bubble"):
         if not isinstance(profile[key], str) or not 1 <= len(profile[key]) <= 80:
             raise ValueError("聊天泡泡需要 1～80 字短提示")
     # 2、只接受已注册动作，禁止表达式、脚本或任意帧指令。
     overrides = profile["action_overrides"]
     if not isinstance(overrides, dict) or any(
-        key not in TOOL_KINDS or not isinstance(item, str) or item not in GESTURES
+        key not in CATEGORIES or not isinstance(item, str) or item not in GESTURES
         for key, item in overrides.items()
     ):
         raise ValueError("动作映射需要已注册的类别和动作")

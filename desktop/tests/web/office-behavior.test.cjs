@@ -58,8 +58,8 @@ function verifySupplement() {
         const sources = ["original0", "original1"], sizes = [[1,1],[1,1]];
         context.crewSceneCharacterSupplement(asset, sources, sizes);
         assert.equal(JSON.stringify(manifest), before);
-        assert.equal(sources.length, 5);
-        assert.equal(asset.display_manifest.frame_rects.length, manifest.frame_rects.length + 18);
+        assert.equal(sources.length, 6);
+        assert.equal(asset.display_manifest.frame_rects.length, manifest.frame_rects.length + 20);
         for(const direction of catalog.directions) {
             const sample = {action:"work", posture:"seated", direction, expression:"neutral", seatMix:1, time:0};
             const clip = context.crewSelectClip(asset.display_manifest, sample);
@@ -208,7 +208,7 @@ class DecodedTestImage {
     }
 }
 
-/** 因为补图加载曾被单页白名单拒绝，需要走完整 ensure 并检查五个显示页和原数组不变。 */
+/** 因为补图加载曾被单页白名单拒绝，需要走完整 ensure 并检查六个显示页和原数组不变。 */
 async function verifyDisplayPageLoading() {
     // 1、替身只代替 Image 解码，仍调用正式加载器与正式方向素材合同。
     context.Image = DecodedTestImage;
@@ -227,15 +227,16 @@ async function verifyDisplayPageLoading() {
         imageDimensions.set(entry.image,entry.size);
         imageDimensions.set(entry.paired.image,entry.paired.size);
         imageDimensions.set(entry.transition.image,entry.transition.size);
+        imageDimensions.set(entry.call.image,entry.call.size);
         const before = JSON.stringify({manifest,sources});
         const skins = new context.classes.CrewSkins(loadTestAsset.bind(null,asset));
         skins.ensure(id);
         await skins.pending.get(id);
         assert.equal(skins.errors.size,0);
-        assert.equal(skins.cache.get(id).decoded_pages.length,5);
+        assert.equal(skins.cache.get(id).decoded_pages.length,6);
         assert.equal(JSON.stringify({manifest,sources}),before);
     }
-    console.log("five display pages + private supplement allowlist + immutable source arrays passed");
+    console.log("six display pages + private supplement allowlist + immutable source arrays passed");
 }
 
 /** 因为正式加载器接收异步素材入口，需要返回本测试构造的清单而不绕过 ensure。 */

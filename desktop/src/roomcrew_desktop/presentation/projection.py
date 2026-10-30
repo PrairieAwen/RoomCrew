@@ -29,6 +29,10 @@ class StudioProjection:
             )
             row = cache.execute("SELECT cursor,body FROM projection WHERE id=1").fetchone()
             cursor, actors = (row[0], json.loads(row[1])) if row else (0, {})
+            # 新归约规则必须重放旧日志，不能继续复用旧子任务产生的 reporting 缓存。
+            if cache.execute("PRAGMA user_version").fetchone()[0] < 1:
+                cursor, actors = 0, {}
+                cache.execute("PRAGMA user_version=1")
             with closing(
                 sqlite3.connect(self._journal.as_uri() + "?mode=ro", uri=True, timeout=0.2)
             ) as journal:

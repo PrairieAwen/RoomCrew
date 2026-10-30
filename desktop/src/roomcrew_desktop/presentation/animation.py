@@ -2,45 +2,23 @@
 
 from typing import Any
 
-OPERATIONS = {
-    "read_file": "read",
-    "ls": "read",
-    "glob": "read",
-    "grep": "read",
-    "write_file": "write",
-    "edit_file": "type",
-    "write_todos": "write",
-    "task": "talk",
-    "ask_user": "ask",
-    "get_local_time": "think",
-}
-KIND_ACTIONS = {
-    "tool": "work",
-    "python": "work",
-    "mcp": "phone",
-    "skill": "read",
-    "security": "talk",
-    "human": "ask",
-    "directory": "read",
-}
-
 
 def animation_hint(
     activity: str, tools: list[str], questions: int, warnings: int, kinds: list[str] | None = None
 ) -> dict[str, str]:
-    """因为同一执行状态可以包含不同工具动作，需要用有限映射细化动作并保留人工与异常表情。"""
-    # 1、工具名只用于白名单映射，不读取工具正文、参数或模型自然语言。
+    """因为工作过程统一表现为操作电脑，需要按阶段保留人工与异常表情，特殊动作另行排队。"""
+    # 1、快照不反复触发特殊行为，兼容调用参数不包含正文或模型推断的成败。
     gesture = {
-        "thinking": "think",
-        "executing": "work",
-        "delegating": "talk",
+        "thinking": "type",
+        "executing": "type",
+        "delegating": "type",
         "question": "ask",
         "reporting": "report",
         "warning": "alert",
-        "receiving": "listen",
+        "receiving": "type",
+        "waiting": "type",
     }.get(activity, "idle")
-    if activity == "executing" and tools:
-        gesture = KIND_ACTIONS.get((kinds or [""])[-1], OPERATIONS.get(tools[-1], "work"))
+    # 特殊动作通过独立持久队列短暂演出；快照始终保留正常工作的电脑动作。
     # 2、问题与错误优先显示表情，但不令其他正在执行的上下文变成完成或暂停。
     expression = "focused" if activity in {"thinking", "executing", "delegating"} else "neutral"
     if activity == "reporting":
@@ -60,14 +38,23 @@ def visual_cue(event: dict[str, Any]) -> dict[str, Any] | None:
         return None
     expression, duration = "focused", 320
     if kind == "tool.started":
-        action = KIND_ACTIONS.get(
-            payload.get("tool_kind", ""), OPERATIONS.get(payload.get("name", ""), "work")
-        )
+        if payload.get("tool_kind") in {"mcp", "security"} or payload.get("name") in {
+            "search_archive",
+            "read_archive_messages",
+            "task",
+            "ask_user",
+        }:
+            return None
+        action = "type"
+        # 快速远程工具也需留出转向显示器后的实际操作时间，不能只播放转身。
+        duration = 900 if action in {"type", "work", "write"} else duration
     elif kind == "human.requested":
         action, expression, duration = "ask", "curious", 900
     elif kind in {"tool.failed", "run.failed", "run.interrupted", "task.failed"}:
         action, expression, duration = "alert", "concerned", 900
     elif kind == "run.completed":
+        if event.get("scope", "main") != "main":
+            return None
         action, expression, duration = "report", "smile", 800
     else:
         return None

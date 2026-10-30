@@ -50,10 +50,17 @@ def main() -> None:
     logging.disable(logging.CRITICAL)
     parser = argparse.ArgumentParser()
     parser.add_argument("--timeout-seconds", type=int, default=180)
-    timeout = parser.parse_args().timeout_seconds
+    parser.add_argument("--executable", type=Path)
+    arguments = parser.parse_args()
+    timeout = arguments.timeout_seconds
     if not 30 <= timeout <= 1800:
         raise ValueError("发行验收等待时间需要在 30—1800 秒之间")
     project = Path(__file__).resolve().parents[2]
+    executable = (arguments.executable or project / "dist/RoomCrew/RoomCrew.exe").resolve(
+        strict=True
+    )
+    if not executable.is_relative_to(project) or executable.name != "RoomCrew.exe":
+        raise ValueError("发行验收只允许运行本项目内的 RoomCrew.exe")
     root = project / ".cache/frozen-smoke" / uuid4().hex
     script = (
         "import json\nfrom pathlib import Path\n"
@@ -78,10 +85,13 @@ def main() -> None:
     with mcp_server() as (url, calls), model_server(responses) as (endpoint, requests):
         asyncio.run(configure(root, endpoint, url))
         process = subprocess.Popen(
-            [str(project / "dist/RoomCrew/RoomCrew.exe"), "--data-dir", str(root)],
+            [str(executable), "--data-dir", str(root)],
             creationflags=0x08000000,
         )
-        print(json.dumps({"stage": "ready_for_native_input", "pid": process.pid}), flush=True)
+        print(
+            json.dumps({"stage": "ready_for_native_input", "pid": process.pid, "root": str(root)}),
+            flush=True,
+        )
         # 2、只观察发行程序自己写入的终态与文件，不能补写缺失结果。
         result: dict = {"ok": False}
         deadline = time.monotonic() + timeout

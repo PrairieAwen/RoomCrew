@@ -14,7 +14,10 @@ from starlette.responses import JSONResponse
 
 @contextlib.contextmanager
 def mcp_server(
-    api_key: str | None = None, echo_key: bool = False, discovery_echo: bool = False
+    api_key: str | None = None,
+    echo_key: bool = False,
+    discovery_echo: bool = False,
+    delay: float = 0,
 ) -> Iterator[tuple[str, list[dict[str, Any]]]]:
     """因为 MCP 接入必须验证实际协议，需要启动只监听本机的合成 MCP 服务并在结束时关闭。"""
     # 1、使用官方 MCP 服务器，工具返回真实计算结果，不替换生产适配器。
@@ -26,6 +29,8 @@ def mcp_server(
         """因为协议验证需要可核对的工具结果，需要计算两个输入整数之和。"""
         # 1、只记录合成整数，不读取文件、环境变量或凭据。
         requests.append({"left": left, "right": right})
+        if delay:
+            time.sleep(delay)
         result: dict[str, Any] = {"sum": left + right}
         if echo_key and api_key:
             result[api_key] = {"echo": api_key}

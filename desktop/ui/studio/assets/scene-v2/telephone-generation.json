@@ -1,0 +1,18 @@
+{
+  "tool": "imagegen built-in",
+  "reference_assets": [
+    "scene-v2/paired-chair-v2.png",
+    "library-v1/characters/hippo/work.png"
+  ],
+  "output": "telephone-calls.png",
+  "coverage": "Five identities, two telephone keyframes each; not a full animation",
+  "row_edges": [
+    0,
+    363,
+    726,
+    1092,
+    1452,
+    1774
+  ],
+  "prompt": "Use case: identity-preserve. Asset type: transparent telephone-call keyframe atlas for RoomCrew office game. Input1 gives EXACT FOUR human character identities and fitted olive office chairs; input2 gives exact yellow male hippo and matching foot-platform chair. Generate 2 COLUMNS x 5 ROWS, ten isolated complete sprites, portrait image 1024x2048, equal cells, no grid visible. Row1 green cardigan brown-haired male, row2 pink cardigan brown-haired bun female, row3 navy suit black-haired male with glasses, row4 tan suit brown-haired male, row5 yellow hippo male with orange muzzle/shorts/tuft. All face FRONT-RIGHT seated comfortably in their exact matching chairs, complete wheels, same size/position in each pair. In BOTH frames per row they are TALKING ON A TELEPHONE: one hand clearly holds small dark phone FLAT AGAINST EAR, elbow bent, other hand gestures lightly or rests on lap. Frame1 neutral speaking with mouth open a little; frame2 attentive listening, very small hand/mouth difference. This is NOT looking down or playing on a smartphone. Preserve identity, clothing colours, head/body proportions, chair contact and upper-left warm lighting. Camera is 30-degree elevated orthographic, +/-0.5 ground slopes, polished cozy office art. Keep human style from input1 and hippo style from input2. NO desk, monitor, floor, cast shadows, objects, UI, labels, text, borders, glow, clouds, sparkles, particles or background. Fully transparent RGBA outside silhouettes. Do not crop heads, chairs or wheels, leave safe margins per cell."
+}

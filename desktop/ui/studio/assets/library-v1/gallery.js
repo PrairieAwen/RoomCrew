@@ -107,7 +107,7 @@ class MaterialGallery {
         const titles = {
             character: [
                 "会议室里的伙伴",
-                "每套覆盖 20 种动作；点击角色可以选动作、姿态、表情和朝向。",
+                "点击角色查看实际动作、姿态与朝向；关键帧预览的未覆盖能力会单独标明。",
             ],
             furniture: [
                 "让工作发生的地方",
@@ -132,7 +132,7 @@ class MaterialGallery {
             titles[category][1];
         if (category === "matrix") {
             this.matrix();
-            document.getElementById("section-count").textContent = "20 × 4";
+            document.getElementById("section-count").textContent = `20 × ${this.catalog.characters.length}`;
             return;
         }
         const entries =
@@ -183,7 +183,7 @@ class MaterialGallery {
         const info = materialNode("div", "asset-info");
         const count =
             entry.kind === "character"
-                ? `${entry.frame_count} 个姿态 · 20 种动作 · 5 种闲置表情`
+                ? `${entry.frame_count} 个姿态 · ${entry.action_count} 种动作${entry.coverage_level === "keyframe-preview" ? " · 关键帧预览" : " · 5 种闲置表情"}`
                 : entry.kind === "effects"
                   ? "4 帧状态动画"
                   : "透明 PNG · 统一画风";

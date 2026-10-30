@@ -215,7 +215,9 @@ class CrewStudio {
             ? "表现暂不可用 · 执行继续"
             : data.catching_up
               ? "正在恢复状态…"
-              : "本地状态同步";
+              : data.actions_pending
+                ? `本地状态同步 · ${data.actions_pending} 项行为待演示`
+                : "本地状态同步";
         el("narration-enabled").checked = data.preferences.narration_enabled;
         if (
             this.initialized &&
@@ -225,6 +227,17 @@ class CrewStudio {
         )
             this.renderer.animator.offer(data.cues);
         this.initialized = true;
+        // 表现回执只在控制层提交，帧回调不访问桌面桥；失败时保留并在下一次刷新重试。
+        for (const receipt of [...this.renderer.collaboration.receipts]) {
+            try {
+                await api("acknowledge_scene_action", receipt.id, receipt.result, receipt.reason);
+                if (generation !== this.refreshGeneration) return;
+                this.renderer.collaboration.confirm(receipt.id);
+            } catch (error) {
+                if (error.stale) return;
+                break;
+            }
+        }
         // 2、用户明确选择人物且展开轨迹后才读取原始事件。
         if (
             this.selected &&
@@ -686,8 +699,15 @@ class CrewStudio {
     async saveMember(event) {
         // 1、只收集白名单普通属性，拒绝任意素材路径或脚本。
         event.preventDefault();
+        if (this.materials.importState !== "idle" || this.materials.saving) {
+            toast(this.materials.importState === "failed"
+                ? "素材尚未应用，请重新选择或重试后再保存。"
+                : "正在加载人物素材，请等待预览完成后再保存。");
+            return;
+        }
         const epoch = state.workspaceEpoch;
-        el("save-member").disabled = true;
+        this.materials.saving = true;
+        this.materials.updateControls();
         const original = this.editMemberValue;
         const values = {
             name: el("member-name").value,
@@ -727,8 +747,10 @@ class CrewStudio {
         } catch (error) {
             showError(error);
         } finally {
-            if (epoch === state.workspaceEpoch)
-                el("save-member").disabled = false;
+            if (epoch === state.workspaceEpoch) {
+                this.materials.saving = false;
+                this.materials.updateControls();
+            }
         }
     }
 

@@ -10,16 +10,20 @@ const CREW_BINDING_LABELS = {
     completed: "任务完成",
     security: "安全审核（预留）",
     directory: "发现团队成员",
+    archive: "查阅档案库",
+    delegation: "向成员递交任务",
 };
 const CREW_BINDING_DEFAULTS = {
-    tool: "work",
-    python: "work",
+    tool: "type",
+    python: "type",
     mcp: "phone",
-    skill: "read",
+    skill: "type",
     human: "ask",
     completed: "report",
     security: "talk",
-    directory: "read",
+    directory: "type",
+    archive: "read",
+    delegation: "talk",
 };
 
 class CrewMemberConfiguration {
@@ -97,7 +101,7 @@ class CrewMemberConfiguration {
         el("member-question-bubble").value =
             profile.question_bubble || "老板，我有问题想问你。";
         el("member-completed-bubble").value =
-            profile.completed_bubble || "老板，我干完了，你看看。";
+            profile.completed_bubble || "老板，本轮回复已就绪，请查看。";
         this.actions.load(member);
     }
 

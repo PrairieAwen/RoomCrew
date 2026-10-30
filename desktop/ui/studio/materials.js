@@ -24,6 +24,8 @@ class CrewMaterialPanel {
         this.previous = 0;
         this.lastDraw = 0;
         this.token = 0;
+        this.importState = "idle";
+        this.saving = false;
         this.view = null;
         this.sequence = null;
         for (const key of [
@@ -61,6 +63,8 @@ class CrewMaterialPanel {
             "click",
             this.importBundle.bind(this),
         );
+        el("bundle-character").addEventListener("change", this.importBundle.bind(this));
+        el("member-dialog").addEventListener("close", this.close.bind(this));
         el("preview-sequence").addEventListener(
             "click",
             this.toggleSequence.bind(this),
@@ -107,6 +111,10 @@ class CrewMaterialPanel {
         // 1、立即提供当前引用，目录慢或损坏也不阻止编辑普通属性。
         const token = ++this.token,
             identifier = member.avatar_id || "builtin:crew-v1";
+        this.importState = "idle";
+        this.saving = false;
+        el("bundle-character").value = "";
+        this.updateControls();
         this.stopSequence();
         el("member-avatar").replaceChildren();
         const current = node("option", "", identifier);
@@ -134,6 +142,7 @@ class CrewMaterialPanel {
                     "原素材缺失，可保存为内置外观或重新导入。";
             }
         } catch (error) {
+            if (token !== this.token) return;
             el("avatar-feedback").textContent =
                 "素材目录暂不可用，已有角色仍可编辑。";
         }
@@ -226,8 +235,14 @@ class CrewMaterialPanel {
     }
 
     /** 因为更换素材只改变显示引用，需要按需请求已注册图片并保留原执行定义。 */
-    changeAvatar() {
+    changeAvatar(event = null) {
         // 1、不发送人物提示、模型参数或工作日志。
+        if (event?.type === "change") {
+            ++this.token;
+            this.importState = "idle";
+            el("bundle-character").value = "";
+            this.updateControls();
+        }
         this.view?.sprite?.remove();
         if (this.view) this.view.sprite = null;
         const imported = el("member-avatar").value.startsWith("avatar:");
@@ -258,9 +273,10 @@ class CrewMaterialPanel {
         await this.importSource("import_avatar_portrait");
     }
 
-    /** 因为四套角色需要共用安全导入和反馈，需要只传递有限角色标识来选择整套动作素材。 */
+    /** 因为随附角色选择应即时生效，需要共用导入入口更新预览，保存前不改变正式成员。 */
     async importBundle() {
         // 1、选择形象不改变人物身份或 Agent 能力；保存前只预览。
+        if (!el("bundle-character").value || this.saving) return;
         await this.importSource(
             "import_avatar_bundle",
             el("bundle-character").value,
@@ -276,11 +292,11 @@ class CrewMaterialPanel {
     /** 因为用户自制素材需显式选择来源，需要调用原生文件选择器后再显示校验结果。 */
     async importSource(method, role = null) {
         // 1、只接受本地 PNG 图集与 JSON 清单，不向网页传文件路径或执行脚本。
+        if (this.saving) return;
         const token = ++this.token;
-        el("import-avatar").disabled = true;
-        el("example-avatar").disabled = true;
-        el("portrait-avatar").disabled = true;
-        el("bundle-avatar").disabled = true;
+        if (method !== "import_avatar_bundle") el("bundle-character").value = "";
+        this.importState = "loading";
+        this.updateControls();
         el("avatar-feedback").textContent =
             method !== "import_avatar"
                 ? "正在导入并校验随附动作样例…"
@@ -288,9 +304,17 @@ class CrewMaterialPanel {
         try {
             const result =
                 role === null ? await api(method) : await api(method, role);
-            if (result.cancelled) return;
             if (token !== this.token || !el("member-dialog").open) return;
+            if (result.cancelled) {
+                el("bundle-character").value = "";
+                el("avatar-feedback").textContent = "已取消导入，仍使用原人物素材。";
+                return;
+            }
             const catalog = await api("avatar_catalog");
+            // 2、导入与目录刷新均可能迟到；两次等待之后都检查当前表单代次。
+            if (token !== this.token || !el("member-dialog").open) return;
+            if (!catalog.some(crewImportedAssetMatches, result.id))
+                throw new Error("新素材未出现在本地目录中，请重新选择或重试。");
             el("member-avatar").replaceChildren();
             for (const asset of catalog) {
                 const option = node("option", "", asset.name);
@@ -298,35 +322,73 @@ class CrewMaterialPanel {
                 el("member-avatar").append(option);
             }
             el("member-avatar").value = result.id;
+            this.skins.errors.delete(result.id);
             this.changeAvatar();
+            await this.skins.pending.get(result.id);
+            if (token !== this.token || !el("member-dialog").open) return;
+            if (!this.skins.cache.has(result.id))
+                throw new Error("素材已导入，但预览加载失败。请重试，暂未修改已保存人物。");
             if (method === "import_avatar_portrait") {
                 el("preview-action").value = "phone";
                 el("preview-posture").value = "seated";
                 el("preview-direction").value = "se";
             }
             el("avatar-feedback").textContent =
-                "已校验并复制到本地素材库。点击保存后绑定到人物。";
+                "已应用到当前预览；点击“保存到本地”后，会议室人物才会更新。";
         } catch (error) {
-            if (!error.stale && token === this.token)
+            if (!error.stale && token === this.token) {
+                this.importState = "failed";
                 el("avatar-feedback").textContent =
                     error.message || "素材导入失败";
+            }
         } finally {
             if (token === this.token) {
-                el("import-avatar").disabled = false;
-                el("example-avatar").disabled = false;
-                el("portrait-avatar").disabled = false;
-                el("bundle-avatar").disabled = false;
+                if (this.importState === "loading") this.importState = "idle";
+                this.updateControls();
             }
         }
     }
 
+    /** 因为导入和保存都可能异步结束，需要统一控制按钮，防止把旧素材误保存为新选择。 */
+    updateControls() {
+        // 1、角色列表允许快速重新选择；导入按钮、已注册素材和保存按当前状态协调。
+        const busy = this.importState === "loading" || this.saving;
+        for (const id of ["import-avatar", "example-avatar", "portrait-avatar", "member-avatar"])
+            el(id).disabled = busy;
+        el("bundle-character").disabled = this.saving;
+        el("bundle-avatar").disabled = busy || !el("bundle-character").value;
+        el("save-member").disabled = busy || this.importState === "failed";
+    }
+
+    /** 因为关闭或重开表单不能应用迟到的导入结果，需要失效当前代次并释放编辑状态。 */
+    close() {
+        // 1、只结束显示草稿；已经导入的素材库文件不删除，成员绑定未保存就不改变。
+        ++this.token;
+        this.importState = "idle";
+        this.saving = false;
+        this.stopSequence();
+        this.updateControls();
+    }
+
     /** 因为暂时读取失败不应永久锁住素材，需要提供人工重新加载而不自动无限重试。 */
-    reload() {
+    async reload() {
         // 1、只刷新当前注册引用，不接受任意 URL。
-        const id = el("member-avatar").value;
+        if (this.saving) return;
+        const id = el("member-avatar").value, token = ++this.token;
+        el("bundle-character").value = "";
+        this.importState = "loading";
+        this.updateControls();
         this.skins.errors.delete(id);
         this.skins.cache.delete(id);
         this.changeAvatar();
+        // 2、重试也等待实际解码，失败不能悄悄恢复保存按钮。
+        await this.skins.pending.get(id);
+        if (token !== this.token || !el("member-dialog").open) return;
+        this.importState = id === "builtin:crew-v1" || this.skins.cache.has(id) ? "idle" : "failed";
+        el("avatar-feedback").textContent = this.importState === "idle"
+            ? "预览已重新载入；保存后应用到会议室人物。"
+            : "素材预览仍未加载，请重新选择角色或重试。";
+        this.updateControls();
     }
 
     /** 因为预览应体现正式播放器的真实能力，需要使用相同骨架与图集选帧接口。 */
@@ -390,4 +452,10 @@ class CrewMaterialPanel {
         }
         requestAnimationFrame(this.tick);
     }
+}
+
+/** 因为导入回执必须能在当前目录找到，需要按稳定内容 ID 确认而不依赖角色名称。 */
+function crewImportedAssetMatches(asset) {
+    // 1、目录内容来自可信桌面入口，不拼接任意路径。
+    return asset.id === String(this);
 }

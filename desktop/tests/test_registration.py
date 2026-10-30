@@ -24,7 +24,11 @@ def test_bundled_frames_keep_head_scale_and_sources_immutable() -> None:
         # 2、动作与站坐共享同一头部尺度；腾空差异保留，不能将整个坐姿拉成长站姿。
         widths = [frame["head_width"] for frame in result["frames"]]
         assert max(widths) / min(widths) < 1.025
-        assert result["sockets"]["standing"] < result["sockets"]["seated"]
+        if folder.name == "hippo":
+            # 短腿吉祥物坐到带脚踏的高椅后头部反而高于站立，不能强套人类身高关系。
+            assert result["sockets"]["standing"] > result["sockets"]["seated"]
+        else:
+            assert result["sockets"]["standing"] < result["sockets"]["seated"]
         assert hashes == [
             hashlib.sha256((folder / name).read_bytes()).hexdigest() for name in manifest["images"]
         ]

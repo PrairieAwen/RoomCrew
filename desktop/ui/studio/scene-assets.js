@@ -35,6 +35,8 @@ function crewSceneCharacterSupplement(asset, sources, sizes) {
     // 1、仅替换显示补充页，旧文件、ID、帧号和两页用户导入合同保持不变。
     const entry = window.ROOMCREW_SCENE_ASSETS?.characters[asset.id];
     if (!entry || asset.manifest.version !== 3) return false;
+    if (entry.coverage === "keyframe-preview")
+        return crewMascotSupplement(asset, sources, sizes, entry);
     const manifest = structuredClone(asset.manifest), start = manifest.frame_rects.length;
     const page = sources.length;
     sources.push(entry.image);
@@ -79,7 +81,61 @@ function crewSceneCharacterSupplement(asset, sources, sizes) {
                     frames:rise.frames.map(crewTransitionFrameIndex,riseStart),fps:6,loop:false,
                     includes_seat:true,mirror:direction==="ne",transition:true});
     }
+    crewSceneCallSupplement(asset, sources, sizes, entry);
     return true;
+}
+
+/** 因为短腿吉祥物不能套用人类椅子片段，需要按固定内容登记自身的椅子、脚踏和起坐素材。 */
+function crewMascotSupplement(asset, sources, sizes, entry) {
+    // 1、只在匹配的内置内容 ID 中复用原两页，逐页固定尺度而不逐帧估计头宽。
+    const manifest = structuredClone(asset.manifest), unit = manifest.display_height / manifest.frame_size[1];
+    manifest.interaction_clips = manifest.clips.filter(crewMascotSeatedClip).flatMap(crewMascotChairClips);
+    asset.display_registration = {frames: structuredClone(manifest.frame_rects), sockets: {standing: -76, seated: -74}};
+    const start = manifest.frame_rects.length, page = sources.length;
+    sources.push(entry.transition.image);
+    sizes.push(entry.transition.size);
+    manifest.frame_rects.push(...entry.transition.frames.map(crewContactFrame, page));
+    asset.display_registration.frames.push(...entry.transition.frames);
+    // 2、起身按顺序、落座按同片段反向求值；接触仍标作者估计，不宣称全动作验收。
+    for (const direction of ["nw", "ne"])
+        for (const action of ["stand_up", "sit_down"])
+            manifest.interaction_clips.push({action, direction, posture: "seated", expression: "neutral", frames: entry.transition.frames.map(crewTransitionFrameIndex, start), fps: 6, loop: false, includes_seat: true, mirror: direction === "ne", transition: true});
+    asset.display_manifest = manifest;
+    asset.contact_ready = false;
+    asset.authoring_status = entry.contact_status;
+    crewSceneCallSupplement(asset, sources, sizes, entry);
+    return unit > 0;
+}
+
+/** 因为通话不能复用低头玩手机，需要只在真实 MCP 演出时选用独立的电话贴耳姿势。 */
+function crewSceneCallSupplement(asset, sources, sizes, entry) {
+    // 1、补页只来自内容 ID 对应的随包登记；用户原两页和帧号保持不变。
+    if (!entry.call) return;
+    const manifest = asset.display_manifest, start = manifest.frame_rects.length, page = sources.length;
+    sources.push(entry.call.image); sizes.push(entry.call.size);
+    manifest.frame_rects.push(...entry.call.frames.map(crewContactFrame, page));
+    asset.display_registration.frames.push(...entry.call.frames);
+    manifest.call_clips = ["se", "sw"].map(crewPhoneClip, {start});
+}
+
+/** 因为电话动作仍遵守同一素材选择器，需要登记前向两帧通话与显式对称复用。 */
+function crewPhoneClip(direction) {
+    // 1、电话仅是表现，不与真实 MCP 网络连接或授权结果绑定。
+    return {action:"phone",direction,posture:"seated",expression:"neutral",frames:[this.start,this.start+1],fps:3,loop:true,includes_seat:true,mirror:direction==="sw"};
+}
+
+/** 因为配套椅只适用于已登记坐姿，需要筛选真实的双页坐姿变体。 */
+function crewMascotSeatedClip(clip) {
+    // 1、站立和行走片段仍使用原图集与根点。
+    return clip.posture === "seated";
+}
+
+/** 因为画面不能同时叠加两把椅子，需要给可信内置坐姿标记已包含椅子。 */
+function crewMascotChairClips(clip) {
+    // 1、前向仅用于休闲和问答；工作方向由实际工位决定。
+    const original = {...clip, includes_seat: true};
+    const mirror = {nw: "ne", se: "sw"}[clip.direction];
+    return mirror ? [original, {...original, direction: mirror, mirror: true}] : [original];
 }
 
 /** 因为起坐原图可能有不同帧数，需要将每帧局部索引转入显示副本。 */

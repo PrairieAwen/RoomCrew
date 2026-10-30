@@ -7,6 +7,7 @@ from typing import Any
 from roomcrew.accounts.service import AccountService
 from roomcrew.platform.paths import AppPaths
 from roomcrew_desktop.accounts import interaction_profile
+from roomcrew_desktop.presentation.action_queue import ActionQueueStore
 from roomcrew_desktop.presentation.animation import animation_hint
 from roomcrew_desktop.presentation.bubbles import BubbleStore
 from roomcrew_desktop.presentation.narration import NarrationService
@@ -33,6 +34,9 @@ class StudioService:
         self._configuration = configuration
         self.bubbles = BubbleStore(paths.data / "sessions.sqlite", paths.data / "bubbles.sqlite")
         self._bubble_snapshot: dict[str, list[dict[str, Any]]] = {}
+        self.actions = ActionQueueStore(
+            paths.data / "sessions.sqlite", paths.data / "scene-actions.sqlite"
+        )
         self.narrator = NarrationService(generate)
 
     @property
@@ -66,6 +70,11 @@ class StudioService:
             projection["degraded"] = True
         # 2、辅助旁白立即返回规则结果；未读提示独立于最新动作，不受新任务覆盖。
         preferences = self.accounts.repository.preferences()
+        try:
+            projection.update(await asyncio.to_thread(self.actions.feed, projection["cursor"]))
+        except Exception:
+            projection["degraded"] = True
+            projection.update(actions=[], actions_pending=0)
         actors = projection["actors"]
         members = self.accounts.members()
         definitions = {item["id"]: item for item in members}
@@ -98,7 +107,9 @@ class StudioService:
                 if actor["requires_input"]
                 else "completed"
                 if actor["activity"] == "reporting"
-                else actor.get("tool_kind")
+                else "tool"
+                if actor["active_contexts"]
+                else None
             )
             action = profile["action_overrides"].get(category)
             if action:
@@ -119,9 +130,14 @@ class StudioService:
             actor["bubble"] = (
                 profile["question_bubble"]
                 if notice and notice["kind"] == "question"
+                else "有历史结果待查看，当前任务仍在进行。"
+                if notice and actor["active_contexts"] > 0
                 else profile["completed_bubble"]
                 if notice
                 else ""
+            )
+            actor["bubble_is_history"] = bool(
+                notice and notice["kind"] == "result" and actor["active_contexts"] > 0
             )
         actors = self.narrator.decorate(actors, preferences["narration_enabled"])
         question_presenters = {

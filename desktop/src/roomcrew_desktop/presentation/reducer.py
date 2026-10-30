@@ -73,6 +73,9 @@ def reduce_event(actors: dict[str, Any], event: dict[str, Any]) -> None:
     key = run_id + ":" + scope
     # 3、终态只清除本 Run 的上下文，不能让其他并行工作显示空闲。
     if kind in {"run.completed", "run.failed", "run.cancelled", "run.interrupted"}:
+        if scope != "main":
+            state["last_source_seq"] = event["seq"]
+            return
         for item in actors.values():
             removed = [key for key, value in item["contexts"].items() if value["run_id"] == run_id]
             for context_key in removed:
@@ -153,9 +156,13 @@ def reduce_event(actors: dict[str, Any], event: dict[str, Any]) -> None:
                 if identifier != payload["request_id"]
             ]
         elif kind in {"task.completed", "task.failed"}:
-            state["contexts"].pop(key, None)
+            # 子任务结束不是整轮结束；主 scope 必须等正式 Run 终态才能释放。
+            if scope == "main":
+                context["phase"] = "thinking"
+            else:
+                state["contexts"].pop(key, None)
             failed = kind == "task.failed" or payload.get("status") == "error"
-            state["terminal"] = "warning" if failed else "reporting"
+            state["terminal"] = "warning" if failed else "idle"
             if failed:
                 state["warnings"] = ["子任务返回错误，请查看轨迹"]
     state["last_source_seq"] = event["seq"]

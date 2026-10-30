@@ -8,12 +8,12 @@ vm.runInContext(
         fs.readFileSync("desktop/ui/studio/navigation.js", "utf8") +
         fs.readFileSync("desktop/ui/studio/motion.js", "utf8") +
         fs.readFileSync("desktop/ui/studio/leisure.js", "utf8") +
-        fs.readFileSync("desktop/ui/studio/collaboration.js", "utf8") +
+        fs.readFileSync("desktop/ui/studio/performance.js", "utf8") +
         fs.readFileSync("desktop/ui/studio/animation.js", "utf8") +
         fs.readFileSync("desktop/ui/studio/skins.js", "utf8") +
         fs.readFileSync("desktop/ui/studio/rig.js", "utf8") +
         fs.readFileSync("desktop/ui/studio/controller.js", "utf8") +
-        "\nglobalThis.testApi={crewState,crewProject,CrewMotion,CrewAnimator,crewSelectClip,crewPose,crewLeisureProfile,crewAtlasDirection,CrewStudio,CrewNavigator,CrewIdleDirector,CrewCollaborationDirector,crewIdleProfile};",
+        "\nglobalThis.testApi={crewState,crewProject,CrewMotion,CrewAnimator,crewSelectClip,crewPose,crewLeisureProfile,crewAtlasDirection,CrewStudio,CrewNavigator,CrewIdleDirector,crewIdleProfile};",
     context,
 );
 const {
@@ -28,7 +28,7 @@ const {
     CrewStudio,
     CrewNavigator,
     CrewIdleDirector,
-    CrewCollaborationDirector,
+
     crewIdleProfile,
 } = context.testApi;
 
@@ -592,86 +592,7 @@ function zeroRandom() {
     return 0;
 }
 
-/** 因为同任务会议和外援电话不能混淆，需要验证真实关系驱动的临时站位及退出。 */
-function verifyMeetingAndExternalCall() {
-    // 1、两个人物仅消费明确配置的会议关系；不调用桌面桥或生成任务。
-    const nav = new CrewNavigator();
-    nav.update({ version: 1, revision: 1, width: 10, height: 10, blocked: [] });
-    const motion = new CrewMotion(),
-        home = {
-            id: "home",
-            position: [1, 1],
-            approach: [1, 1],
-            posture: "standing",
-        },
-        home2 = { ...home, id: "home2", position: [2, 1], approach: [2, 1] };
-    motion.restore(
-        { member_id: "a", anchor_id: "home", generation: 1 },
-        [home],
-        1,
-    );
-    motion.restore(
-        { member_id: "b", anchor_id: "home2", generation: 1 },
-        [home2],
-        1,
-    );
-    const views = new Map([
-        ["a", { member: { role: "assistant", enabled: true } }],
-        ["b", { member: { role: "employee", enabled: true } }],
-    ]);
-    const scene = {
-        room: { objects: [{ id: "m", type: "meeting" }] },
-        anchors: [
-            {
-                id: "seat1",
-                object_id: "m",
-                position: [6, 6],
-                approach: [6, 6],
-                posture: "seated",
-            },
-            {
-                id: "seat2",
-                object_id: "m",
-                position: [7, 6],
-                approach: [7, 6],
-                posture: "seated",
-            },
-        ],
-        placements: [],
-    };
-    const director = new CrewCollaborationDirector(motion, nav),
-        groups = [{ kind: "meeting", group_id: "run-1", members: ["a", "b"] }];
-    director.tick(groups, scene, views, new Map(), true, 0);
-    assert.equal(director.assignments.size, 2);
-    for (let i = 0; i < 100; i++) motion.step(0.05);
-    director.tick(groups, scene, views, new Map(), true, 5000);
-    assert.equal(director.hints.get("a").kind, "meeting");
-    assert.equal(motion.actors.get("a").posture, "standing");
-    director.tick([], scene, views, new Map(), true, 5001);
-    assert.equal(director.hints.size, 0);
-    assert.equal(motion.actors.get("a").visualKind, "return");
-    const animator = new CrewAnimator();
-    const call = animator.sample(
-        "a",
-        {
-            activity: "delegating",
-            external_calls: 1,
-            animation: { gesture: "talk", expression: "focused" },
-        },
-        { ...motion.actors.get("a"), phase: "settled" },
-        0.016,
-        false,
-        null,
-        5002,
-    );
-    assert.equal(call.externalCall, true);
-    assert.equal(call.leisure, false);
-    assert.equal(call.action, "phone");
-    assert.equal(views.size, 2, "外援不生成新人物");
-}
-
 verifyIdleRotationAndInterruption();
-verifyMeetingAndExternalCall();
 
 /** 因为假聊天不能继续拉住已经接单的同事，需要验证双人配对会被真实工作原子解除。 */
 function verifyIdleChatPair() {

@@ -80,14 +80,19 @@ class CrewAnimator {
         // 2、短线索只修饰画面；移动时不堆积历史回放，问题和错误不会被其掩盖。
         let queue = this.queues.get(member) || [];
         queue = queue.filter(crewCueFresh, Date.now());
+        // 正在执行新工作时不能补播上一轮的完成姿势；通知回执仍由独立泡泡库保留。
+        const mayReport = fact?.activity === "reporting" && fact?.active_contexts === 0;
+        if (!mayReport) queue = queue.filter(crewCueNotReport);
         this.queues.set(member, queue);
+        if (player.cue?.action === "report" && !mayReport) player.cue = null;
         if (urgent || reduced || fact?.activity === "stopped") {
             player.cue = null;
             queue.length = 0;
         }
         if (player.cue) {
-            player.cue.left -= dt;
-            if (player.cue.left <= 0) player.cue = null;
+            // 起坐、移动和转向不消耗手部动作时长，已过期线索仍有明确截止时间。
+            if (!moving && !transition && !player.turning) player.cue.left -= dt;
+            if (player.cue.left <= 0 || player.cue.expires <= now) player.cue = null;
         }
         if (!urgent && !moving && !transition && !player.cue && queue.length) {
             const cue = queue.shift();
@@ -153,23 +158,13 @@ class CrewAnimator {
         // 4、会议和生活均只覆盖表现；真实人工/错误优先，外援内部工作不生成新人物动作。
         let caption = "",
             externalCall = false;
-        const canDecorate = !urgent && !reduced && !actor.interactionHold;
+        const canDecorate = !reduced && !actor.interactionHold &&
+            (layer?.kind === "performance" ? !fact?.requires_input && fact?.activity !== "warning" : !urgent);
         if (canDecorate && layer) {
             if (!moving && !transition) action = layer.action;
             expression = layer.kind === "idle" ? "smile" : "focused";
             relaxing = layer.kind === "idle";
             caption = layer.caption;
-        }
-        if (canDecorate && fact?.external_calls > 0) {
-            externalCall = true;
-            caption =
-                layer?.kind === "meeting"
-                    ? "协作讨论 · 同时联系已配置协作者"
-                    : "联系已配置协作者 · 仅轨迹";
-            if (!moving && !transition && layer?.kind !== "meeting")
-                action = "phone";
-            expression = "focused";
-            relaxing = false;
         }
         // 5、工作面向显示器，暂停手部动作后再转向用户；移动与起坐沿运动层朝向。
         const desired =
@@ -180,6 +175,7 @@ class CrewAnimator {
             typeof crewOfficeTurn === "function"
                 ? crewOfficeTurn(player, actor, desired, dt, reduced)
                 : { direction: desired, turning: false };
+        player.turning = facing.turning;
         if (facing.turning) action = "idle";
         // 6、没有显示器的座位不播放打字或电脑游戏；无空工位仍可思考，不伪造工具失败。
         if (typeof crewOfficeAction === "function") {
@@ -219,6 +215,9 @@ class CrewAnimator {
             caption,
             externalCall,
             meeting: layer?.kind === "meeting",
+            performance_kind: layer?.performance_kind || null,
+            aggregation_count: layer?.aggregation_count || 1,
+            material_category: layer?.category || null,
             idleActivity: relaxing
                 ? layer?.activity === "game" && action === "phone"
                     ? "phone"
@@ -242,4 +241,10 @@ class CrewAnimator {
 function crewCueFresh(cue) {
     // 1、过期项静默丢弃，任务依然按真实状态继续显示。
     return cue.expires > Number(this);
+}
+
+/** 因为旧 Run 的完成线索不能覆盖新工作的真实状态，需要在队列与当前线索中统一排除汇报。 */
+function crewCueNotReport(cue) {
+    // 1、只移除可丢弃的动画线索，不删除未读结果或改变后端终态。
+    return cue.action !== "report";
 }

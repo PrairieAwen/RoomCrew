@@ -41,9 +41,9 @@ RoomCrew 是 Windows 本地工作空间原型：多会议室、人物与家具�
 
 辅助模型旁白默认关闭。如需使用，在模型配置中选择“辅助旁白模型”单独填写，再勾选开关；它只接收活动数量等最小事实，超时回到规则动作，不使用执行模型 Key 兜底，也不能改变任务事实或代替用户答复。
 
-人物属性可设置最多四项空闲活动，默认手机、游戏、散步、同事闲聊；浇花和自绘休闲可作为替换项。首次空闲等待 0—120 秒，选定活动后每 **5–10 分钟随机轮换**。接单、派工或点击人物立即停止；假聊天不调用模型、不写消息。监管员保持值守。委派给已配置成员时，同任务人物集合站会；无形象的已配置 Agent 仅展示轨迹。临时视觉移动不改变持久化座位或执行进度。
+人物属性可设置最多四项空闲活动，默认手机、游戏、散步、同事闲聊；浇花和自绘休闲可作为替换项。首次空闲等待 0—120 秒，选定活动后每 **5–10 分钟随机轮换**。接单、派工或点击人物立即停止；假聊天不调用模型、不写消息。监管员保持值守。委派给已配置成员时，主角逐个前往递文件；无形象的已配置 Agent 仅展示轨迹。临时视觉移动不改变持久化座位或执行进度。
 
-顶部“素材总览”提供四套可选形象（阿晨、小禾、小岚、监管员），共 496 个登记姿态，每套覆盖 20 种动作语义和 5 种闲置表情；可切换变体、暂停逐帧并检查真实覆盖矩阵。在人物属性选择角色后“导入完整角色”，保存才绑定，不自动覆盖原人物。另备齐 12 件家具、16 件装饰和 8 组四帧特效，常用家具与灯/咖啡机已接入房间，其余装饰和特效按总览详情标明用途。完整目录、约束与美术缺口见 `desktop/ui/studio/assets/library-v1/README.md`；专业逐帧精修与所有方向/站坐/表情组合仍待完善。
+顶部“素材总览”提供五套可选形象（阿晨、小禾、小岚、监管员和小橘），共 528 个主图登记姿态。原四套每套覆盖 20 种动作语义和 5 种闲置表情；小橘为覆盖较少的关键帧预览。可切换变体、暂停逐帧并检查真实覆盖矩阵。在人物属性的“员工素材配置”选择随附角色，会自动导入并更新预览，点击“保存到本地”才绑定人物。导入或解码期间暂停保存，失败不能误存旧素材；取消编辑不改变已保存成员。另备齐 12 件家具、16 件装饰和 8 组四帧特效，具体接入与美术缺口见 `desktop/ui/studio/assets/library-v1/README.md`；专业逐帧精修与所有方向/站坐/表情组合仍待完善。
 
 配置与数据默认在 `%LOCALAPPDATA%/RoomCrew`。模型配置由 Windows DPAPI 加密，独立于 Agent 文件视图；原始配置和 Key 不注入消息、普通轨迹或 checkpoint。Python 使用另一个随包解释器，在无网络 AppContainer 与受限 Job 中执行会话文件副本，不继承父进程秘密环境。模型请求仍会将任务内容发往用户配置的服务商。
 
@@ -56,6 +56,10 @@ Agent 配置与执行流程见 [ADR-0009](doc/architecture/0009-agent-foundation
 泡泡使用人物局部挂点，与人物共用同一份移动变换，走动、起坐和镜头平移同步跟随，缩放时一起缩放；提示绘制在家具上层，挂点按整套姿态缓存，不随帧裁切抖动或在左右位置间跳换。完成提示只有点击并成功查看对应结果后才消失；人工提示在实际答复或取消相应任务后解除。未读与已读单独保存在各空间 bubbles.sqlite，新任务、切空间和重启不清除未读，也不恢复已经读过的结果。
 
 每个任务由入口主 Agent 统一对用户汇报：子 Agent 完成不单独冒泡，整轮任务完成后由主 Agent 提示；子任务遇到人工问题，也由主 Agent 转达，点击后答复原始问题并恢复原子任务。多个独立入口任务仍各自保留提示；完整委派过程和真实执行者保留在右侧轨迹。升级自动退役旧版子任务完成提示，并保留主结果的已读记录。
+
+工作过程统一面向显示器打字；MCP 短暂打电话，派发任务时主角走到对应成员旁递文件，查历史时前往档案柜翻查。特殊行为进入各空间的持久顺序队列，两个并行委派按 A、B 顺序演示，允许晚于真实执行；动画和回执不控制后端。待命活动保持五至十分钟轮换。默认完成提示为“本轮回复已就绪”，旧未读结果在新任务期间注明为历史结果；子任务完成不触发主角汇报。新增“小橘 · 男性吉祥物”可在员工素材配置中选择，不自动替换已有形象。当前为关键帧兼容预览，详见 [ADR-0025](doc/architecture/0025-queued-agent-performances.md)。
+
+同一人物的 MCP 和查档分别在首条事件起 60 秒内合并演出，首条立即播放，后续增加次数但不重播；跨自然分钟和重启也保持这一窗口。不同人物、空间、动作类别分开，派发任务和人工/审核不合并；原始工具调用与轨迹全部保留。协议与边界见 [ADR-0026](doc/architecture/0026-coalesced-desktop-actions.md)。
 
 ## 工作空间与会议室
 
@@ -142,7 +146,10 @@ $env:UV_PYTHON_INSTALL_DIR = Join-Path (Get-Location) '.tools/python'
 & .\.venv\Scripts\python.exe desktop/tests/capabilities_smoke.py
 & .\.venv\Scripts\python.exe desktop/tests/studio_smoke.py
 & .\.venv\Scripts\python.exe desktop/tests/workspace_smoke.py
-& .\.venv\Scripts\python.exe desktop/tests/collaboration_smoke.py
+& .\.venv\Scripts\python.exe desktop/tests/performance_queue_smoke.py
+& .\.venv\Scripts\python.exe desktop/tests/execution_visuals_smoke.py
+& .\.venv\Scripts\python.exe desktop/tests/material_selection_smoke.py
+& .\.venv\Scripts\python.exe desktop/tests/action_coalescing_smoke.py
 & .\.venv\Scripts\python.exe -m ruff check backend desktop
 & .\.venv\Scripts\python.exe -m mypy backend/src desktop/src
 node --check desktop/ui/app.js
@@ -150,9 +157,12 @@ node desktop/tests/web/protocol.test.cjs
 node desktop/tests/web/workspaces.test.cjs
 node desktop/tests/web/model-settings.test.cjs
 node desktop/tests/web/material-bindings.test.cjs
+node desktop/tests/web/material-selection.test.cjs
 node desktop/tests/web/bubble-read.test.cjs
 node desktop/tests/web/camera-pointer.test.cjs
 node desktop/tests/web/office-behavior.test.cjs
+node desktop/tests/web/performance.test.cjs
+node desktop/tests/web/execution-visuals.test.cjs
 & .\.venv\Scripts\python.exe desktop/tests/office_scene_smoke.py
 node desktop/tests/web/markdown.test.cjs
 & .\.venv\Scripts\python.exe desktop/tests/markdown_smoke.py

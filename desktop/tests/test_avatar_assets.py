@@ -124,10 +124,10 @@ def test_png_dimensions_and_filetype_are_bounded() -> None:
 
 
 def test_animation_mapping_uses_real_tools_and_keeps_question_expression() -> None:
-    """因为工作与人工提醒可以并行，需要验证精细工具映射与表情独立而不依赖文字解释。"""
-    # 1、写文件、读文件和编辑代码映射到不同动作，提问不抹掉并行写作。
-    assert animation_hint("executing", ["write_file"], 0, 0)["gesture"] == "write"
-    assert animation_hint("executing", ["read_file"], 0, 0)["gesture"] == "read"
+    """因为普通工具统一表现为操作电脑，需要验证读写共用工作姿态且人工提醒保持独立。"""
+    # 1、文件读写与代码编辑都打电脑，问题和错误仍使用各自的表情通道。
+    assert animation_hint("executing", ["write_file"], 0, 0)["gesture"] == "type"
+    assert animation_hint("executing", ["read_file"], 0, 0)["gesture"] == "type"
     hint = animation_hint("executing", ["edit_file"], 1, 0)
     assert hint["gesture"] == "type" and hint["expression"] == "curious"
     assert animation_hint("executing", ["read_file"], 0, 1)["expression"] == "concerned"
@@ -142,7 +142,7 @@ def test_animation_mapping_uses_real_tools_and_keeps_question_expression() -> No
             "created_at": "2026-10-26T00:00:00Z",
         }
     )
-    assert cue and cue["action"] == "read" and cue["visual_only"]
+    assert cue and cue["action"] == "type" and cue["visual_only"]
     assert "隐私正文" not in json.dumps(cue, ensure_ascii=False)
 
 

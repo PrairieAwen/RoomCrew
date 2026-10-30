@@ -13,6 +13,7 @@ DESKTOP_METHODS = frozenset(
     {
         "studio_feed",
         "acknowledge_bubble",
+        "acknowledge_scene_action",
         "scene_move",
         "scene_edit",
         "preferences",
@@ -165,10 +166,17 @@ class DesktopRuntime(Runtime):
             raise ValueError("手绘角色样板缺失，请保留完整程序目录")
         return await asyncio.to_thread(self._avatars.import_manifest, selected)
 
+    async def acknowledge_scene_action(
+        self, identifier: str, result: str, reason: str = ""
+    ) -> dict[str, str]:
+        """因为表现消费必须独立于业务执行，需要只写入当前工作空间的动画回执。"""
+        # 1、原始事件、任务、模型配置和权限保持由后端原有服务管理。
+        return await asyncio.to_thread(self._studio.actions.acknowledge, identifier, result, reason)
+
     async def import_avatar_bundle(self, role: str) -> dict[str, Any]:
         """因为用户需要完整角色套装，需要从有限的随附人物库导入双页清单而不接收任意文件路径。"""
         # 1、这里只选择美术形象，不创建 Agent、修改身份或授予监管权限。
-        if role not in ("owner", "assistant", "employee", "guardian"):
+        if role not in ("owner", "assistant", "employee", "guardian", "hippo"):
             raise ValueError("未知的内置人物素材")
         selected = (
             self.paths.resources

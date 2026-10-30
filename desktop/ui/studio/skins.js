@@ -57,7 +57,7 @@ class CrewSkins {
                     typeof sources[index] !== "string" ||
                     !(index < importedPages
                         ? sources[index].startsWith("data:image/png;base64,")
-                        : index >= importedPages && index < importedPages + 3 &&
+                        : index >= importedPages && index < importedPages + 4 &&
                           [
                               "studio/assets/scene-v1/seated-assistant.png",
                               "studio/assets/scene-v1/seated-employee.png",
@@ -65,6 +65,8 @@ class CrewSkins {
                               "studio/assets/scene-v1/seated-owner.png",
                               "studio/assets/scene-v2/paired-chair-v2.png",
                               "studio/assets/scene-v2/chair-rise-v3.png",
+                              "studio/assets/library-v1/characters/hippo/rise.png",
+                              "studio/assets/scene-v2/telephone-calls.png",
                           ].includes(sources[index]))
                 )
                     throw new Error("素材图片来源无效");
@@ -240,6 +242,13 @@ class CrewSkins {
 
 /** 因为自制素材不一定覆盖所有变体，需要只选择兼容姿态并明确按优先级回退。 */
 function crewSelectClip(manifest, sample) {
+    // 通话使用独立贴耳片段；摸鱼手机仍走原图集，转身时不跳过朝向过渡。
+    if (sample.performance_kind === "mcp" && sample.action === "phone" && !sample.turning &&
+        sample.posture === "seated" && !sample.material_binding?.clip &&
+        ["workstation", "meeting", "chair"].includes(sample.surface)) {
+        const call = manifest.call_clips?.find(crewExactDirection, sample.direction);
+        if (call) return call;
+    }
     // 1、标准椅的配套交互只用于相同家具规格；沙发与自制图集继续采用独立人物帧。
     if ((sample.posture === "seated" || ["stand_up","sit_down"].includes(sample.phase)) && ["workstation","meeting","chair"].includes(sample.surface) &&
         (sample.seat_height == null || sample.seat_height === 22)) {
