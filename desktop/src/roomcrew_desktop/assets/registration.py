@@ -54,15 +54,15 @@ def register_frames(manifest: dict[str, Any], pages: list[bytes]) -> dict[str, A
     valid = [value for value in measured if value is not None]
     if len(valid) < len(measured) * 0.75:
         return None
-    # 2、以头宽 38 世界单位统一体型，保留原脚底与小跑腾空；站坐不会被统一拉成同样身高。
+    # 2、完整片段共享一个头部校准倍率，保留作者逐帧登记、脚底与腾空，不逐帧量头缩放。
     unit = manifest["display_height"] / manifest["frame_size"][1]
+    factors = clip_factors(manifest, measured, unit)
     pivot_x, pivot_y = manifest["pivot"]
     geometry = []
-    for frame, head in zip(manifest["frame_rects"], measured, strict=True):
+    for index, (frame, head) in enumerate(zip(manifest["frame_rects"], measured, strict=True)):
         width, height = frame["rect"][2:]
         old_scale = frame.get("scale", 1)
-        scale = 38 / ((head or statistics.median(valid)) * unit)
-        scale = max(old_scale * 0.4, min(old_scale * 2, scale))
+        scale = old_scale * factors[index]
         root = (pivot_x - frame["offset"][0]) / old_scale
         flight = max(0, pivot_y - frame["offset"][1] - height * old_scale)
         geometry.append(
@@ -97,4 +97,48 @@ def register_frames(manifest: dict[str, Any], pages: list[bytes]) -> dict[str, A
             for index in clip["frames"]
         ]
         sockets[posture] = statistics.median(tops) if tops else -96
-    return {"version": 1, "frames": geometry, "sockets": sockets}
+    return {"version": 2, "strategy": "clip-median", "frames": geometry, "sockets": sockets}
+
+
+def clip_factors(
+    manifest: dict[str, Any], measured: list[float | None], unit: float
+) -> list[float]:
+    """因为背影、表情和道具会干扰单帧头宽估计，需要按动作/姿态/方向汇总固定倍率。
+
+    保留作者原 scale；同组表情和所有共用帧的片段合并，未引用帧采用整包基准。
+    """
+    # 1、去重组内帧号，避免同一帧被多个表情引用后影响权重。
+    groups: dict[tuple[str, str, str], set[int]] = {}
+    frames = manifest["frame_rects"]
+    for clip in manifest["clips"]:
+        key = (clip["action"], clip["posture"], clip["direction"])
+        groups.setdefault(key, set()).update(clip["frames"])
+    valid = [
+        head * frames[index].get("scale", 1) * unit
+        for index, head in enumerate(measured)
+        if head is not None
+    ]
+    fallback = 38 / statistics.median(valid)
+    components: list[set[int]] = []
+    for indices in groups.values():
+        merged = set(indices)
+        separate = []
+        for component in components:
+            if merged.isdisjoint(component):
+                separate.append(component)
+            else:
+                merged.update(component)
+        components = [*separate, merged]
+    factors = [fallback] * len(frames)
+    # 2、共用任意帧的片段只估算一次，防止一个 idle 帧因同时用于 report 而有不同倍率。
+    for indices in components:
+        widths = [
+            measured[index] * frames[index].get("scale", 1) * unit
+            for index in indices
+            if measured[index] is not None
+        ]
+        factor = 38 / statistics.median(widths) if widths else fallback
+        for index in indices:
+            factors[index] = factor
+    # 3、有界矫正保留特殊体型；无法可靠识别的整包已由调用方退出自动校准。
+    return [max(0.4, min(2, factor)) for factor in factors]

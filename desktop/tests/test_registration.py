@@ -9,8 +9,8 @@ from PIL import Image
 from roomcrew_desktop.assets.registration import head_width, register_frames
 
 
-def test_bundled_frames_keep_head_scale_and_sources_immutable() -> None:
-    """因为人物各动作不能忽大忽小，需要用四套真实图集验证头部尺度与站坐基线。"""
+def test_bundled_frames_keep_clip_scale_and_sources_immutable() -> None:
+    """因为逐帧估算头宽会产生呼吸式缩放，需要验证五套真实图集按整段校准且源文件不变。"""
     # 1、读取真实随包图集，原图与帧号必须完全不变，校准只生成显示元数据。
     root = Path(__file__).resolve().parents[1] / "ui/studio/assets/library-v1/characters"
     for folder in root.iterdir():
@@ -21,9 +21,17 @@ def test_bundled_frames_keep_head_scale_and_sources_immutable() -> None:
         hashes = [hashlib.sha256(page).hexdigest() for page in pages]
         result = register_frames(manifest, pages)
         assert result and len(result["frames"]) == len(manifest["frame_rects"])
-        # 2、动作与站坐共享同一头部尺度；腾空差异保留，不能将整个坐姿拉成长站姿。
-        widths = [frame["head_width"] for frame in result["frames"]]
-        assert max(widths) / min(widths) < 1.025
+        # 2、走路和跑步保留原步态起伏，但同一个方向的片段不能逐帧改变相对作者的倍率。
+        assert result["strategy"] == "clip-median"
+        for clip in manifest["clips"]:
+            if clip["action"] not in {"walk", "run"}:
+                continue
+            factors = [
+                result["frames"][index]["scale"]
+                / manifest["frame_rects"][index].get("scale", 1)
+                for index in clip["frames"]
+            ]
+            assert max(factors) - min(factors) < 0.000001
         if folder.name == "hippo":
             # 短腿吉祥物坐到带脚踏的高椅后头部反而高于站立，不能强套人类身高关系。
             assert result["sockets"]["standing"] > result["sockets"]["seated"]

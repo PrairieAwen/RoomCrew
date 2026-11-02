@@ -82,6 +82,7 @@ function crewSceneCharacterSupplement(asset, sources, sizes) {
                     includes_seat:true,mirror:direction==="ne",transition:true});
     }
     crewSceneCallSupplement(asset, sources, sizes, entry);
+    if (typeof crewCalibrateStanding === "function") crewCalibrateStanding(asset);
     return true;
 }
 

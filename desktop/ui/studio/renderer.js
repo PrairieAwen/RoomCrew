@@ -704,9 +704,10 @@ class CrewRenderer {
         if (sample.material_binding?.clip)
             seat =
                 sample.material_binding.clip.split(".")[2] === "seated" ? 1 : 0;
+        const spriteAsset = this.skins.cache.get(view.member.avatar_id);
         const registration =
             custom && view.member.material_profile?.normalize !== false
-                ? this.skins.cache.get(view.member.avatar_id)?.registration
+                ? (spriteAsset?.display_registration || spriteAsset?.registration)
                 : null;
         const anchor = crewBubbleAnchor(manifest, seat, registration);
         anchor.y -= view.contact?.elevation || 0;

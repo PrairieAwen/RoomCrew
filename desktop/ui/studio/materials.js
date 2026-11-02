@@ -28,6 +28,8 @@ class CrewMaterialPanel {
         this.saving = false;
         this.view = null;
         this.sequence = null;
+        this.coverageId = null;
+        this.buildGallery();
         for (const key of [
             "member-color",
             "member-skin",
@@ -113,6 +115,7 @@ class CrewMaterialPanel {
             identifier = member.avatar_id || "builtin:crew-v1";
         this.importState = "idle";
         this.saving = false;
+        this.coverageId = null;
         el("bundle-character").value = "";
         this.updateControls();
         this.stopSequence();
@@ -254,6 +257,8 @@ class CrewMaterialPanel {
         ])
             el(key).disabled = imported;
         this.skins.ensure(el("member-avatar").value);
+        this.coverageId = null;
+        this.updateGallery();
         this.binding = null;
         el("member-avatar").dispatchEvent(new Event("crew-avatar-change"));
         this.clock = 0;
@@ -358,6 +363,58 @@ class CrewMaterialPanel {
         el("bundle-character").disabled = this.saving;
         el("bundle-avatar").disabled = busy || !el("bundle-character").value;
         el("save-member").disabled = busy || this.importState === "failed";
+        this.updateGallery();
+    }
+
+    /** 因为招募时应直接看到现有形象，需要从随包目录生成候选卡片，复用原有可靠导入流程。 */
+    buildGallery() {
+        // 1、只展示可信随包目录；图片来源不能由 Agent 文本或用户输入拼接。
+        const gallery = el("recruit-gallery");
+        for (const entry of window.ROOMCREW_MATERIAL_LIBRARY.characters) {
+            const button = node("button", "recruit-card");
+            button.type = "button";
+            button.dataset.role = entry.id;
+            button.dataset.avatar = entry.registered_id;
+            button.setAttribute("aria-pressed", "false");
+            button.addEventListener("click", this.chooseGallery.bind(this));
+            const clip = entry.manifest.clips.find(crewStandingNeutralIdle);
+            const frame = entry.manifest.frame_rects[clip.frames[0]], rect = frame.rect;
+            const svg = crewSvg("svg", {viewBox: `${rect[0]-8} ${rect[1]-4} ${rect[2]+16} ${rect[3]+8}`, "aria-hidden": "true"});
+            button.append(svg, node("span", "", entry.name.split(" · ")[0]),
+                node("small", "", entry.id === "hippo" ? "关键帧预览" : "配套办公动作"));
+            gallery.append(button);
+            crewRecruitPortrait(entry, svg, frame.page || 0);
+        }
+    }
+
+    /** 因为卡片和原选择框必须有相同保存语义，需要通过同一个导入状态机更新预览。 */
+    async chooseGallery(event) {
+        // 1、选择只改变草稿，最终绑定仍需明确点击保存。
+        if (this.saving) return;
+        el("bundle-character").value = event.currentTarget.dataset.role;
+        await this.importBundle();
+    }
+
+    /** 因为已保存与正在选择的形象可能不同，需要明确标记当前草稿而不直接修改成员。 */
+    updateGallery() {
+        // 1、加载允许切换候选，保存期间锁定；原生导入的自定义形象保留在已导入列表。
+        const buttons = el("recruit-gallery")?.querySelectorAll?.("button") || [];
+        for (const button of buttons) {
+            const role = el("bundle-character").value;
+            button.setAttribute("aria-pressed", String(role ? role === button.dataset.role :
+                el("member-avatar").value === button.dataset.avatar));
+            button.disabled = this.saving;
+        }
+    }
+
+    /** 因为自定义素材不一定具备完整办公动画，需要从实际加载的片段生成统一覆盖报告。 */
+    showCoverage() {
+        // 1、报告只读显示合同，不修改 Agent 能力或伪造已支持的动作。
+        const id = el("member-avatar").value, asset = this.skins.cache.get(id);
+        if (id === this.coverageId) return;
+        if (id !== "builtin:crew-v1" && !asset) return;
+        this.coverageId = id;
+        el("material-coverage").textContent = asset ? crewMaterialCoverage(asset) : "内置骨架 · 程序化动作，无导入图集。";
     }
 
     /** 因为关闭或重开表单不能应用迟到的导入结果，需要失效当前代次并释放编辑状态。 */
@@ -406,6 +463,7 @@ class CrewMaterialPanel {
         );
         this.previous = timestamp;
         if (el("member-dialog").open && !document.hidden && this.view) {
+            this.showCoverage();
             if (this.sequence) {
                 this.sequence.elapsed += dt;
                 if (
@@ -436,6 +494,10 @@ class CrewMaterialPanel {
                 time: this.clock,
                 clock: this.clock,
                 reduced: false,
+                surface: "workstation",
+                seat_height: 22,
+                phase: ["sit_down", "stand_up"].includes(action) ? action : "settled",
+                pose_progress: action === "sit_down" ? 1 - Math.min(1, this.clock / 0.38) : Math.min(1, this.clock / 0.32),
             };
             const custom = this.skins.render(
                 this.view,
@@ -451,6 +513,21 @@ class CrewMaterialPanel {
             el("avatar-preview").dataset.expression = sample.expression;
         }
         requestAnimationFrame(this.tick);
+    }
+}
+
+/** 因为候选图集不是单张头像，需要按真实裁切展示角色，并共享浏览器图片缓存。 */
+async function crewRecruitPortrait(entry, svg, page) {
+    // 1、只读取随包目录已经声明的图片，不需要额外注册或更改用户素材。
+    try {
+        const source = "studio/assets/library-v1/" + entry.images[page];
+        const image = new Image();
+        image.src = source;
+        await image.decode();
+        svg.append(crewSvg("image", {href: source, width: image.naturalWidth, height: image.naturalHeight}));
+    } catch {
+        // 2、缩略图缺失不阻塞配置；正式导入仍独立验证 PNG 与清单。
+        svg.setAttribute("aria-label", "缩略图暂不可用");
     }
 }
 

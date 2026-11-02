@@ -12,9 +12,19 @@
     /** 因为忙等会阻塞动画，需要在检查之间释放事件循环。 */
     function pause(resolve) { /* 1、只控制测试采样间隔。 */ setTimeout(resolve, 100); }
     /** 因为实际 DOM 点击不能绕过渲染器，需要通过人物根节点触发正式入口。 */
-    function clickMember(id) {
+    async function clickMember(id) {
         // 1、稳定成员身份来自本测试的配置，不根据显示名字猜测。
+        const expected = id === "guardian" ? null : await api("member_chat",id);
         studio.renderer.views.get(id).group.dispatchEvent(new MouseEvent("click", {bubbles: true}));
+        // 2、人物入口需异步查询持久聊天，不能在桥响应前断言会话已展开。
+        if(id === "guardian") await new Promise(pause);
+        else await until(recipientReady.bind(null,id,expected?.id || null));
+    }
+    /** 因为角色接单包含异步恢复，需要等待实际对话与选中身份一致。 */
+    function recipientReady(id, conversation) {
+        // 1、不直接调用控制器来绕过正式人物事件。
+        return document.body.classList.contains("conversation-open") && el("task-member").value===id &&
+            (state.conversation?.id || null)===conversation;
     }
     /** 因为桥与人物异步初始化，需要确认真实空间已经可用。 */
     function ready() { /* 1、只检查实际就绪状态。 */ return !state.switching && studio?.data?.members.length === 3; }
@@ -31,7 +41,7 @@
         await until(ready);
         studio.roomMode();
         const before = (await api("overview")).conversations.length;
-        clickMember("role_worker");
+        await clickMember("role_worker");
         if (!document.body.classList.contains("conversation-open") || document.body.classList.contains("team-open") || el("task-member").value !== "role_worker")
             throw new Error("role click opened configuration or wrong recipient");
         if ((await api("overview")).conversations.length !== before)
@@ -45,22 +55,22 @@
         await until(completed);
         const conversation = state.conversation.id;
         await until(notSending);
-        clickMember("assistant");
+        await clickMember("assistant");
         if (state.conversation || el("task-member").value !== "assistant")
             throw new Error("different agent reused another agent conversation");
-        clickMember("role_worker");
+        await clickMember("role_worker");
         if (state.conversation?.id !== conversation)
             throw new Error("return to existing member conversation failed");
-        clickMember("guardian");
+        await clickMember("guardian");
         if (state.conversation?.id !== conversation || el("task-member").value !== "role_worker")
             throw new Error("infrastructure stole conversation recipient");
-        el("workspace-options").open = true;
+        el("room-options").open = true;
         if (!el("toggle-team").getBoundingClientRect().width)
             throw new Error("team configuration menu is not visible");
         window.__roleStage = "options";
         await until(captured);
         el("toggle-team").click();
-        if (!document.body.classList.contains("team-open") || document.body.classList.contains("conversation-open") || el("workspace-options").open)
+        if (!document.body.classList.contains("team-open") || document.body.classList.contains("conversation-open") || el("room-options").open)
             throw new Error("explicit team configuration did not open independently");
         window.__roleResult = {ok: true, conversation, roleClick: true, recipient: "role_worker", noEmptyConversation: true, separateAgentChats: true, optionsMenu: true, labelsRemoved: true};
     } catch (error) {

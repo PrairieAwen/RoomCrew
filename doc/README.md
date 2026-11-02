@@ -19,6 +19,7 @@
 | 泡泡与人工交互 | [ADR-0013](architecture/0013-bubble-pointer-and-read-receipts.md) | 主 Agent 转达、局部挂点、真实点击及持久已读 |
 | 统一工作与顺序演出 | [ADR-0025](architecture/0025-queued-agent-performances.md) | 常态打字、MCP 通话、逐人递文件、查档往返；独立持久队列与新吉祥物 |
 | 重复动作合并 | [ADR-0026](architecture/0026-coalesced-desktop-actions.md) | MCP、查档按人物六十秒合并，已播冷却持久化；原始调用、委派与审核不变 |
+| 会议室招募与素材抽象 | [ADR-0027](architecture/0027-recruitment-and-material-contract.md) | 五套随附形象、自定义导入、动作覆盖合同、固定片段校准和起身/行走尺度衔接 |
 | Markdown | [ADR-0012](architecture/0012-message-markdown.md) | 展示层安全解析，原轨迹保留原文 |
 | 素材与人物接触 | [ADR-0020](architecture/0020-unified-projection-assets.md)、[ADR-0019](architecture/0019-paired-chair-interactions.md) | 固定投影兼容预览，四角色配套工作/起坐；完整动作及骨点仍待验收 |
 | 素材制作规范 | [规范 v1.0](assets/asset-production-standard/README.md)、[图解版](assets/asset-production-standard/guide.html) | 相机、尺寸、八向、接触、导出及验收；制作端 JSON 尚非导入合同 |

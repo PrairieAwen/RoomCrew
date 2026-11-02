@@ -30,6 +30,7 @@
         <script src="studio/assets/library-v1/catalog.js" defer></script>
         <script src="studio/assets/scene-v1/catalog.js" defer></script>
         <script src="studio/assets/library-v1/characters/hippo/display.js" defer></script>
+        <script src="studio/material-contract.js" defer></script>
         <script src="studio/scene-assets.js" defer></script>
         <script src="studio/office-behavior.js" defer></script>
         <script src="studio/environment.js" defer></script>
@@ -111,13 +112,6 @@
                         </summary>
                         <div class="workspace-options-menu">
                             <button
-                                id="toggle-team"
-                                class="drawer-toggle"
-                                aria-expanded="false"
-                            >
-                                ♧ 我的团队
-                            </button>
-                            <button
                                 id="open-schedules"
                                 class="drawer-toggle"
                                 type="button"
@@ -152,8 +146,15 @@
                                 <button id="asset-library-open">
                                     ▧ 素材总览
                                 </button>
-                                <button id="layout-toggle">⌘ 布置会议室</button
-                                ><button id="furniture-add" hidden>
+                                <details id="room-options" class="room-options">
+                                    <summary id="layout-toggle">⌘ 布置会议室</summary>
+                                    <div class="room-options-menu">
+                                        <button id="recruit-member" type="button">＋ 招募 AI 员工</button>
+                                        <button id="toggle-team" type="button" aria-expanded="false">员工与 Agent 配置</button>
+                                        <button id="layout-edit-toggle" type="button" aria-pressed="false">编辑家具布置</button>
+                                    </div>
+                                </details>
+                                <button id="furniture-add" hidden>
                                     ＋ 家具
                                 </button>
                             </div>
@@ -488,7 +489,7 @@
                 <div class="modal-heading">
                     <div>
                         <div class="eyebrow">MEET YOUR CREW</div>
-                        <h2>人物属性</h2>
+                        <h2 id="member-dialog-title">人物属性</h2>
                     </div>
                     <button
                         id="close-member"
@@ -628,6 +629,8 @@
                     aria-labelledby="member-tab-material"
                     hidden
                 >
+                    <details class="material-requirements">
+                        <summary>待命习惯与提示泡泡</summary>
                     <details class="agent-abilities">
                         <summary>人物交互 · 仅影响桌面表现</summary>
                         <label class="checkbox-label"
@@ -636,7 +639,7 @@
                                 id="member-normalize"
                                 checked
                             />
-                            统一动作体型（按头部尺度校准，特殊素材可关闭）</label
+                            统一动作体型（按片段固定尺度，特殊素材可关闭）</label
                         >
                         <label
                             >需要人工介入时的泡泡<input
@@ -714,6 +717,7 @@
                         所有工作、待答复及提醒清空后才随机活动，每 5–10
                         分钟轮换一次；新任务或点击人物立即停止。闲聊仅作场景表演，不调用模型或生成消息；监管员保持值守。
                     </p>
+                    </details>
                     <section class="material-card" aria-label="素材与动作预览">
                         <div class="material-preview">
                             <svg
@@ -726,6 +730,7 @@
                             >
                         </div>
                         <div class="material-controls">
+                            <div id="recruit-gallery" class="recruit-gallery" role="group" aria-label="选择员工形象"></div>
                             <label
                                 >当前人物素材（已导入）<select id="member-avatar">
                                     <option value="builtin:crew-v1">
@@ -818,6 +823,12 @@
                             >
                                 连播核心动作
                             </button>
+                            <details class="material-requirements">
+                                <summary>统一素材要求与当前动作覆盖</summary>
+                                <p>本地 JSON + PNG（最多两页，单页不超过 2048 × 2048）；必须提供站立待命 idle。动作、朝向、表情、姿态分别登记，整段动画保持固定尺度、脚底根点与稳定头部挂点。</p>
+                                <p>建议提供行走、工作、通话、查档、递交任务、人工询问、完成与起坐。坐姿需登记臀部与鞋底接触；缺失变体会回退，不代表完整动画。</p>
+                                <output id="material-coverage" aria-live="polite">选择素材后显示实际覆盖。</output>
+                            </details>
                             <p id="avatar-feedback" class="scope-note">
                                 动作由工作轨迹映射；缺失素材会明确回退。
                             </p>

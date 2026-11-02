@@ -52,6 +52,7 @@ class CrewStudio {
         el("view-room").addEventListener("click", this.roomMode.bind(this));
         el("view-chat").addEventListener("click", this.chatMode.bind(this));
         el("add-member").addEventListener("click", this.addMember.bind(this));
+        el("recruit-member").addEventListener("click", this.recruitMember.bind(this));
         el("member-edit").addEventListener("click", this.editMember.bind(this));
         el("member-form").addEventListener(
             "submit",
@@ -89,7 +90,7 @@ class CrewStudio {
             "click",
             this.traceTab.bind(this),
         );
-        el("layout-toggle").addEventListener(
+        el("layout-edit-toggle").addEventListener(
             "click",
             this.toggleLayout.bind(this),
         );
@@ -143,6 +144,12 @@ class CrewStudio {
         el("team-list").replaceChildren();
         el("task-member").replaceChildren();
         el("workspace-options").open = false;
+        el("room-options").open = false;
+        el("layout-toggle").classList.remove("active");
+        el("layout-edit-toggle").setAttribute("aria-pressed", "false");
+        el("layout-edit-toggle").textContent = "编辑家具布置";
+        el("furniture-add").hidden = true;
+        el("layout-hint").textContent = "点击人物查看事项，再点击沙发或工位让他换座。";
         document.body.classList.remove("team-open", "layout-edit");
         this.renderer.resetWorkspace();
         this.materials.skins = this.renderer.skins;
@@ -351,7 +358,7 @@ class CrewStudio {
             toast(
                 member?.role === "guardian"
                     ? "监管员是安全服务入口，当前尚未接入对话。"
-                    : "该成员目前不能接单，可在右上角的我的团队中配置。",
+                    : "该成员目前不能接单，可在布置会议室的员工与 Agent 配置中调整。",
             );
             return false;
         }
@@ -360,6 +367,7 @@ class CrewStudio {
         // 2、只复用当前窗口中向该成员发起的会话，不把其参与的其他主 Agent 任务当成私聊。
         this.selectMember(identifier, false);
         el("workspace-options").open = false;
+        el("room-options").open = false;
         el("task-member").value = identifier;
         try {
             const conversation = await api("member_chat", identifier);
@@ -627,6 +635,14 @@ class CrewStudio {
         });
     }
 
+    /** 因为招募是会议室布置的一部分，需要先让用户挑选形象，再配置独立的 Agent 能力。 */
+    recruitMember() {
+        // 1、只打开草稿；选择素材、预览和取消均不创建会话或运行任务。
+        el("room-options").open = false;
+        this.addMember();
+        this.memberConfiguration.show("material");
+    }
+
     /** 因为完整提示配置不应出现在场景订阅，需要在人工点击后单独读取。 */
     async editMember() {
         // 1、编辑入口不注册为 Agent 工具。
@@ -641,6 +657,8 @@ class CrewStudio {
     /** 因为新建与编辑共享字段，需要在一个表单中维护版本和已注册的外观参数。 */
     fillMember(member) {
         // 1、隐藏字段仅保存稳定 ID 与版本，不包含 Key 或模型 URL。
+        el("room-options").open = false;
+        el("member-dialog-title").textContent = member.id ? "员工与 Agent 配置" : "招募 AI 员工";
         this.editMemberValue = member;
         this.memberRevision = member.revision || 0;
         el("member-name").value = member.name;
@@ -678,6 +696,7 @@ class CrewStudio {
         el("member-dialog").showModal();
         this.materials.open(member);
         this.memberConfiguration.loadMaterial(member);
+        this.materials.appearance();
     }
 
     /** 因为复用定义不应意外覆盖原人物的能力，需要在新建共享形象时锁定定义字段。 */
@@ -935,6 +954,9 @@ class CrewStudio {
         // 1、布置模式不暂停模型或工具调用。
         this.editing = !this.editing;
         el("layout-toggle").classList.toggle("active", this.editing);
+        el("layout-edit-toggle").setAttribute("aria-pressed", String(this.editing));
+        el("layout-edit-toggle").textContent = this.editing ? "完成家具布置" : "编辑家具布置";
+        el("room-options").open = false;
         el("layout-hint").textContent = this.editing
             ? "布置中：点击家具修改格网位置；占用中的家具需先让人物离开。"
             : "点击人物查看事项，再点击沙发或工位让他换座。";
@@ -1015,12 +1037,13 @@ class CrewStudio {
         el("toggle-workspace").setAttribute("aria-expanded", String(open));
     }
 
-    /** 因为团队属于配置入口，需要仅通过右上角选项展开并避免与对话面板重叠。 */
+    /** 因为员工与 Agent 配置归入布置会议室，需要收起子菜单并避免与对话面板重叠。 */
     toggleTeam() {
         // 1、收起时停止按需轨迹订阅，执行器继续运行。
         const open = document.body.classList.toggle("team-open");
         el("toggle-team").setAttribute("aria-expanded", String(open));
         el("workspace-options").open = false;
+        el("room-options").open = false;
         if (open) document.body.classList.remove("conversation-open");
     }
 
@@ -1032,6 +1055,7 @@ class CrewStudio {
             el("toggle-workspace").setAttribute("aria-expanded", "false");
             el("toggle-team").setAttribute("aria-expanded", "false");
             el("workspace-options").open = false;
+            el("room-options").open = false;
         }
     }
 

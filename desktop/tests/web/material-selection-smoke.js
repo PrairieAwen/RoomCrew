@@ -57,11 +57,51 @@
         // 1、不会查询用户正式资料。
         return item.name==="素材选择验收";
     }
+    /** 因为数值通过不能代替美术目检，需要把五套真实素材的常用状态放在同尺度比较图中。 */
+    async function captureScaleMatrix() {
+        // 1、通过真实导入和 PNG 解码获取全部角色；不伪造后台任务、人物位置或轨迹。
+        const entries=window.ROOMCREW_MATERIAL_LIBRARY.characters;
+        let chosen;
+        /** 因为每套素材加载时间不同，需要等当前选择实际解码成功。 */
+        function chosenReady() {
+            // 1、失败不能以旧角色或骨架替代。
+            return studio.materials.importState==="idle" && el("member-avatar").value===chosen.registered_id &&
+                studio.materials.skins.cache.has(chosen.registered_id);
+        }
+        for(const entry of entries) { chosen=entry;select(entry.id);await until(chosenReady); }
+        const dialog=node("dialog"),svg=crewSvg("svg",{viewBox:"0 0 850 610",width:850,height:610});
+        dialog.style.width="1000px";
+        svg.style.width="100%";svg.style.height="auto";
+        dialog.append(node("h2","","同尺度真实素材 · 待命 / 行走 / 跑步 / 工作"),svg);
+        const samples=[{action:"idle",direction:"se"},{action:"walk",direction:"se"},
+            {action:"walk",direction:"ne"},{action:"run",direction:"ne"},
+            {action:"work",direction:"nw",posture:"seated",surface:"workstation",seat_height:22,seatMix:1}];
+        // 2、每格复用生产播放器，不能通过截图缩放去掩盖实际比例差。
+        for(let row=0;row<entries.length;row++) {
+            const entry=entries[row],label=crewSvg("text",{x:5,y:35+row*115,fill:"#202936","font-size":13});
+            label.textContent=entry.name;svg.append(label);
+            for(let col=0;col<samples.length;col++) {
+                const group=crewSvg("g",{transform:`translate(${115+col*150} ${120+row*115})`});
+                const badge=crewSvg("text");group.append(badge);svg.append(group);
+                const view={group,badge,member:{material_profile:{normalize:true}}};
+                const sample={expression:"neutral",posture:"standing",seatMix:0,time:0.34,reduced:true,...samples[col]};
+                if(!studio.materials.skins.render(view,entry.registered_id,sample))throw new Error("比较图素材无法播放："+entry.id);
+            }
+        }
+        document.body.append(dialog);dialog.showModal();await capture("scale-comparison");dialog.close();dialog.remove();
+    }
     try {
-        await until(ready);studio.addMember();
-        el("member-name").value="素材选择验收";el("member-tab-material").click();
+        await until(ready);
+        el("layout-toggle").click();
+        if(!el("room-options").open)throw new Error("布置会议室菜单未展开");
+        el("recruit-member").click();
+        if(!el("member-dialog").open || el("member-panel-material").hidden)throw new Error("招募未进入素材选择");
+        if(el("recruit-gallery").querySelectorAll("button").length!==5)throw new Error("内置形象不完整");
+        el("member-name").value="素材选择验收";
+        await capture("recruit-gallery");
+        await captureScaleMatrix();
         const count=studio.data.members.length;
-        select("hippo");
+        el("recruit-gallery").querySelector('[data-role="hippo"]').click();
         if(!el("save-member").disabled)throw new Error("加载期间仍能保存旧素材");
         el("member-form").requestSubmit();
         await until(previewReady);

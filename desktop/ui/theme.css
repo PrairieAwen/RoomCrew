@@ -18,6 +18,13 @@
     --success: #2f654f;
     --warning: #805a19;
 }
+.room-options summary, .room-options-menu { background: var(--panel); color: var(--text); border-color: var(--line); box-shadow: 0 8px 24px #20304818; }
+.room-options-menu button { background: var(--panel); color: var(--text); }
+.room-options-menu button:hover, .room-options-menu button[aria-pressed="true"] { background: var(--surface-soft); color: var(--accent); }
+.recruit-card { background: var(--control-bg); color: var(--text); border-color: var(--control-border); }
+.recruit-card[aria-pressed="true"] { background: #edf3fb; border-color: var(--accent); }
+.recruit-card small { color: var(--muted); }
+.material-requirements { background: var(--surface-soft); color: var(--text); border-color: var(--line); }
 /* 所有正文先继承白色主题，再由下面的语义角色赋色；不继承旧组件的浅字。 */
 body
     :where(
